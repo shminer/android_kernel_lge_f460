@@ -105,7 +105,7 @@ struct cpuidle_driver {
 	struct module 		*owner;
 	int                     refcnt;
 
-        /* used by the cpuidle framework to setup the broadcast timer */
+    /* used by the cpuidle framework to setup the broadcast timer */
 	unsigned int            bctimer:1;
 	/* states array must be ordered in decreasing power consumption */
 	struct cpuidle_state	states[CPUIDLE_STATE_MAX];
