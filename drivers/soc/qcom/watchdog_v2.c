@@ -337,6 +337,11 @@ void g_pet_watchdog(void)
 	pet_watchdog(g_wdog_dd);
 }
 
+void g_pet_watchdog(void)
+{
+	pet_watchdog(g_wdog_dd);
+}
+
 static void keep_alive_response(void *info)
 {
 	int cpu = smp_processor_id();
