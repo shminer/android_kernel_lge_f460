@@ -27,7 +27,7 @@
 #ifdef CONFIG_DIAG_OVER_USB
 #include <mach/usbdiag.h>
 #endif
-#include <mach/msm_smd.h>
+#include <soc/qcom/smd.h>
 #include <soc/qcom/socinfo.h>
 #include <mach/restart.h>
 #include "diagmem.h"
@@ -1064,7 +1064,7 @@ int diag_device_write(void *buf, int data_type, struct diag_request *write_ptr)
 			unsigned long flags;
 			int foundIndex = -1;
 			index = data_type - HSIC_DATA;
-			
+
 			spin_lock_irqsave(&diag_hsic[index].hsic_spinlock,flags);
 			for (i = 0; i < diag_hsic[index].poolsize_hsic_write; i++) {
 				if (diag_hsic[index].hsic_buf_tbl[i].length == 0) {
@@ -1373,7 +1373,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	temp += 2;
 	data_type = APPS_DATA;
 
-	//                                                                      
+	//
 #ifdef DIAG_NATIVE_CMD_SEND_TO_MODEM
 	/* Dont send any command other than mode reset */
 	if (chk_apps_master() && cmd_code == MODE_CMD) {
@@ -1381,7 +1381,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			data_type = MODEM_DATA;
 	}
 #endif
-	//            
+	//
 
 	pr_debug("diag: %d %d %d", cmd_code, subsys_id, subsys_cmd_code);
 	for (i = 0; i < diag_max_reg; i++) {
@@ -1808,7 +1808,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	}
 	 /* Check for ID for NO MODEM present */
 	else if (chk_polling_response()) {
-		//                                                              
+		//
 #ifdef DIAG_NATIVE_CMD_SEND_TO_MODEM
 		/* respond to 0x0 command */
 		if (*buf == 0x00) {
@@ -1823,7 +1823,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 #endif
 		/* respond to 0x7c command */
 		if (*buf == 0x7c) {
-		//            
+		//
 			driver->apps_rsp_buf[0] = 0x7c;
 			for (i = 1; i < 8; i++)
 				driver->apps_rsp_buf[i] = 0;
