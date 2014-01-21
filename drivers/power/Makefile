@@ -73,3 +73,4 @@ obj-$(CONFIG_LGE_PM_CHARGING_SMART_CHARGING) += smart_charging.o
 obj-$(CONFIG_LGE_PM_CHARGING_UNIFIED_WLC) += unified_wireless_charger.o
 obj-$(CONFIG_LGE_PM_CHARGING_UNIFIED_WLC_ALIGNMENT_IDT9025A) += idtp9025a_wireless_power_receiver.o
 obj-$(CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE)+= max17048_battery.o
+obj-y				+= qcom/
