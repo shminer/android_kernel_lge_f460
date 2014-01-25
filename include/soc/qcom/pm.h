@@ -21,10 +21,12 @@
 #include <linux/cpuidle.h>
 #include <asm/barrier.h>
 
-#ifdef CONFIG_SMP
+#if !defined(CONFIG_SMP)
+#define msm_secondary_startup NULL
+#elif defined(CONFIG_CPU_V7)
 extern void msm_secondary_startup(void);
 #else
-#define msm_secondary_startup NULL
+#define msm_secondary_startup secondary_entry
 #endif
 
 enum msm_pm_sleep_mode {
