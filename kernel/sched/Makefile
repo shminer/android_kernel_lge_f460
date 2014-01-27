@@ -12,7 +12,7 @@ CFLAGS_core.o := $(PROFILING) -fno-omit-frame-pointer
 endif
 
 ifdef CONFIG_SCHED_BFS
-obj-y += bfs.o clock.o
+obj-y += bfs.o clock.o idle.o
 else
 obj-y += core.o clock.o cputime.o idle_task.o fair.o rt.o stop_task.o sched_avg.o
 obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
