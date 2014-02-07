@@ -4320,8 +4320,7 @@
 		qcom,bytes-per-beat = <16>;
 	};
 
-	qcom,msm-cpufreq@0 {
-		reg = <0 4>;
+	qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
 		qcom,cpufreq-table =
 			<  300000  300000  1144 >,
