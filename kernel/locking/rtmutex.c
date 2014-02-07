@@ -246,6 +246,18 @@ int rt_mutex_getprio(struct task_struct *task)
 		   task->normal_prio);
 }
 
+/*
+ * Called by sched_setscheduler() to check whether the priority change
+ * is overruled by a possible priority boosting.
+ */
+int rt_mutex_check_prio(struct task_struct *task, int newprio)
+{
+	if (!task_has_pi_waiters(task))
+		return 0;
+
+	return task_top_pi_waiter(task)->task->prio <= newprio;
+}
+
 struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
 {
 	if (likely(!task_has_pi_waiters(task)))
