@@ -54,7 +54,7 @@
 #include <mach/board_lge.h>
 #endif
 #include <mach/msm_serial_hs_lite.h>
-#include <mach/msm_bus.h>
+#include <linux/msm-bus.h>
 #include "msm_serial_hs_hwreg.h"
 
 /*

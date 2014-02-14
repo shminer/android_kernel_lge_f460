@@ -48,7 +48,7 @@
 #include <soc/qcom/scm.h>
 
 #include <mach/rpm-regulator.h>
-#include <mach/msm_bus.h>
+#include <linux/msm-bus.h>
 
 #ifdef CONFIG_LGE_PM
 #include <mach/board_lge.h>
