@@ -709,3 +709,4 @@ int __init msm_spm_device_init(void)
 	registered = true;
 	return platform_driver_register(&msm_spm_device_driver);
 }
+arch_initcall(msm_spm_device_init);
