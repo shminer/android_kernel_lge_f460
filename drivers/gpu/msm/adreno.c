@@ -1527,7 +1527,7 @@ static int adreno_of_get_pdata(struct platform_device *pdev)
 		goto err;
 
 	/* get pm-qos-latency from target, set it to default if not found */
-	if (adreno_of_read_property(pdev->dev.of_node, "qcom,pm-qos-latency",
+	if (of_property_read_u32(pdev->dev.of_node, "qcom,pm-qos-latency",
 		&pdata->pm_qos_latency))
 		pdata->pm_qos_latency = 501;
 
@@ -1626,7 +1626,7 @@ adreno_ocmem_free(struct adreno_device *adreno_dev)
 }
 #endif
 
-static int 
+static int
 adreno_probe(struct platform_device *pdev)
 {
 	struct kgsl_device *device;
