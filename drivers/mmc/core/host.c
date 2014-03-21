@@ -889,7 +889,6 @@ int mmc_add_host(struct mmc_host *host)
 	  respective threads, thus allowing other devices to suspend
 	  concurrently.*/
 	device_enable_async_suspend(&host->class_dev);
-
 	led_trigger_register_simple(dev_name(&host->class_dev), &host->led);
 
 #ifdef CONFIG_DEBUG_FS
