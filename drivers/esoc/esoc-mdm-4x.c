@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, Motorola Mobility LLC
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,10 +14,12 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/jiffies.h>
+#include <linux/list.h>
 #include <linux/module.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/reboot.h>
 #include <linux/workqueue.h>
 #include <linux/sched.h>
 #include <soc/qcom/sysmon.h>
@@ -41,7 +44,7 @@
 #define MDM9x35_DUAL_LINK		"HSIC+PCIe"
 #define MDM9x35_HSIC			"HSIC"
 #define MDM2AP_STATUS_TIMEOUT_MS	120000L
-#define MODEM_CRASH_REPORT_TIMEOUT	5000L		//                                                                     
+#define MODEM_CRASH_REPORT_TIMEOUT	5000L		//
 #define MDM_MODEM_TIMEOUT		3000
 #define DEF_RAMDUMP_TIMEOUT		120000
 #define DEF_RAMDUMP_DELAY		2000
@@ -49,7 +52,14 @@
 #define SFR_MAX_RETRIES			10
 #define SFR_RETRY_INTERVAL		1000
 
-static int ramdump_done;		//                                                                     
+static int ramdump_done;		//
+
+static LIST_HEAD(mdm_list);
+
+struct mdm_reboot_entry {
+	struct list_head mdm_list;
+	struct mdm_ctrl *mdm;
+};
 
 enum mdm_gpio {
 	AP2MDM_WAKEUP = 0,
@@ -88,7 +98,7 @@ struct mdm_ctrl {
 	spinlock_t status_lock;
 	struct workqueue_struct *mdm_queue;
 	struct delayed_work mdm2ap_status_check_work;
-	struct delayed_work save_sfr_reason_work;	//                                                                     
+	struct delayed_work save_sfr_reason_work;	//
 	struct work_struct mdm_status_work;
 	struct work_struct restart_reason_work;
 	struct completion debug_done;
@@ -668,7 +678,7 @@ static int copy_dump(char index)
 	char path_to_dump[128];
         char path_to_copy[128];
 	char *dump_files[] = { "CODERAM.BIN", "DATARAM.BIN", "DDRCS0.BIN", "IPA_DRAM.BIN", "IPA_IRAM.BIN",
-			"IPA_REG1.BIN", "IPA_REG2.BIN", "IPA_REG3.BIN", "LPM.BIN", "MSGRAM.BIN", 
+			"IPA_REG1.BIN", "IPA_REG2.BIN", "IPA_REG3.BIN", "LPM.BIN", "MSGRAM.BIN",
 			"OCIMEM.BIN", "PMIC_PON.BIN", "RST_STAT.BIN", "load.cmm" };
         int ret, i;
 
@@ -707,7 +717,7 @@ static int copy_dump(char index)
         return 1;
 }
 
-static int ach_enabled(void) 
+static int ach_enabled(void)
 {
 	int fd, ret;
 	char *ach_switch_path = "/sys/module/lge_handle_panic/parameters/ach_enable";
@@ -718,7 +728,7 @@ static int ach_enabled(void)
 	if (fd < 0) {
 		printk("%s : can't open the ach switch file\n", __func__);
 		return 0;
-	} 
+	}
 
 	ret = sys_read(fd, &switch_buf, 1);
 
@@ -750,7 +760,7 @@ static void save_sfr_reason_work_fn(struct work_struct *work)
 	char serialno_file_path[]="/data/logger/serialno";
 	char serialno_buf[20];
 	int read_len = 0;
-       
+
 	mm_segment_t oldfs;
 	oldfs = get_fs();
 	set_fs(get_ds());
@@ -819,7 +829,7 @@ static void save_sfr_reason_work_fn(struct work_struct *work)
 			} else {
 
 				ret = sys_read(fd, &report_index, 1);
-	
+
 				if (ret < 0) {
 					printk("%s : can't read the index file\n", __func__);
 					report_index = '0';
@@ -1487,6 +1497,7 @@ static int mdm_probe(struct platform_device *pdev)
 	const struct mdm_ops *mdm_ops;
 	struct device_node *node = pdev->dev.of_node;
 	struct mdm_ctrl *mdm;
+	struct mdm_reboot_entry *entry;
 
 	match = of_match_node(mdm_dt_match, node);
 	if (IS_ERR(match))
@@ -1495,8 +1506,69 @@ static int mdm_probe(struct platform_device *pdev)
 	mdm = devm_kzalloc(&pdev->dev, sizeof(*mdm), GFP_KERNEL);
 	if (IS_ERR(mdm))
 		return PTR_ERR(mdm);
+
+	entry = devm_kzalloc(&pdev->dev, sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+
+	entry->mdm = mdm;
+	list_add_tail(&entry->mdm_list, &mdm_list);
+
 	return mdm_ops->config_hw(mdm, mdm_ops->clink_ops, pdev);
 }
+
+static int mdm_reboot(struct notifier_block *nb,
+				unsigned long event, void *unused)
+{
+	int reset;
+	struct mdm_reboot_entry *entry;
+
+	/* Ignore anything but power off */
+	if (event != SYS_POWER_OFF)
+		return 0;
+
+	list_for_each_entry(entry, &mdm_list, mdm_list) {
+		struct mdm_ctrl *mdm = entry->mdm;
+
+		if (mdm->soft_reset_inverted)
+			reset = 1;
+		else
+			reset = 0;
+
+		mdm_disable_irqs(mdm);
+		mdm->debug = 0;
+		mdm->ready = false;
+
+		dev_dbg(mdm->dev, "%s: Sending sysmon shutdown\n", __func__);
+		if (sysmon_send_shutdown(mdm->sysmon_subsys_id) == 0) {
+			unsigned long end_time;
+			unsigned int status = MDM_GPIO(mdm, MDM2AP_STATUS);
+
+			end_time = jiffies + msecs_to_jiffies(10000);
+			while (time_before(jiffies, end_time)) {
+				if (!gpio_get_value(status))
+					break;
+				msleep(100);
+			}
+			dev_dbg(mdm->dev, "%s: Got MDM2AP_STATUS low\n",
+					__func__);
+		}
+
+		dev_info(mdm->dev, "%s: Driving AP2MDM_SOFT_RESET\n",
+				__func__);
+
+		/* Lets force it off now, and let it reach low */
+		gpio_direction_output(MDM_GPIO(mdm, AP2MDM_SOFT_RESET),
+					reset);
+		msleep(100);
+	}
+
+	return 0;
+}
+
+static struct notifier_block mdm_reboot_notifier = {
+	.notifier_call = mdm_reboot,
+};
 
 static struct platform_driver mdm_driver = {
 	.probe		= mdm_probe,
@@ -1509,12 +1581,21 @@ static struct platform_driver mdm_driver = {
 
 static int __init mdm_register(void)
 {
+	int ret;
+
+	ret = register_reboot_notifier(&mdm_reboot_notifier);
+	if (ret) {
+		pr_err("%s: Error registering reboot notifier\n", __func__);
+		return ret;
+	}
+
 	return platform_driver_register(&mdm_driver);
 }
 module_init(mdm_register);
 
 static void __exit mdm_unregister(void)
 {
+	unregister_reboot_notifier(&mdm_reboot_notifier);
 	platform_driver_unregister(&mdm_driver);
 }
 module_exit(mdm_unregister);
