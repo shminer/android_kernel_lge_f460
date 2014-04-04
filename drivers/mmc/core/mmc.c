@@ -121,12 +121,12 @@ static int mmc_decode_cid(struct mmc_card *card)
 		card->cid.serial	= UNSTUFF_BITS(resp, 16, 32);
 		card->cid.month		= UNSTUFF_BITS(resp, 12, 4);
 #ifdef CONFIG_MACH_LGE
-		/*           
-                                    
-                                         
-                                                      
-                                                   
-                                  
+		/*
+
+
+
+
+
    */
 		if(card->ext_csd.rev > 4)
 			card->cid.year		= UNSTUFF_BITS(resp, 8, 4) + 2013;
@@ -601,6 +601,8 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_MAX_PACKED_WRITES];
 		card->ext_csd.max_packed_reads =
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
+		card->ext_csd.raw_driver_strength =
+			ext_csd[EXT_CSD_DRIVER_STRENGTH];
 	} else {
 		card->ext_csd.data_sector_size = 512;
 	}
@@ -627,8 +629,8 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 
 	if (err || bw_ext_csd == NULL) {
 #ifdef CONFIG_MACH_LGE
-		/*                                      
-                                                 
+		/*
+
    */
 		pr_err("%s: %s: 0x%x, 0x%x\n", mmc_hostname(card->host),
 				__func__, err, bw_ext_csd ?
@@ -674,8 +676,8 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 		(card->ext_csd.raw_sectors[3] ==
 			bw_ext_csd[EXT_CSD_SEC_CNT + 3]));
 #ifdef CONFIG_MACH_LGE
-	/*                                      
-                                                
+	/*
+
   */
 	if (err) {
 		pr_err("%s: %s: fail during compare, err = 0x%x\n",
@@ -810,8 +812,8 @@ static int mmc_select_powerclass(struct mmc_card *card,
 		break;
 	default:
 #ifdef CONFIG_MACH_LGE
-		/*                                      
-                                                 
+		/*
+
    */
 		pr_err("%s: %s: Voltage range not supported for power class, "
 				"host->ios.vdd = 0x%x\n", mmc_hostname(host),
@@ -941,7 +943,8 @@ static int mmc_select_hs(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				EXT_CSD_HS_TIMING, 1,
+				EXT_CSD_HS_TIMING,
+				EXT_CSD_HS_TIMING_HIGH_SPEED,
 				card->ext_csd.generic_cmd6_time);
 
 	if (err && err != -EBADMSG)
@@ -1035,6 +1038,72 @@ out:
 }
 
 /*
+ * eMMC v4.5 added 4 driver strengths for HS200, matching those for UHS-I in
+ * the SD v3.0 specification.  Functionally, eMMC and SD driver types map as:
+ *
+ *   SD   eMMC   Impedance   Relative Drive
+ *   A    1      33 ohms     x1.5
+ *   B    0      50 ohms     x1    (default)
+ *   C    2      66 ohms     x0.75
+ *   D    3      100 ohms    x0.5
+ *
+ * eMMC v5.0 spec adds one additional type for which there is no corresponding
+ * SD type:
+ *
+ *   Type 4 - 40 ohms, x1.2
+ */
+static int mmc_select_driver_type(struct mmc_card *card)
+{
+	int host_drv_type = MMC_DRIVER_TYPE_0;
+	int card_drv_type = MMC_DRIVER_TYPE_0;
+	int drv_type;
+
+	/*
+	 * We reuse the SD-derived capability bits here.  If the host doesn't
+	 * support any of the Driver Types 1, 2 or 3, or there is no board
+	 * specific handler then default Driver Type 0 is used.
+	 */
+	if (!(card->host->caps & (MMC_CAP_DRIVER_TYPE_A | MMC_CAP_DRIVER_TYPE_C
+	    | MMC_CAP_DRIVER_TYPE_D)) &&
+	    !(card->host->caps2 & MMC_CAP2_DRIVER_TYPE_4))
+		return 0;
+
+	if (!card->host->ops->select_drive_strength)
+		return 0;
+
+	if (card->host->caps & MMC_CAP_DRIVER_TYPE_A)
+		host_drv_type |= MMC_DRIVER_TYPE_1;
+
+	if (card->host->caps & MMC_CAP_DRIVER_TYPE_C)
+		host_drv_type |= MMC_DRIVER_TYPE_2;
+
+	if (card->host->caps & MMC_CAP_DRIVER_TYPE_D)
+		host_drv_type |= MMC_DRIVER_TYPE_3;
+
+	if (card->host->caps2 & MMC_CAP2_DRIVER_TYPE_4)
+		host_drv_type |= MMC_DRIVER_TYPE_4;
+
+	card_drv_type |= card->ext_csd.raw_driver_strength &
+			 (MMC_DRIVER_TYPE_1 | MMC_DRIVER_TYPE_2 |
+			  MMC_DRIVER_TYPE_3 | MMC_DRIVER_TYPE_4);
+
+	/*
+	 * Card drive strength depends on the board design.  Let the host
+	 * driver decide what driver strength is best, based on all of the
+	 * constraints.
+	 */
+	mmc_host_clk_hold(card->host);
+	drv_type = card->host->ops->select_drive_strength(card->host,
+		host_drv_type, card_drv_type);
+	mmc_host_clk_release(card->host);
+
+	/* We send the driver type as part of the HS_TIMING command. */
+	card->ext_csd.drv_type = drv_type;
+
+	return 0;
+}
+
+/*
  * Select the desired buswidth and switch to HS200 mode
  * if bus width set without error
  */
@@ -1085,9 +1154,14 @@ static int mmc_select_hs200(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	}
 
+	mmc_select_driver_type(card);
+
 	/* switch to HS200 mode if bus width set successfully */
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				EXT_CSD_HS_TIMING, 2, 0);
+				EXT_CSD_HS_TIMING,
+				EXT_CSD_HS_TIMING_HS200 |
+				(card->ext_csd.drv_type << 4),
+				0);
 
 	if (err && err != -EBADMSG) {
 		pr_err("%s: HS200 switch failed\n",
@@ -1190,10 +1264,10 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 
 	/* Switch to HS400 mode if bus width set successfully */
 #ifdef CONFIG_MACH_LGE
-	/*           
-                                                                
-                            
-                                         
+	/*
+
+
+
   */
 	if (card->cid.manfid == 17) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
@@ -1204,7 +1278,10 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 	}
 #else
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-			EXT_CSD_HS_TIMING, 3, 0);
+				EXT_CSD_HS_TIMING,
+				EXT_CSD_HS_TIMING_HS400 |
+				(card->ext_csd.drv_type << 4),
+				0);
 #endif
 	if (err && err != -EBADMSG) {
 		pr_err("%s: Setting HS_TIMING to HS400 failed (err:%d)\n",
@@ -1474,9 +1551,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err)
 			goto free_card;
 #ifndef CONFIG_MACH_LGE
-		/*           
-                                                                           
-                                   
+		/*
+
+
    */
 		err = mmc_decode_cid(card);
 		if (err)
@@ -1506,9 +1583,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err)
 			goto free_card;
 #ifdef CONFIG_MACH_LGE
-		/*           
-                     
-                                  
+		/*
+
+
    */
 		err = mmc_decode_cid(card);
 		if (err)
