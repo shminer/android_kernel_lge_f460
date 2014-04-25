@@ -132,6 +132,7 @@ static bool gfx_crit_phase_ctrl_enabled;
 static bool gfx_warm_phase_ctrl_enabled;
 static bool cx_phase_ctrl_enabled;
 static bool therm_reset_enabled;
+static bool online_core;
 static int *tsens_id_map;
 static DEFINE_MUTEX(vdd_rstr_mutex);
 static DEFINE_MUTEX(psm_mutex);
@@ -1236,16 +1237,27 @@ static int __ref update_offline_cores(int val)
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 
 	for_each_possible_cpu(cpu) {
-		if (!(cpus_offlined & BIT(cpu)))
-			continue;
-		if (!cpu_online(cpu))
-			continue;
-		ret = cpu_down(cpu);
-		if (ret)
-			pr_err("Unable to offline CPU%d. err:%d\n",
-				cpu, ret);
-		else
-			pr_debug("Offlined CPU%d\n", cpu);
+		if (cpus_offlined & BIT(cpu)) {
+			if (!cpu_online(cpu))
+				continue;
+			ret = cpu_down(cpu);
+			if (ret)
+				pr_err("Unable to offline CPU%d. err:%d\n",
+					cpu, ret);
+			else
+				pr_debug("Offlined CPU%d\n", cpu);
+		} else if (online_core && (previous_cpus_offlined & BIT(cpu))) {
+			if (cpu_online(cpu))
+				continue;
+			ret = cpu_up(cpu);
+			if (ret && ret == notifier_to_errno(NOTIFY_BAD))
+				pr_debug("Onlining CPU%d is vetoed\n", cpu);
+			else if (ret)
+				pr_err("Unable to online CPU%d. err:%d\n",
+						cpu, ret);
+			else
+				pr_debug("Onlined CPU%d\n", cpu);
+		}
 	}
 	return ret;
 }
@@ -3570,6 +3582,12 @@ static int msm_thermal_dev_probe(struct platform_device *pdev)
 		pr_err("thermal pre init failed. err:%d\n", ret);
 		goto fail;
 	}
+
+	key = "qcom,online-hotplug-core";
+	if (of_property_read_bool(node, key))
+		online_core = true;
+	else
+		online_core = false;
 
 	ret = probe_cc(node, &data, pdev);
 
