@@ -973,8 +973,6 @@ static void mdm_notify(enum esoc_notify notify, struct esoc_clink *esoc)
 		gpio_direction_output(MDM_GPIO(mdm, AP2MDM_SOFT_RESET),
 				!!mdm->soft_reset_inverted);
 		mdelay(300);
-		gpio_direction_output(MDM_GPIO(mdm, AP2MDM_SOFT_RESET),
-				!mdm->soft_reset_inverted);
 		break;
 /*                                                                            */
 	case ESOC_RAMDUMP_DONE :
