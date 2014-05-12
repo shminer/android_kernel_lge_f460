@@ -1324,6 +1324,7 @@ err_supplies:
 	wcd9xxx_disable_supplies(wcd9xxx, pdata);
 err_codec:
 	kfree(wcd9xxx);
+	dev_set_drvdata(&client->dev, NULL);
 fail:
 	return ret;
 }
@@ -1336,6 +1337,7 @@ static int wcd9xxx_i2c_remove(struct i2c_client *client)
 	wcd9xxx = dev_get_drvdata(&client->dev);
 	wcd9xxx_disable_supplies(wcd9xxx, pdata);
 	wcd9xxx_device_exit(wcd9xxx);
+	dev_set_drvdata(&client->dev, NULL);
 	return 0;
 }
 
@@ -1846,6 +1848,7 @@ err_supplies:
 	wcd9xxx_disable_supplies(wcd9xxx, pdata);
 err_codec:
 	kfree(wcd9xxx);
+	slim_set_clientdata(slim, NULL);
 err:
 	return ret;
 }
@@ -1864,6 +1867,7 @@ static int wcd9xxx_slim_remove(struct slim_device *pdev)
 	slim_remove_device(wcd9xxx->slim_slave);
 	wcd9xxx_disable_supplies(wcd9xxx, pdata);
 	wcd9xxx_device_exit(wcd9xxx);
+	slim_set_clientdata(pdev, NULL);
 	return 0;
 }
 
