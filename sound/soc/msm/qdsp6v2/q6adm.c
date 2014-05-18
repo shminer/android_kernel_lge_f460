@@ -34,6 +34,7 @@
 /* 2 is to account for module & param ID in payload */
 #define ADM_GET_PARAMETER_LENGTH  (4096 - APR_HDR_SIZE - 2 * sizeof(uint32_t))
 
+#define ULL_SUPPORTED_BITS_PER_SAMPLE 16
 #define ULL_SUPPORTED_SAMPLE_RATE 48000
 
 
@@ -1436,6 +1437,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 #ifdef CONFIG_HIFI_SOUND
 				bits_per_sample = 16;
 #endif
+				open.bit_width = ULL_SUPPORTED_BITS_PER_SAMPLE;
 			} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
 				if ((open.topology_id ==
 					DOLBY_ADM_COPP_TOPOLOGY_ID) ||
