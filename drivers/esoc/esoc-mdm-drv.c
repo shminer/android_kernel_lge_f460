@@ -47,15 +47,14 @@ static int esoc_msm_restart_handler(struct notifier_block *nb,
 					esoc_restart);
 	struct esoc_clink *esoc_clink = mdm_drv->esoc_clink;
 	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
-	if (action == SYS_RESTART) {
 		dev_dbg(&esoc_clink->dev, "Notifying esoc of cold reboot\n");
 		clink_ops->notify(ESOC_PRIMARY_REBOOT, esoc_clink);
-	}
         /*WA for MDM on issue after device power off which result in current leakage*/
-        else if(action == SYS_POWER_OFF){ 
-        	dev_err(&esoc_clink->dev, "Notifying esoc of poweroff\n"); 
+		if(action == SYS_POWER_OFF){
+        	dev_err(&esoc_clink->dev, "Notifying esoc of poweroff\n");
         	clink_ops->cmd_exe(ESOC_PWR_OFF, esoc_clink);
         }
+
 	return NOTIFY_OK;
 }
 static void mdm_handle_clink_evt(enum esoc_evt evt,
