@@ -389,10 +389,11 @@
 		CALL(sys_process_vm_writev)
 		CALL(sys_kcmp)
 		CALL(sys_finit_module)
-/* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION [S] */
-/* 380 */	CALL(sys_set_media_property)
-		CALL(sys_set_media_ext)
-/* FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION [E] */
+/* 380 */	CALL(sys_ni_syscall)		/* reserved sys_sched_setattr */
+		CALL(sys_ni_syscall)		/* reserved sys_sched_getattr */
+		CALL(sys_ni_syscall)		/* reserved sys_renameat2     */
+		CALL(sys_seccomp)
+
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted

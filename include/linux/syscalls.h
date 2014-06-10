@@ -847,11 +847,6 @@ asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
 
-/*FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[S] */
-asmlinkage long sys_set_media_property(int value);
-asmlinkage long sys_set_media_ext(char *mediaExtList);
-/*FEATURE_SDCARD_MEDIAEXN_SYSTEMCALL_ENCRYPTION[E] */
-
 asmlinkage long sys_seccomp(unsigned int op, unsigned int flags,
 			    const char __user *uargs);
 #endif
