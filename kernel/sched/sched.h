@@ -1147,7 +1147,7 @@ static inline void inc_nr_running(struct rq *rq)
 	write_seqcount_end(&nr_stats->ave_seqcnt);
 #endif
 
-	if (rq->nr_running >= 2) {
+	if (rq->nr_running == 2) {
 #ifdef CONFIG_SMP
 		if (!rq->rd->overload)
 			rq->rd->overload = true;
@@ -1160,7 +1160,7 @@ static inline void inc_nr_running(struct rq *rq)
 			smp_send_reschedule(rq->cpu);
 		}
 #endif
-       }
+	}
 }
 
 static inline void dec_nr_running(struct rq *rq)
