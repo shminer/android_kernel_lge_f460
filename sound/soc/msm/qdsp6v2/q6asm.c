@@ -689,7 +689,7 @@ int q6asm_audio_client_buf_free(unsigned int dir,
 
 		while (cnt >= 0) {
 			if (port->buf[cnt].data) {
-				if (!rc)
+				if (!rc || atomic_read(&ac->reset))
 					msm_audio_ion_free(
 						port->buf[cnt].client,
 						port->buf[cnt].handle);
@@ -736,10 +736,10 @@ int q6asm_audio_client_buf_free_contiguous(unsigned int dir,
 			__func__,
 			port->buf[0].data,
 			&port->buf[0].phys,
-			&port->buf[0].phys,
-			port->buf[0].client,
-			port->buf[0].handle);
-		if (!rc)
+			(void *)&port->buf[0].phys,
+			(void *)port->buf[0].client,
+			(void *)port->buf[0].handle);
+		if (!rc || atomic_read(&ac->reset))
 			msm_audio_ion_free(port->buf[0].client,
 					   port->buf[0].handle);
 		port->buf[0].client = NULL;
@@ -909,6 +909,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	init_waitqueue_head(&ac->time_wait);
 	init_waitqueue_head(&ac->mem_wait);
 	atomic_set(&ac->time_flag, 1);
+	atomic_set(&ac->reset, 0);
 	INIT_LIST_HEAD(&ac->port[0].mem_map_handle);
 	INIT_LIST_HEAD(&ac->port[1].mem_map_handle);
 	pr_debug("%s: mem_map_handle list init'ed\n", __func__);
@@ -1324,6 +1325,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	}
 
 	if (data->opcode == RESET_EVENTS) {
+		atomic_set(&ac->reset, 1);
 		if (ac->apr == NULL)
 			ac->apr = ac->apr2;
 		pr_debug("%s: Reset event is received: %d %d apr[%p]\n",
