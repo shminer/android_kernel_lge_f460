@@ -1231,6 +1231,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	__le32 __iomem **port_array;
 	struct xhci_bus_state *bus_state;
 	unsigned long flags;
+	int ret = 0;
 
 	max_ports = xhci_get_ports(hcd, &port_array);
 	bus_state = &xhci->bus_state[hcd_index(hcd)];
@@ -1265,7 +1266,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 					port_index + 1);
 			if (slot_id) {
 				spin_unlock_irqrestore(&xhci->lock, flags);
-				xhci_stop_device(xhci, slot_id, 1);
+				ret = xhci_stop_device(xhci, slot_id, 1) | ret;
 				spin_lock_irqsave(&xhci->lock, flags);
 			}
 			t2 &= ~PORT_PLS_MASK;
@@ -1316,7 +1317,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	bus_state->last_susp_resume = ktime_get();
 #endif
 	spin_unlock_irqrestore(&xhci->lock, flags);
-	return 0;
+	return ret;
 }
 
 int xhci_bus_resume(struct usb_hcd *hcd)
