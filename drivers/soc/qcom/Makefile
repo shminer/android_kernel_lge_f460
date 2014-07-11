@@ -49,3 +49,4 @@ endif
 obj-$(CONFIG_MSM_SYSMON_COMM) += sysmon.o
 
 obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o
+obj-$(CONFIG_MSM_SHARED_HEAP_ACCESS) += shared_memory.o
