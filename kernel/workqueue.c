@@ -1669,11 +1669,11 @@ __acquires(&pool->lock)
 	}
 }
 
-static struct worker *alloc_worker(void)
+static struct worker *alloc_worker(int node)
 {
 	struct worker *worker;
 
-	worker = kzalloc(sizeof(*worker), GFP_KERNEL);
+	worker = kzalloc_node(sizeof(*worker), GFP_KERNEL, node);
 	if (worker) {
 		INIT_LIST_HEAD(&worker->entry);
 		INIT_LIST_HEAD(&worker->scheduled);
@@ -1719,7 +1719,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 	if (id < 0)
 		goto fail;
 
-	worker = alloc_worker();
+	worker = alloc_worker(pool->node);
 	if (!worker)
 		goto fail;
 
@@ -4266,7 +4266,7 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 	if (flags & WQ_MEM_RECLAIM) {
 		struct worker *rescuer;
 
-		rescuer = alloc_worker();
+		rescuer = alloc_worker(NUMA_NO_NODE);
 		if (!rescuer)
 			goto err_destroy;
 
