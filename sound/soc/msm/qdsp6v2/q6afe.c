@@ -3579,7 +3579,7 @@ int afe_spk_prot_get_calib_data(struct afe_spkr_prot_get_vi_calib *calib_resp)
 	}
 	memcpy(&calib_resp->res_cfg , &this_afe.calib_data.res_cfg,
 		sizeof(this_afe.calib_data.res_cfg));
-	pr_debug("%s: state %d resistance %d\n", __func__,
+	pr_info("%s: state %d resistance %d\n", __func__,
 			 calib_resp->res_cfg.th_vi_ca_state,
 			 calib_resp->res_cfg.r0_cali_q24);
 	ret = 0;
