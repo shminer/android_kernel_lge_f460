@@ -846,13 +846,6 @@ static void mdss_mdp_perf_calc_ctl(struct mdss_mdp_ctl *ctl,
 	struct mdss_mdp_pipe *right_plist[MAX_PIPES_PER_LM];
 	int i, left_cnt = 0, right_cnt = 0;
 
-#ifdef CONFIG_MACH_LGE
-	struct mdss_overlay_private *mdp5_data = NULL;
-
-	if (ctl->mfd)
-		mdp5_data = mfd_to_mdp5_data(ctl->mfd);
-#endif
-
 	for (i = 0; i < MAX_PIPES_PER_LM; i++) {
 		if (ctl->mixer_left && ctl->mixer_left->stage_pipe[i]) {
 			left_plist[left_cnt] =
@@ -871,21 +864,11 @@ static void mdss_mdp_perf_calc_ctl(struct mdss_mdp_ctl *ctl,
 		left_plist, left_cnt, right_plist, right_cnt);
 
 	if (ctl->is_video_mode) {
-		if (perf->bw_overlap > perf->bw_prefill)
-			perf->bw_ctl = apply_fudge_factor(perf->bw_ctl,
-				&mdss_res->ib_factor_overlap);
-		else
-#ifdef CONFIG_MACH_LGE
-			if (mdp5_data && mdp5_data->bw_limit) {
-				/* change the value as you want but should not cause underrun */
-				pr_debug(" B/W limited !!!\n");
-				perf->bw_ctl = apply_fudge_factor(perf->bw_overlap,
-					&mdss_res->ib_factor_limit);
-			} else
-#endif
-				perf->bw_ctl = apply_fudge_factor(perf->bw_ctl,
-					&mdss_res->ib_factor);
-
+		perf->bw_ctl =
+			max(apply_fudge_factor(perf->bw_overlap,
+				&mdss_res->ib_factor_overlap),
+			apply_fudge_factor(perf->bw_prefill,
+				&mdss_res->ib_factor));
 	}
 	pr_debug("ctl=%d clk_rate=%u\n", ctl->num, perf->mdp_clk_rate);
 	pr_debug("bw_overlap=%llu bw_prefill=%llu prefill_bytes=%d mode:%d\n",
