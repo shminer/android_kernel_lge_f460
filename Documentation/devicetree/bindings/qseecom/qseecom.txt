@@ -5,12 +5,15 @@ Required properties:
 - reg : should contain memory region address reserved for loading secure apps.
 - qcom,disk-encrypt-pipe-pair : indicates what CE HW pipe pair is used for disk encryption
 - qcom,file-encrypt-pipe-pair : indicates what CE HW pipe pair is used for file encryption
+- qcom,support-multiple-ce-hw-instance : indicates if multicore CE support is supported.
+- qcom,hlos-num-ce-hw-instances : indicates number of CE HW instances hlos can use.
 - qcom,hlos-ce-hw-instance : indicates what CE HW is used by HLOS crypto driver
 - qcom,qsee-ce-hw-instance : indicates what CE HW is used by secure domain (TZ) crypto driver
 - qcom, msm_bus,name: Should be "qseecom-noc"
 - qcom, msm_bus,num_cases: Depends on the use cases for bus scaling
 - qcom, msm_bus,num_paths: The paths for source and destination ports
 - qcom, msm_bus,vectors: Vectors for bus topology.
+- qcom,ce-opp-freq: indicates the CE operating frequency in Hz, changes from target to target.
 
 Optional properties:
   - qcom,support-bus-scaling : indicates if driver support scaling the bus for crypto operation.
@@ -24,7 +27,9 @@ Example:
 		reg-names = "secapp-region";
                 qcom,disk-encrypt-pipe-pair = <2>;
                 qcom,file-encrypt-pipe-pair = <0>;
-		qcom,hlos-ce-hw-instance = <1>;
+		qcom,support-multiple-ce-hw-instance;
+		qcom,hlos-num-ce-hw-instances = <2>;
+		qcom,hlos-ce-hw-instance = <1 2>;
 		qcom,qsee-ce-hw-instance = <0>;
 		qcom,support-fde;
 		qcom,support-pfe;
@@ -37,4 +42,5 @@ Example:
 			<55 512 3936000000 393600000>,
 			<55 512 3936000000 393600000>,
 			<55 512 3936000000 393600000>;
+		qcom,ce-opp-freq = <100000000>;
 	};
