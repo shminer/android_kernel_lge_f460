@@ -1195,7 +1195,6 @@ int mdss_hw_init(struct mdss_data_type *mdata)
 			mdss_mdp_hscl_init(&vig[i]);
 
 	pr_debug("MDP hw init done\n");
-
 	return 0;
 }
 
