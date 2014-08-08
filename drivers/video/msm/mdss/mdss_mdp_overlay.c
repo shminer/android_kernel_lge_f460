@@ -3707,7 +3707,7 @@ ctl_stop:
 
 			if (!mdp5_data->mdata->idle_pc_enabled ||
 				(mfd->panel_info->type != MIPI_CMD_PANEL)) {
-				rc = pm_runtime_put(&mfd->pdev->dev);
+			rc = pm_runtime_put_sync(&mfd->pdev->dev);
 				if (rc)
 					pr_err("unable to suspend w/pm_runtime_put (%d)\n",
 						rc);
@@ -3717,7 +3717,7 @@ ctl_stop:
 	mutex_unlock(&mdp5_data->ov_lock);
 
 	/* Release the last reference to the runtime device */
-	rc = pm_runtime_put(&mfd->pdev->dev);
+	rc = pm_runtime_put_sync(&mfd->pdev->dev);
 	if (rc)
 		pr_err("unable to suspend w/pm_runtime_put (%d)\n", rc);
 
