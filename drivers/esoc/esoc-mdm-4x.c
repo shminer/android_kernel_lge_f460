@@ -599,7 +599,7 @@ static void mdm2ap_status_check(struct work_struct *work)
 	struct esoc_clink *esoc = mdm->esoc;
 	if (gpio_get_value(MDM_GPIO(mdm, MDM2AP_STATUS)) == 0) {
 		dev_dbg(dev, "MDM2AP_STATUS did not go high\n");
-		esoc_clink_evt_notify(ESOC_UNEXPECTED_RESET, esoc);
+		esoc_clink_evt_notify(ESOC_INVALID_STATE, esoc);
 
 #ifdef FEATURE_LGE_MODEM_DEBUG_INFO
     modem_debug.modem_ssr_level = subsys_get_restart_level(mdm->esoc->subsys_dev);
