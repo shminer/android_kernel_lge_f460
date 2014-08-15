@@ -5168,6 +5168,13 @@ static int __qce_get_device_tree_data(struct platform_device *pdev,
 		pr_warn("ce-device =0x%x", pce_dev->ce_sps.ce_device);
 	}
 
+	if (of_property_read_u32((&pdev->dev)->of_node,
+				"qcom,ce-hw-instance",
+				&pce_dev->ce_sps.ce_hw_instance)) {
+		pr_err("Fail to get CE hw instance information.\n");
+		return -EINVAL;
+	}
+
 	pce_dev->ce_sps.dest_pipe_index	= 2 * pce_dev->ce_sps.pipe_pair_index;
 	pce_dev->ce_sps.src_pipe_index	= pce_dev->ce_sps.dest_pipe_index + 1;
 
@@ -5223,7 +5230,6 @@ err_getting_bam_info:
 static int __qce_init_clk(struct qce_device *pce_dev)
 {
 	int rc = 0;
-	struct clk *ce_core_clk;
 	struct clk *ce_clk;
 	struct clk *ce_core_src_clk;
 	struct clk *ce_bus_clk;
@@ -5233,8 +5239,8 @@ static int __qce_init_clk(struct qce_device *pce_dev)
 	if (!IS_ERR(ce_core_src_clk)) {
 		pce_dev->ce_core_src_clk = ce_core_src_clk;
 
-		/* Set the core src clk @100Mhz */
-		rc = clk_set_rate(pce_dev->ce_core_src_clk, 100000000);
+		/* Set the core src clk @171.43Mhz */
+		rc = clk_set_rate(pce_dev->ce_core_src_clk, 171430000);
 		if (rc) {
 			clk_put(pce_dev->ce_core_src_clk);
 			pce_dev->ce_core_src_clk = NULL;
@@ -5245,17 +5251,6 @@ static int __qce_init_clk(struct qce_device *pce_dev)
 		pr_warn("Unable to get CE core src clk, set to NULL\n");
 		pce_dev->ce_core_src_clk = NULL;
 	}
-
-	/* Get CE core clk */
-	ce_core_clk = clk_get(pce_dev->pdev, "core_clk");
-	if (IS_ERR(ce_core_clk)) {
-		rc = PTR_ERR(ce_core_clk);
-		pr_err("Unable to get CE core clk\n");
-		if (pce_dev->ce_core_src_clk != NULL)
-			clk_put(pce_dev->ce_core_src_clk);
-		goto err_clk;
-	}
-	pce_dev->ce_core_clk = ce_core_clk;
 
 	/* Get CE Interface clk */
 	ce_clk = clk_get(pce_dev->pdev, "iface_clk");
@@ -5314,8 +5309,8 @@ int qce_enable_clk(void *handle)
 	int rc = 0;
 
 	/* Enable CE core clk */
-	if (pce_dev->ce_core_clk != NULL) {
-		rc = clk_prepare_enable(pce_dev->ce_core_clk);
+	if (pce_dev->ce_core_src_clk != NULL) {
+		rc = clk_prepare_enable(pce_dev->ce_core_src_clk);
 		if (rc) {
 			pr_err("Unable to enable/prepare CE core clk\n");
 			return rc;
@@ -5352,8 +5347,8 @@ int qce_disable_clk(void *handle)
 
 	if (pce_dev->ce_clk != NULL)
 		clk_disable_unprepare(pce_dev->ce_clk);
-	if (pce_dev->ce_core_clk != NULL)
-		clk_disable_unprepare(pce_dev->ce_core_clk);
+	if (pce_dev->ce_core_src_clk != NULL)
+		clk_disable_unprepare(pce_dev->ce_core_src_clk);
 	if (pce_dev->ce_bus_clk != NULL)
 		clk_disable_unprepare(pce_dev->ce_bus_clk);
 
@@ -5506,6 +5501,7 @@ int qce_hw_support(void *handle, struct ce_hw_support *ce_support)
 	ce_support->use_sw_aes_ccm_algo =
 				pce_dev->use_sw_aes_ccm_algo;
 	ce_support->ce_device = pce_dev->ce_sps.ce_device;
+	ce_support->ce_hw_instance = pce_dev->ce_sps.ce_hw_instance;
 	return 0;
 }
 EXPORT_SYMBOL(qce_hw_support);
