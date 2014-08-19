@@ -1205,6 +1205,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 				if (mfd->disp_thread)
 					mdss_fb_stop_disp_thread(mfd);
 				mdss_fb_set_backlight(mfd, 0);
+				mfd->unset_bl_level = bl_level_old;
 				mfd->bl_updated = 0;
 			}
 			mfd->panel_power_state = req_power_state;
