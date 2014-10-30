@@ -653,7 +653,7 @@ MHI_STATUS parse_xfer_event(mhi_device_ctxt *ctxt, mhi_event_pkt *event)
 	mhi_xfer_pkt *local_trb_loc;
 	mhi_chan_ctxt *chan_ctxt;
 	u32 nr_trb_to_parse;
-	u32 i;
+	u32 i = 0;
 
 	switch (MHI_EV_READ_CODE(EV_TRB_CODE, event)) {
 	case MHI_EVENT_CC_EOB:
@@ -747,7 +747,7 @@ MHI_STATUS parse_xfer_event(mhi_device_ctxt *ctxt, mhi_event_pkt *event)
 					(mhi_xfer_pkt *)local_chan_ctxt->rp;
 			}
 			i++;
-		} while (i <= nr_trb_to_parse);
+		} while (i < nr_trb_to_parse);
 		break;
 	} /* CC_EOT */
 	case MHI_EVENT_CC_OOB:
