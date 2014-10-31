@@ -53,6 +53,9 @@ enum {
 };
 #endif
 
+#define SDHCI_DBG_DUMP_RS_INTERVAL (10 * HZ)
+#define SDHCI_DBG_DUMP_RS_BURST 2
+
 static unsigned int debug_quirks = 0;
 static unsigned int debug_quirks2;
 
@@ -2759,8 +2762,8 @@ static int lge_asctodec(char *buff, int num)
 		tmp = 1;
 		for (j = 0; j < (num - (i + 1)); j++) {
 			tmp = tmp * 10;
-		}   
-		val += tmp * (buff[i] - 48); 
+		}
+		val += tmp * (buff[i] - 48);
 	}
 	return val;
 }
@@ -2778,9 +2781,9 @@ static void record_crc_error(int crctype, char *hostname)
 	mm_segment_t old_fs = get_fs();
 
 	if (crctype == CMD_CRC_ERROR) {
-		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_crc_error.txt", hostname);		
+		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_crc_error.txt", hostname);
 	} else if (crctype == DAT_CRC_ERROR) {
-		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_dat_error.txt", hostname);		
+		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_dat_error.txt", hostname);
 	}
 
 	set_fs(KERNEL_DS);
@@ -2808,7 +2811,7 @@ static void record_crc_error(int crctype, char *hostname)
 			count++;
 		else
 			break;
-	} while (1);  
+	} while (1);
 
 	for (i = 0; i < count; i++) {
 		tmp = num_crc%10;
@@ -3065,7 +3068,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		} else {
 			pr_msg = true;
 		}
-		if (pr_msg) {
+		if (pr_msg && __ratelimit(&host->dbg_dump_rs)) {
 			pr_err("%s: data txfr (0x%08x) error: %d after %lld ms\n",
 			       mmc_hostname(host->mmc), intmask,
 			       host->data->error, ktime_to_ms(ktime_sub(
@@ -3494,6 +3497,8 @@ struct sdhci_host *sdhci_alloc_host(struct device *dev,
 
 	spin_lock_init(&host->lock);
 	mutex_init(&host->ios_mutex);
+	ratelimit_state_init(&host->dbg_dump_rs, SDHCI_DBG_DUMP_RS_INTERVAL,
+			SDHCI_DBG_DUMP_RS_BURST);
 
 	return host;
 }
