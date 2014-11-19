@@ -44,6 +44,7 @@ enum {
 	VI_SENSE_1,
 	VI_SENSE_2,
 	VI_SENSE_MAX,
+	BUS_DOWN,
 };
 
 #define TOMTOM_MAD_SLIMBUS_TX_PORT 12
@@ -4966,6 +4967,7 @@ unsigned int tomtom_read(struct snd_soc_codec *codec,
 {
 	unsigned int val;
 	int ret;
+	struct tomtom_priv *tomtom_p = snd_soc_codec_get_drvdata(codec);
 
 	struct wcd9xxx *wcd9xxx = codec->control_data;
 
@@ -4984,8 +4986,13 @@ unsigned int tomtom_read(struct snd_soc_codec *codec,
 				reg, ret);
 	}
 
-	val = wcd9xxx_reg_read(&wcd9xxx->core_res, reg);
-	return val;
+	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
+		dev_err(codec->dev, "read 0x%02x while offline\n", reg);
+		return -ENODEV;
+	} else {
+		val = wcd9xxx_reg_read(&wcd9xxx->core_res, reg);
+		return val;
+	}
 }
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
 EXPORT_SYMBOL(tomtom_read);
@@ -4999,6 +5006,7 @@ int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 {
  int ret;
  struct wcd9xxx *wcd9xxx = codec->control_data;
+ struct tomtom_priv *tomtom_p = snd_soc_codec_get_drvdata(codec);
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
  unsigned int val;
 #endif
@@ -5023,9 +5031,18 @@ int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 		snd_hax_cache_write(reg, value);
 		val = value;
 	}
-	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, val);
+	
+	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
+		dev_err(codec->dev, "write 0x%02x while offline\n", reg);
+		return -ENODEV;
+	} else
+		return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, val);
 #else
-	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
+	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
+		dev_err(codec->dev, "write 0x%02x while offline\n", reg);
+		return -ENODEV;
+	} else
+		return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
 #endif
 }
 #ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
@@ -7456,6 +7473,7 @@ static int tomtom_device_down(struct wcd9xxx *wcd9xxx)
 	priv = snd_soc_codec_get_drvdata(codec);
 	wcd_cpe_ssr_event(priv->cpe_core, WCD_CPE_BUS_DOWN_EVENT);
 	snd_soc_card_change_online_state(codec->card, 0);
+	set_bit(BUS_DOWN, &priv->status_mask);
 
 	return 0;
 }
@@ -7999,6 +8017,7 @@ static int tomtom_post_reset_cb(struct wcd9xxx *wcd9xxx)
 	tomtom = snd_soc_codec_get_drvdata(codec);
 
 	snd_soc_card_change_online_state(codec->card, 1);
+	clear_bit(BUS_DOWN, &tomtom->status_mask);
 
 	mutex_lock(&codec->mutex);
 
