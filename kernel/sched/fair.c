@@ -2050,6 +2050,42 @@ static inline int wake_to_idle(struct task_struct *p)
 			 (p->flags & PF_WAKE_UP_IDLE);
 }
 
+/*
+ * Select a single cpu in cluster as target for packing, iff cluster frequency
+ * is less than a threshold level
+ */
+static int select_packing_target(struct task_struct *p, int best_cpu)
+{
+	struct rq *rq = cpu_rq(best_cpu);
+	struct cpumask search_cpus;
+	int i;
+	int min_cost = INT_MAX;
+	int target = best_cpu;
+
+	if (rq->cur_freq >= rq->mostly_idle_freq)
+		return best_cpu;
+
+	/* Don't pack if current freq is low because of throttling */
+	if (rq->max_freq <= rq->mostly_idle_freq)
+		return best_cpu;
+
+	cpumask_and(&search_cpus, tsk_cpus_allowed(p), cpu_online_mask);
+	cpumask_and(&search_cpus, &search_cpus, &rq->freq_domain_cpumask);
+
+	/* Pick the first lowest power cpu as target */
+	for_each_cpu(i, &search_cpus) {
+		int cost = power_cost(scale_load_to_cpu(task_load(p), i), i);
+
+		if (cost < min_cost) {
+			target = i;
+			min_cost = cost;
+		}
+	}
+
+	return target;
+}
+
+
 /* return cheapest cpu that can fit this task */
 static int select_best_cpu(struct task_struct *p, int target, int reason,
 			   int sync)
