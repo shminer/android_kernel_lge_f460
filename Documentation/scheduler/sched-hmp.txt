@@ -557,8 +557,31 @@ both tasks and CPUs to aid in the placement of tasks.
 
   /proc/sys/kernel/sched_upmigrate
 
-  This value is a percentage. If a task consumes more than this much of
-  a particular CPU, that CPU will be considered too small for the task.
+  This value is a percentage. If a task consumes more than this much of a
+  particular CPU, that CPU will be considered too small for the task. The task
+  will thus be seen as a "big" task on the cpu and will reflect in nr_big_tasks
+  statistics maintained for that cpu. Note that certain tasks (whose nice
+  value exceeds sched_upmigrate_min_nice value or those that belong to a cgroup
+  whose upmigrate_discourage flag is set) will never be classified as big tasks
+  despite their high demand.
+
+  As the load scale factor is calculated against current fmax, it gets boosted
+  when a lower capacity CPU is restricted to run at lower fmax. The task
+  demand is inflated in this scenario and the task upmigrates early to the
+  maximum capacity CPU. Hence this threshold is auto-adjusted by a factor
+  equal to max_possible_frequency/current_frequency of a lower capacity CPU.
+  This adjustment happens only when the lower capacity CPU frequency is
+  restricted. The same adjustment is applied to the downmigrate threshold
+  as well.
+
+  When the frequency restriction is relaxed, the previous values are restored.
+  sched_up_down_migrate_auto_update macro defined in kernel/sched/core.c
+  controls this auto-adjustment behavior and it is enabled by default.
+
+  If the adjusted upmigrate threshold exceeds the window size, it is clipped to
+  the window size. If the adjusted downmigrate threshold decreases the difference
+  between the upmigrate and downmigrate, it is clipped to a value such that the
+  difference between the modified and the original thresholds is same.
 
 - mostly_idle
 
@@ -1096,6 +1119,8 @@ A task whose nice value is greater than this tunable value will never
 be considered as a "big" task (it will not be allowed to run on a
 high-performance CPU).
 
+See also notes on 'cpu.upmigrate_discourage' tunable.
+
 *** 7.10 sched_enable_power_aware
 
 Appears at: /proc/sys/kernel/sched_enable_power_aware
@@ -1284,6 +1309,33 @@ account of energy awareness reasons.
 The same logic also applies to the load balancer path to avoid frequent
 migrations due to energy awareness.
 
+** 7.25 cpu.upmigrate_discourage
+
+Default value : 0
+
+This is a cgroup attribute supported by the cpu resource controller. It normally
+appears at [root_cpu]/[name1]/../[name2]/cpu.upmigrate_discourage. Here
+"root_cpu" is the mount point for cgroup (cpu resource control) filesystem
+and name1, name2 etc are names of cgroups that form a hierarchy.
+
+Setting this flag to 1 discourages upmigration for all tasks of a cgroup. High
+demand tasks of such a cgroup will never be classified as big tasks and hence
+not upmigrated. Any task of the cgroup is allowed to upmigrate only under
+overcommitted scenario. See notes on sched_spill_nr_run and sched_spill_load for
+how overcommitment threshold is defined and also notes on
+'sched_upmigrate_min_nice' tunable.
+
+** 7.26 power_aware_timer_migration
+
+Appears at: /proc/sys/kernel/power_aware_timer_migration
+
+Default value: 0
+
+This tunable helps save power by offloading timer activity to cpus of lesser
+power cost (power cluster). Both high-res and low-res timers that are not pinned
+to one cpu are now enqueued on first online CPU found in least shallow C-state in
+the power-cluster.
+
 =========================
 8. HMP SCHEDULER TRACE POINTS
 =========================
@@ -1337,7 +1389,7 @@ Logged when selecting the best CPU to run a task (select_best_cpu() for fair
 class tasks, find_lowest_rq_hmp() for RT tasks) and load balancing
 (update_sg_lb_stats()).
 
-<idle>-0     [004] d.h3 12700.711541: sched_cpu_load: cpu 0 idle 1 mostly_idle 1 nr_run 0 nr_big 0 nr_small 0 lsf 1945 capacity 1045 cr_avg 0 fcur 199200 fmax 940800 power_cost 1045 cstate 1
+<idle>-0     [004] d.h3 12700.711541: sched_cpu_load: cpu 0 idle 1 mostly_idle 1 nr_run 0 nr_big 0 nr_small 0 lsf 1945 capacity 1045 cr_avg 0 irqload 4456 fcur 199200 fmax 940800 power_cost 1045 cstate 1 temp 73
 
 - cpu: the CPU being described
 - idle: boolean indicating whether the CPU is idle
@@ -1350,10 +1402,12 @@ class tasks, find_lowest_rq_hmp() for RT tasks) and load balancing
 - capacity: capacity of CPU (based on max possible frequency and efficiency)
 - cr_avg: cumulative runnable average, instantaneous sum of the demand (either
   PELT or window-based) of all the runnable task on a CPU (ns)
+- irqload: decaying average of irq activity on CPU (ns)
 - fcur: current CPU frequency (Khz)
 - fmax: max CPU frequency (but not maximum _possible_ frequency) (KHz)
 - power_cost: cost of running this CPU at the current frequency
 - cstate: current cstate of CPU
+- temp: current temperature of the CPU
 
 The power_cost value above differs in how it is calculated depending on the
 callsite of this tracepoint. The select_best_cpu() call to this tracepoint
