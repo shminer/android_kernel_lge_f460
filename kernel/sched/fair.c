@@ -2109,6 +2109,11 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		prefer_idle_override = 1;
 	}
 
+	if (reason) {
+		prefer_idle = 1;
+		prefer_idle_override = 1;
+	}
+
 	if (wake_to_idle(p)) {
 		prefer_idle = 1;
 		prefer_idle_override = 1;
