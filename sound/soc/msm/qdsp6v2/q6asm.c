@@ -1015,6 +1015,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 		mutex_unlock(&session_lock);
 		goto fail_mmap;
 	}
+
 	pr_debug("%s: session[%d]\n", __func__, ac->session);
 
 	mutex_unlock(&session_lock);
@@ -1304,7 +1305,7 @@ static int32_t q6asm_srvc_callback(struct apr_client_data *data, void *priv)
 				if (payload[0] ==
 				    ASM_CMD_SHARED_MEM_UNMAP_REGIONS)
 					atomic_set(&ac->unmap_cb_success, 0);
-					atomic_set(&ac->cmd_state, -payload[1]);
+				atomic_set(&ac->cmd_state, -payload[1]);
 				wake_up(&ac->cmd_wait);
 			} else {
 				if (payload[0] ==
@@ -1412,6 +1413,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	}
 
 	if (data->opcode == RESET_EVENTS) {
+		mutex_lock(&ac->cmd_lock);
 		atomic_set(&ac->reset, 1);
 		if (ac->apr == NULL)
 			ac->apr = ac->apr2;
@@ -1427,6 +1429,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		atomic_set(&ac->cmd_state, 0);
 		wake_up(&ac->time_wait);
 		wake_up(&ac->cmd_wait);
+		mutex_unlock(&ac->cmd_lock);
 		return 0;
 	}
 
@@ -1817,12 +1820,13 @@ static void __q6asm_add_hdr(struct audio_client *ac, struct apr_hdr *hdr,
 {
 	dev_vdbg(ac->dev, "%s: pkt_size=%d cmd_flg=%d session=%d stream_id=%d\n",
 			__func__, pkt_size, cmd_flg, ac->session, stream_id);
+	mutex_lock(&ac->cmd_lock);
 	if (ac->apr == NULL) {
 		pr_err("%s: AC APR handle NULL", __func__);
+		mutex_unlock(&ac->cmd_lock);
 		return;
 	}
 
-	mutex_lock(&ac->cmd_lock);
 	hdr->hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD, \
 			APR_HDR_LEN(sizeof(struct apr_hdr)),\
 			APR_PKT_VER);
@@ -2024,6 +2028,7 @@ static int __q6asm_open_read(struct audio_client *ac,
 				__func__, atomic_read(&ac->cmd_state));
 		goto fail_cmd;
 	}
+
 	ac->io_mode |= TUN_READ_IO_MODE;
 	return 0;
 fail_cmd:
@@ -4133,7 +4138,7 @@ static int q6asm_memory_unmap_regions(struct audio_client *ac, int dir)
 	rc = apr_send_pkt(ac->mmap_apr, (uint32_t *) &mem_unmap);
 	if (rc < 0) {
 		pr_err("mmap_regions op[0x%x]rc[%d]\n",
-					mem_unmap.hdr.opcode, rc);
+				mem_unmap.hdr.opcode, rc);
 		goto fail_cmd;
 	}
 
@@ -6297,7 +6302,7 @@ static int __q6asm_cmd(struct audio_client *ac, int cmd, uint32_t stream_id)
 					hdr.opcode);
 		goto fail_cmd;
 	}
-	
+
 	if (cmd == CMD_FLUSH)
 		q6asm_reset_buf_state(ac);
 	if (cmd == CMD_CLOSE) {
