@@ -15,11 +15,13 @@
 #include "cpufreq_governor.h"
 
 /* Conservative governor macros */
-#define DEF_FREQUENCY_UP_THRESHOLD		(63)
-#define DEF_FREQUENCY_DOWN_THRESHOLD		(26)
+#define DEF_FREQUENCY_UP_THRESHOLD		(95)
+#define DEF_FREQUENCY_DOWN_THRESHOLD		(30)
+#define DEF_FREQUENCY_TWOSTEP_THRESHOLD	(70)
 #define DEF_FREQUENCY_STEP			(5)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE	(10000)
 
 static DEFINE_PER_CPU(struct cs_cpu_dbs_info_s, cs_cpu_dbs_info);
 
@@ -58,21 +60,20 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	if (cs_tuners->freq_step == 0)
 		return;
 
-<<<<<<< HEAD
-=======
-	now = ktime_to_us(ktime_get());
-	boosted = now < (last_input_time + get_input_boost_duration());
-
->>>>>>> 879f62a... input: touchboost: squish get_input_time()
 	/* Check for frequency increase */
-	if (load > cs_tuners->up_threshold) {
+	if (load > DEF_FREQUENCY_TWOSTEP_THRESHOLD) {
 		dbs_info->down_skip = 0;
 
 		/* if we are already at full speed then break out early */
 		if (dbs_info->requested_freq == policy->max)
 			return;
 
-		dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
+		if (load < cs_tuners->up_threshold && cs_tuners->twostep_counter++ < 2)
+			dbs_info->requested_freq = policy->max / 2;
+		else {
+			dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
+			cs_tuners->twostep_counter = 0;
+		}
 
 		if (dbs_info->requested_freq > policy->max)
 			dbs_info->requested_freq = policy->max;
@@ -95,6 +96,9 @@ static void cs_check_cpu(int cpu, unsigned int load)
 		 */
 		if (policy->cur == policy->min)
 			return;
+
+		/* we're scaling down, so reset the counter */
+		cs_tuners->twostep_counter = 0;
 
 		freq_target = get_freq_target(cs_tuners, policy);
 		if (dbs_info->requested_freq > freq_target)
@@ -338,10 +342,10 @@ static int cs_init(struct dbs_data *dbs_data)
 	tuners->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	tuners->ignore_nice_load = 0;
 	tuners->freq_step = DEF_FREQUENCY_STEP;
+	tuners->twostep_counter = 0;
 
 	dbs_data->tuners = tuners;
-	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE_RATIO *
-		jiffies_to_usecs(10);
+	dbs_data->min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
 	mutex_init(&dbs_data->mutex);
 	return 0;
 }
