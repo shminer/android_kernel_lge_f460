@@ -992,7 +992,7 @@
 			<  576000000 4 /* SVS_SOC */	 >,
 			< 1036800000 5 /* NORMAL */	 >,
 			< 1728000000 7 /* SUPER_TURBO */ >,
-			< 1958400000 8 /* Ultimate_TURBO */ >;
+			< 1958400000 7 /* Ultimate_TURBO */ >;
 
 		qcom,svs-fmax = <883200000>;
 
