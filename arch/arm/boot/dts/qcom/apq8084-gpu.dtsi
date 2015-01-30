@@ -1,4 +1,5 @@
-/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ 
+ /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,7 +24,7 @@
 
 		qcom,chipid = <0x04020000>;
 
-		qcom,initial-pwrlevel = <4>;
+		qcom,initial-pwrlevel = <5>;
 
 		qcom,idle-timeout = <8>; //<HZ/12>
 		qcom,strtstp-sleepwake;
@@ -60,7 +61,7 @@
 				<26 512 0 12748800>, <89 662 0 8000000>,     // gpu=500 bus=796.8
 
 				<26 512 0 10598400>, <89 662 0 9600000>,     // gpu=600 bus=662.4
-				<26 512 0 12748800>, <89 662 0 9600000>;     // gpu=650 bus=796.8
+				<26 512 0 12748800>, <89 662 0 9600000>;    // gpu=683 bus=796.8
 
 		/* GDSC oxili regulators */
 		vddcx-supply = <&gdsc_oxili_cx>;
@@ -86,48 +87,55 @@
 			
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
-				qcom,gpu-freq = <650000000>;
+				qcom,gpu-freq = <750000000>;
 				qcom,bus-freq = <16>;
 				qcom,io-fraction = <33>;
 			};
 
 			qcom,gpu-pwrlevel@1 {
 				reg = <1>;
-				qcom,gpu-freq = <600000000>;
+				qcom,gpu-freq = <683000000>;
 				qcom,bus-freq = <16>;
 				qcom,io-fraction = <33>;
 			};
 
 			qcom,gpu-pwrlevel@2 {
 				reg = <2>;
+				qcom,gpu-freq = <600000000>;
+				qcom,bus-freq = <16>;
+				qcom,io-fraction = <33>;
+			};
+
+			qcom,gpu-pwrlevel@3 {
+				reg = <3>;
 				qcom,gpu-freq = <500000000>;
 				qcom,bus-freq = <13>;
 				qcom,io-fraction = <66>;
 			};
 
-			qcom,gpu-pwrlevel@3 {
-				reg = <3>;
+			qcom,gpu-pwrlevel@4 {
+				reg = <4>;
 				qcom,gpu-freq = <389000000>;
 				qcom,bus-freq = <10>;
 				qcom,io-fraction = <66>;
 			};
 
-			qcom,gpu-pwrlevel@4 {
-				reg = <4>;
+			qcom,gpu-pwrlevel@5 {
+				reg = <5>;
 				qcom,gpu-freq = <300000000>;
 				qcom,bus-freq = <7>;
 				qcom,io-fraction = <100>;
 			};
 
-			qcom,gpu-pwrlevel@5 {
-				reg = <5>;
+			qcom,gpu-pwrlevel@6 {
+				reg = <6>;
 				qcom,gpu-freq = <240000000>;
 				qcom,bus-freq = <3>;
 				qcom,io-fraction = <100>;
 			};
 
-			qcom,gpu-pwrlevel@6 {
-				reg = <6>;
+			qcom,gpu-pwrlevel@7 {
+				reg = <7>;
 				qcom,gpu-freq = <27000000>;
 				qcom,bus-freq = <0>;
 				qcom,io-fraction = <0>;
@@ -136,4 +144,3 @@
 
 	};
 };
-

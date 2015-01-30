@@ -991,8 +991,7 @@
 			<          0 0			 >,
 			<  576000000 4 /* SVS_SOC */	 >,
 			< 1036800000 5 /* NORMAL */	 >,
-			< 1728000000 7 /* SUPER_TURBO */ >,
-			< 1958400000 7 /* Ultimate_TURBO */ >;
+			< 1958400000 7 /* SUPER_TURBO */ >;
 
 		qcom,svs-fmax = <883200000>;
 
@@ -4287,7 +4286,6 @@
 			< 2726400 1958400 20339 >, /* overclock */
 			< 2803200 1958400 20339 >, /* overclock */
 			< 2880000 1958400 20339 >; /* overclock */
-			
 	};
 
 	usb_otg: usb@f9a55000 {
@@ -4849,15 +4847,15 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
 		qcom,poll-ms = <250>;
-		qcom,limit-temp = <80>;
+		qcom,limit-temp = <68>;
 		qcom,temp-hysteresis = <10>;
 		qcom,therm-reset-temp = <115>;
 		qcom,freq-step = <2>;
 		qcom,freq-control-mask = <0xf>;
-		qcom,core-limit-temp = <105>;
-		qcom,core-temp-hysteresis = <25>;
+		qcom,core-limit-temp = <83>;
+		qcom,core-temp-hysteresis = <12>;
 		qcom,core-control-mask = <0xe>;
-		qcom,hotplug-temp = <125>;
+		qcom,hotplug-temp = <115>;
 		qcom,hotplug-temp-hysteresis = <20>;
 		qcom,cpu-sensors = "tsens_tz_sensor5", "tsens_tz_sensor6",
 				"tsens_tz_sensor7", "tsens_tz_sensor8";
