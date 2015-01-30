@@ -21,11 +21,11 @@
 
 &soc {
 	qcom,msm-thermal {
-		qcom,limit-temp = <95>;
+		qcom,limit-temp = <82>;
 		qcom,temp-hysteresis = <5>;
-		qcom,core-limit-temp = <115>;
+		qcom,core-limit-temp = <92>;
 		qcom,core-temp-hysteresis = <5>;
-		qcom,cx-phase-hot-crit-temp = <95>;
+		qcom,cx-phase-hot-crit-temp = <87>;
 		qcom,cx-phase-hot-crit-temp-hyst = <10>;
 		qcom,therm-reset-temp = <120>;
 
