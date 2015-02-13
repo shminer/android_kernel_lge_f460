@@ -198,7 +198,6 @@ static __always_inline void *kmalloc_node(size_t size, gfp_t flags, int node)
 }
 #endif
 
-
 /**
  * virt_to_obj - returns address of the beginning of object.
  * @s: object's kmem_cache
