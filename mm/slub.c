@@ -664,7 +664,7 @@ static void print_trailer(struct kmem_cache *s, struct page *page, u8 *p)
 	panic("lge slub debug panic\n");
 }
 
-static void object_err(struct kmem_cache *s, struct page *page,
+void object_err(struct kmem_cache *s, struct page *page,
 			u8 *object, char *reason)
 {
 	slab_bug(s, "%s", reason);
