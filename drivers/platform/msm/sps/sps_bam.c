@@ -807,6 +807,7 @@ int sps_bam_pipe_connect(struct sps_pipe *bam_pipe,
 	void *desc_buf = NULL;
 	u32 pipe_index;
 	int result;
+	unsigned long flags = 0;
 
 	/* Clear the client pipe state and hw init struct */
 	pipe_clear(bam_pipe);
@@ -1042,6 +1043,8 @@ int sps_bam_pipe_disconnect(struct sps_bam *dev, u32 pipe_index)
 	pipe = dev->pipes[pipe_index];
 	if (BAM_PIPE_IS_ASSIGNED(pipe)) {
 		if ((dev->pipe_active_mask & (1UL << pipe_index))) {
+			unsigned long flags = 0;
+			spin_lock_irqsave(&dev->isr_lock, flags);
 			list_del(&pipe->list);
 			dev->pipe_active_mask &= ~(1UL << pipe_index);
 			spin_unlock_irqrestore(&dev->isr_lock, flags);
@@ -1114,9 +1117,13 @@ static void pipe_set_irq(struct sps_bam *dev, u32 pipe_index,
 			SPS_DBG2("sps:BAM %pa pipe %d forced to use polling\n",
 				 BAM_ID(dev), pipe_index);
 	}
-	if ((pipe->state & BAM_STATE_MTI) == 0)
+	if ((pipe->state & BAM_STATE_MTI) == 0) {
+		bam_pipe_get_and_clear_irq_status(dev->base,
+						   pipe_index);
+
 		bam_pipe_set_irq(dev->base, pipe_index, irq_enable,
 					 pipe->irq_mask, dev->props.ee);
+	}
 	else
 		bam_pipe_set_mti(dev->base, pipe_index, irq_enable,
 					 pipe->irq_mask, pipe->irq_gen_addr);
@@ -2121,6 +2128,7 @@ int sps_bam_get_free_count(struct sps_bam *dev, u32 pipe_index,
 int sps_bam_set_satellite(struct sps_bam *dev, u32 pipe_index)
 {
 	struct sps_pipe *pipe = dev->pipes[pipe_index];
+	unsigned long flags = 0;
 
 	/*
 	 * Switch to satellite control is only supported on processor
@@ -2162,7 +2170,9 @@ int sps_bam_set_satellite(struct sps_bam *dev, u32 pipe_index)
 	}
 
 	/* Indicate satellite control */
+	spin_lock_irqsave(&dev->isr_lock, flags);
 	list_del(&pipe->list);
+	spin_unlock_irqrestore(&dev->isr_lock, flags);
 	dev->pipe_active_mask &= ~(1UL << pipe_index);
 	dev->pipe_remote_mask |= pipe->pipe_index_mask;
 	pipe->state |= BAM_STATE_REMOTE;
