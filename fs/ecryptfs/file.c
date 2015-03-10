@@ -217,7 +217,7 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 		/* Policy code enabled in future release */
 		crypt_stat->flags |= (ECRYPTFS_POLICY_APPLIED
 				      | ECRYPTFS_ENCRYPTED);
-#if 1 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
+#if 0 /* FEATURE_SDCARD_ENCRYPTION DEBUG */
 		if (mount_crypt_stat && (mount_crypt_stat->flags
 					& ECRYPTFS_DECRYPTION_ONLY)) {
 			ecryptfs_printk(KERN_ERR, "%s:%d:: Error decryption_only set\n", __FUNCTION__, __LINE__);
