@@ -146,8 +146,8 @@ static struct dbg_data dbg_hsic = {
 	.ctrl_lck = __RW_LOCK_UNLOCKED(clck),
 	.data_idx = 0,
 	.data_lck = __RW_LOCK_UNLOCKED(dlck),
-	.log_payload = 1,
-	.log_events = 1,
+	.log_payload = 0,
+	.log_events = 0,
 	.inep_log_mask = 1,
 	.outep_log_mask = 1
 };
