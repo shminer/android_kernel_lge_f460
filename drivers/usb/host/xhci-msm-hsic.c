@@ -153,8 +153,8 @@ static struct dbg_data dbg_hsic = {
 	.data_lck = __RW_LOCK_UNLOCKED(dlck),
 	.log_payload = 0,
 	.log_events = 0,
-	.inep_log_mask = 1,
-	.outep_log_mask = 1
+	.inep_log_mask = 0,
+	.outep_log_mask = 0
 };
 
 static inline void dbg_inc(unsigned *idx)
