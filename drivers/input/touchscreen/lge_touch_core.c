@@ -109,16 +109,16 @@ extern bool i2c_suspended;
 #endif
 extern int boot_mode;
 
-/*                 
-                                                                              
+/*
+
  */
 u32 touch_debug_mask = DEBUG_BASE_INFO | DEBUG_LPWG_COORDINATES;
 module_param_named(debug_mask, touch_debug_mask, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
 #ifdef LGE_TOUCH_TIME_DEBUG
-/*                 
-                             
-                                                        
+/*
+
+
  */
 u32 touch_time_debug_mask = DEBUG_TIME_PROFILE_NONE;
 module_param_named(time_debug_mask,
@@ -857,7 +857,7 @@ static int report_event(const struct lge_touch_data *ts)
 				ts->ts_curr_data.abs_data[i].width_minor,
 				ts->ts_curr_data.abs_data[i].orientation,
 				ts->ts_curr_data.abs_data[i].pressure);
-
+#if 0
 		if ((ts->ts_curr_data.report_id_mask &
 					(1 << ts->ts_curr_data.abs_data[i].id))
 				&& !(ts->ts_prev_data.report_id_mask &
@@ -879,6 +879,7 @@ static int report_event(const struct lge_touch_data *ts)
 						ts->ts_curr_data.abs_data[i].pressure);
 			}
 		}
+#endif
 
 		if (ts->pdata->role->protocol_type == MT_PROTOCOL_A)
 			input_mt_sync(ts->input_dev);
@@ -904,7 +905,7 @@ static int report_event(const struct lge_touch_data *ts)
 				TOUCH_DEBUG(DEBUG_ABS, "<%d:%d> released\n",
 						ts->ts_prev_data.abs_data[i].id,
 						new_id);
-
+#if 0
 				if (lockscreen_stat) {
 					TOUCH_INFO_MSG("touch_release[ ]: <%d> "
 							"x[xxxx] y[xxxx]\n",
@@ -916,6 +917,7 @@ static int report_event(const struct lge_touch_data *ts)
 							ts->ts_prev_data.abs_data[i].x,
 							ts->ts_prev_data.abs_data[i].y);
 				}
+#endif
 			}
 		}
 	}

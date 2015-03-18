@@ -340,7 +340,7 @@ static struct platform_driver sm100_driver = {
  */
 IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpDisable(VibeUInt8 nActuatorIndex)
 {
-	printk("%s : g_bAmpEnabled:%d\n", __func__, g_bAmpEnabled);
+	//printk("%s : g_bAmpEnabled:%d\n", __func__, g_bAmpEnabled);
 	if (g_bAmpEnabled)
 	{
 		if(sm100_flag) {
@@ -371,7 +371,7 @@ IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpDisable(VibeUInt8 nActuatorIndex
  */
 IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex, VibeInt8 nForce)
 {
-	printk("%s : g_bAmpEnabled:%d\n", __func__, g_bAmpEnabled);
+	//printk("%s : g_bAmpEnabled:%d\n", __func__, g_bAmpEnabled);
 	if (!g_bAmpEnabled)
 	{
 		if(sm100_flag) {
