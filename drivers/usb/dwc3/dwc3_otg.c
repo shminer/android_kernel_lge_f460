@@ -545,10 +545,10 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		power_supply_type = POWER_SUPPLY_TYPE_USB_FLOATED;
 	else
 #ifdef CONFIG_LGE_PM
-		/*                   
-                                               
-                                         
-                                               
+		/*
+
+
+
    */
 		power_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
 #else
@@ -817,7 +817,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					break;
 				case DWC3_SDP_CHARGER:
 					dwc3_otg_set_power(phy,
-								IUNIT);
+								DWC3_MOD_SDP_CHG);
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
