@@ -82,7 +82,7 @@ module_param(override_phy_init, int, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 
 /* Enable Proprietary charger detection */
-static bool prop_chg_detect = true;
+static bool prop_chg_detect = false;
 module_param(prop_chg_detect, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(prop_chg_detect, "Enable Proprietary charger detection");
 
@@ -2704,9 +2704,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 			!mdwc->charger.charging_disabled) {
 		mdwc->usb_psy.name = "usb";
 #ifdef CONFIG_LGE_PM
-		/*                   
-                                                
-                                          
+		/*
+
+
    */
 		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_UNKNOWN;
 #else
@@ -2879,7 +2879,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 #else
 			queue_work(system_nrt_wq,
 				&mdwc->id_work);
-#endif		
+#endif
 		local_irq_restore(flags);
 		enable_irq_wake(mdwc->pmic_id_irq);
 	}
