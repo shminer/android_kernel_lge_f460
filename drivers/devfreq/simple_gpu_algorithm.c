@@ -38,7 +38,7 @@ int simple_gpu_algorithm(int level,
 		if (level == 0)
 			val = 0; /* already maxed, so do nothing */
 		else if ((level > 0) &&
-			(level <= (priv->bus.num + 1)))
+			(level <= (priv->bus.num + 2)))
 			val = -1; /* bump up to next pwrlevel */
 	/* idle case */
 	} else {
@@ -52,7 +52,7 @@ int simple_gpu_algorithm(int level,
 				val = 1; /* above min, lower it */
 				/* reset laziness count */
 				laziness = default_laziness;
-		} else if (level == (priv->bus.num + 1))
+		} else if (level == (priv->bus.num + 2))
 			val = 0; /* already @ min, so do nothing */
 	}
 	return val;
