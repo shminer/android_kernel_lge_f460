@@ -71,7 +71,7 @@
 		interrupt-names = "qup_err_intr";
 		interrupts = <0 99 0>;
 		qcom,i2c-bus-freq = <400000>;
-		qcom,i2c-src-freq = <50000000>;
+		qcom,i2c-src-freq = <19200000>;
 		qcom,sda-gpio = <&msmgpio 41 0>;
 		qcom,scl-gpio = <&msmgpio 42 0>;
 		qcom,active-only;
