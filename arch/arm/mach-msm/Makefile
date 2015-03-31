@@ -138,3 +138,5 @@ obj-$(CONFIG_PERFMAP) += perfmap.o
 
 
 obj-$(CONFIG_MACH_LGE) += lge/
+
+obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
