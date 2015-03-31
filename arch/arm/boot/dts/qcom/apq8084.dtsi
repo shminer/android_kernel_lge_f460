@@ -27,6 +27,35 @@
 		spi0 = &spi_0;
 	};
 
+	cpus {
+		#size-cells = <0>;
+		#address-cells = <1>;
+
+		CPU0: cpu@0 {
+			device_type = "cpu";
+			compatible = "qcom,krait";
+			reg = <0x0>;
+		};
+
+		CPU1: cpu@1 {
+			device_type = "cpu";
+			compatible = "qcom,krait";
+			reg = <0x1>;
+		};
+
+		CPU2: cpu@2 {
+			device_type = "cpu";
+			compatible = "qcom,krait";
+			reg = <0x2>;
+		};
+
+		CPU3: cpu@3 {
+			device_type = "cpu";
+			compatible = "qcom,krait";
+			reg = <0x3>;
+		};
+	};
+
 	soc: soc { };
 
 	memory {
@@ -196,7 +225,7 @@
 
 		qcom,tx-gpio = <&msmgpio 130 0>;
 		qcom,rx-gpio = <&msmgpio 131 0>;
-		qcom,inject-rx-on-wakeup = <1>;
+		qcom,inject-rx-on-wakeup;
 		qcom,rx-char-to-inject = <0x18>;
 
 		qcom,wakeup_irq = <2>;
@@ -424,7 +453,8 @@
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <8>;
-		qcom,cpu-dma-latency-us = <200>;
+		qcom,cpu-dma-latency-us = <701>;
+		qcom,wakeup-on-idle;
 
 		qcom,msm-bus,name = "sdhc1";
 		qcom,msm-bus,num-cases = <9>;
@@ -455,6 +485,7 @@
 
 		qcom,bus-width = <4>;
 		qcom,cpu-dma-latency-us = <200>;
+		qcom,wakeup-on-idle;
 
 		qcom,msm-bus,name = "sdcc2";
 		qcom,msm-bus,num-cases = <8>;
@@ -482,6 +513,7 @@
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <4>;
+		qcom,cpu-dma-latency-us = <701>;
 
 		qcom,msm-bus,name = "sdhc2";
 		qcom,msm-bus,num-cases = <8>;
@@ -671,6 +703,7 @@
 		qcom,msm-bus,vectors-KBps =
 				<56 512 0 0>,
 				<56 512 3936000 393600>;
+		qcom,ce-opp-freq = <171430000>;
 	};
 
         qcom,qcrypto@fd440000 {
@@ -692,6 +725,7 @@
 		qcom,msm-bus,vectors-KBps =
 				<56 512 0 0>,
 				<56 512 3936000 393600>;
+		qcom,ce-opp-freq = <171430000>;
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
@@ -901,7 +935,7 @@
 		qcom,noise-rjct-scl = <1>;
 		qcom,noise-rjct-sda = <1>;
 		qcom,i2c-bus-freq = <400000>;
-		qcom,i2c-src-freq = <50000000>;
+		qcom,i2c-src-freq = <19200000>;
 		qcom,sda-gpio = <&msmgpio 10 0>;
 		qcom,scl-gpio = <&msmgpio 11 0>;
 		qcom,master-id = <86>;
@@ -957,7 +991,7 @@
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
 		qcom,i2c-bus-freq = <100000>;
-		qcom,i2c-src-freq = <50000000>;
+		qcom,i2c-src-freq = <19200000>;
 		qcom,sda-gpio = <&msmgpio 61 0>;
 		qcom,scl-gpio = <&msmgpio 62 0>;
 		qcom,master-id = <84>;
@@ -4251,8 +4285,8 @@
 			<  8056 /*  528 MHz */ >,
 			< 10101 /*  662 MHz */ >,
 			< 12145 /*  796 MHz */ >,
-			< 16250 /* 1065 MHz */ >,
-			< 20339 /* 1333 MHz */ >; /* overclock */
+			< 16250 /* 1065 MHz */ >;
+
 	};
 
 	qcom,kraitbw-l2pm {
@@ -4280,12 +4314,12 @@
 			< 1958400 1728000 16250 >,
 			< 2265600 1728000 16250 >,
 			< 2457600 1728000 16250 >,
-			< 2496000 1728000 20339 >,
-			< 2572800 1728000 20339 >,
-			< 2649600 1728000 20339 >,
-			< 2726400 1958400 20339 >, /* overclock */
-			< 2803200 1958400 20339 >, /* overclock */
-			< 2880000 1958400 20339 >; /* overclock */
+			< 2496000 1728000 16250 >,
+			< 2572800 1728000 16250 >,
+			< 2649600 1728000 16250 >,
+			< 2726400 1958400 16250 >, /* overclock */
+			< 2803200 1958400 16250>, /* overclock */
+			< 2880000 1958400 16250 >; /* overclock */
 	};
 
 	usb_otg: usb@f9a55000 {
@@ -4847,27 +4881,29 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
 		qcom,poll-ms = <250>;
-		qcom,limit-temp = <68>;
+		qcom,limit-temp = <75>;
 		qcom,temp-hysteresis = <10>;
 		qcom,therm-reset-temp = <115>;
 		qcom,freq-step = <2>;
 		qcom,freq-control-mask = <0xf>;
-		qcom,core-limit-temp = <83>;
-		qcom,core-temp-hysteresis = <12>;
+		qcom,core-limit-temp = <80>;
+		qcom,core-temp-hysteresis = <5>;
 		qcom,core-control-mask = <0xe>;
-		qcom,hotplug-temp = <115>;
+		qcom,hotplug-temp = <110>;
 		qcom,hotplug-temp-hysteresis = <20>;
 		qcom,cpu-sensors = "tsens_tz_sensor5", "tsens_tz_sensor6",
 				"tsens_tz_sensor7", "tsens_tz_sensor8";
 		qcom,freq-mitigation-temp = <110>;
 		qcom,freq-mitigation-temp-hysteresis = <20>;
-		qcom,freq-mitigation-value = <960000>;
+		qcom,freq-mitigation-value = <1497600>;
 		qcom,freq-mitigation-control-mask = <0x01>;
 		qcom,rpm-phase-resource-type = "misc";
 		qcom,rpm-phase-resource-id = <0>;
 		qcom,cx-phase-resource-key = "tmpc";
 		qcom,cx-phase-hot-crit-temp = <85>;
 		qcom,cx-phase-hot-crit-temp-hyst = <15>;
+		qcom,gfx-phase-warm-temp = <60>;
+		qcom,gfx-phase-warm-temp-hyst = <10>;
 		qcom,gfx-phase-hot-crit-temp = <85>;
 		qcom,gfx-phase-hot-crit-temp-hyst = <15>;
 		qcom,gfx-sensor-id = <4>;
