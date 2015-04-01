@@ -26,16 +26,16 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			268
+#define DEF_SAMPLING_MS			30
 #define RESUME_SAMPLING_MS		HZ / 10
-#define START_DELAY_MS			HZ * 20
+#define START_DELAY_MS			HZ * 5
 #define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			2500 * 1000L
-#define DEFAULT_NR_CPUS_BOOSTED		1
+#define BOOST_LOCK_DUR			500 * 1000L
+#define DEFAULT_NR_CPUS_BOOSTED		2
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
-#define DEFAULT_DOWN_LOCK_DUR		2500
+#define DEFAULT_DOWN_LOCK_DUR		2000
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 
@@ -245,7 +245,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
 				continue;
-			if (check_down_lock(cpu) || check_cpuboost(cpu))
+			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 / (num_online_cpus());
@@ -336,7 +336,7 @@ static void __ref intelli_plug_resume(struct work_struct *work)
 		}
 	}
 
-	if (wakeup_boost || required_wakeup) {
+	if (required_wakeup) {
 		/* Fire up all CPUs */
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
@@ -355,8 +355,8 @@ static void __ref intelli_plug_resume(struct work_struct *work)
 static void __intelli_plug_suspend(void)
 {
 	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
-	queue_delayed_work_on(0, susp_wq, &suspend_work, 
-				 msecs_to_jiffies(suspend_defer_time * 1000)); 
+	queue_delayed_work_on(0, susp_wq, &suspend_work,
+				 msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
 static void __intelli_plug_resume(void)
@@ -630,7 +630,7 @@ store_one(nr_run_hysteresis, nr_run_hysteresis);
 store_one(down_lock_duration, down_lock_dur);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
-					struct kobj_attribute *attr, 
+					struct kobj_attribute *attr,
 					char *buf)
 {
 	return sprintf(buf, "%d\n",
@@ -662,7 +662,7 @@ static ssize_t store_intelli_plug_active(struct kobject *kobj,
 }
 
 static ssize_t show_boost_lock_duration(struct kobject *kobj,
-					struct kobj_attribute *attr, 
+					struct kobj_attribute *attr,
 					char *buf)
 {
 	return sprintf(buf, "%llu\n", div_u64(boost_lock_duration, 1000));
