@@ -69,9 +69,15 @@ static int polling_enabled;
 static int rails_cnt;
 static int psm_rails_cnt;
 static int limit_idx;
-static int limit_idx_low;
+/*
+ * min limit is set to 1497600 Mhz!
+ * check your FREQ Table and set corect limit_idx_low freq number.
+ * thanks git@dorimanx
+ */
+static int limit_idx_low = 9;
 static int limit_idx_high;
 static int max_tsens_num;
+static bool immediately_limit_stop = false;
 static struct cpufreq_frequency_table *table;
 static uint32_t usefreq;
 static int freq_table_get;
@@ -274,10 +280,14 @@ module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
 			int, 0664);
 module_param_named(freq_control_mask, msm_thermal_info.bootup_freq_control_mask,
 			uint, 0664);
+module_param_named(immediately_limit_stop, immediately_limit_stop,
+			bool, 0664);
 module_param_named(core_limit_temp_degC, msm_thermal_info.core_limit_temp_degC,
 			int, 0664);
 module_param_named(core_control_mask, msm_thermal_info.core_control_mask,
 			uint, 0664);
+static unsigned int safety = 1;
+module_param_named(temp_limit_switch, safety, int, 0664);
 
 static int  msm_thermal_cpufreq_callback(struct notifier_block *nfb,
 		unsigned long event, void *data)
@@ -886,7 +896,6 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
-	limit_idx_low = 0;
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -1426,6 +1435,11 @@ static void do_freq_control(long temp)
 	uint32_t cpu = 0;
 	uint32_t max_freq = cpus[cpu].limited_max_freq;
 
+	if (safety == 1) {
+		if (msm_thermal_info.limit_temp_degC > 82)
+			msm_thermal_info.limit_temp_degC = 82;
+	}
+
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
 			return;
@@ -1440,7 +1454,8 @@ static void do_freq_control(long temp)
 			return;
 
 		limit_idx += msm_thermal_info.bootup_freq_step;
-		if (limit_idx >= limit_idx_high) {
+		if ((limit_idx >= limit_idx_high) ||
+			immediately_limit_stop == true) {
 			limit_idx = limit_idx_high;
 			max_freq = UINT_MAX;
 		} else
@@ -3501,4 +3516,3 @@ MODULE_AUTHOR("Praveen Chidambaram <pchidamb@codeaurora.org>");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("intelligent thermal driver version 3.0 for Qualcomm based SOCs");
 MODULE_DESCRIPTION("originally from Qualcomm's open source repo");
-
