@@ -19,7 +19,6 @@
 #include <linux/input.h>
 #include <linux/kobject.h>
 #include <linux/fb.h>
-#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 
 #define INTELLI_PLUG			"intelli_plug"
@@ -288,9 +287,6 @@ static void intelli_plug_suspend(struct work_struct *work)
 {
 	int cpu = 0;
 
-	if (atomic_read(&intelli_plug_active) == 0)
-		return;
-
 	mutex_lock(&intelli_plug_mutex);
 	hotplug_suspended = true;
 	min_cpus_online_res = min_cpus_online;
@@ -319,9 +315,6 @@ static void intelli_plug_suspend(struct work_struct *work)
 static void __ref intelli_plug_resume(struct work_struct *work)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
-
-	if (atomic_read(&intelli_plug_active) == 0)
-		return;
 
 	if (hotplug_suspended) {
 		mutex_lock(&intelli_plug_mutex);
@@ -356,6 +349,10 @@ static void __ref intelli_plug_resume(struct work_struct *work)
 
 static void __intelli_plug_suspend(void)
 {
+	if ((atomic_read(&intelli_plug_active) == 0) ||
+		hotplug_suspended)
+		return;
+
 	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
 	queue_delayed_work_on(0, susp_wq, &suspend_work,
 				 msecs_to_jiffies(suspend_defer_time * 1000));
@@ -363,10 +360,15 @@ static void __intelli_plug_suspend(void)
 
 static void __intelli_plug_resume(void)
 {
+	if (atomic_read(&intelli_plug_active) == 0)
+		return;
+
 	flush_workqueue(susp_wq);
 	cancel_delayed_work_sync(&suspend_work);
 	queue_work_on(0, susp_wq, &resume_work);
 }
+
+static int prev_fb = FB_BLANK_UNBLANK;
 
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
@@ -378,20 +380,21 @@ static int fb_notifier_callback(struct notifier_block *self,
 		blank = evdata->data;
 		switch (*blank) {
 			case FB_BLANK_UNBLANK:
-				//display on
-				__intelli_plug_resume();
+				if (prev_fb == FB_BLANK_POWERDOWN) {
+					__intelli_plug_resume();
+					prev_fb = FB_BLANK_UNBLANK;
+				}
 				break;
 			case FB_BLANK_POWERDOWN:
-			case FB_BLANK_HSYNC_SUSPEND:
-			case FB_BLANK_VSYNC_SUSPEND:
-			case FB_BLANK_NORMAL:
-				//display off
-				__intelli_plug_suspend();
+				if (prev_fb == FB_BLANK_UNBLANK) {
+					__intelli_plug_suspend();
+					prev_fb = FB_BLANK_POWERDOWN;
+				}
 				break;
 		}
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
 
 static void intelli_plug_input_event(struct input_handle *handle,
@@ -507,6 +510,11 @@ static int __ref intelli_plug_start(void)
 	}
 
 	notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&notif)) {
+		pr_err("%s: Failed to register FB notifier callback\n",
+			INTELLI_PLUG);
+		goto err_dev;
+	}
 
 	ret = input_register_handler(&intelli_plug_input_handler);
 	if (ret) {
@@ -562,6 +570,7 @@ static void intelli_plug_stop(void)
 	cancel_work_sync(&up_down_work);
 	cancel_delayed_work_sync(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
+	fb_unregister_client(&notif);
 	notif.notifier_call = NULL;
 
 	input_unregister_handler(&intelli_plug_input_handler);

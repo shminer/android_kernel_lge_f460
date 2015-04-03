@@ -76,7 +76,7 @@ static struct hotplug_tuners {
 	.maxcoreslimit = NR_CPUS,
 	.maxcoreslimit_sleep = 1,
 	.hp_io_is_busy = 0,
-	.hotplug_suspend = 0,
+	.hotplug_suspend = 1,
 	.suspended = false,
 	.force_cpu_up = false,
 };
@@ -116,6 +116,7 @@ static void start_rq_work(void)
 static void stop_rq_work(void)
 {
 	if (rq_data->nr_run_wq)
+		flush_workqueue(rq_data->nr_run_wq);
 		cancel_delayed_work(&rq_data->work);
 	return;
 }
@@ -387,14 +388,14 @@ static int fb_notifier_callback(struct notifier_block *self,
 		blank = evdata->data;
 		switch (*blank) {
 			case FB_BLANK_UNBLANK:
-				if (prev_fb == FB_BLANK_POWERDOWN) {
+			if (prev_fb == FB_BLANK_POWERDOWN) {
 					/* display on */
 					__alucard_hotplug_resume();
 					prev_fb = FB_BLANK_UNBLANK;
 				}
 				break;
 			case FB_BLANK_POWERDOWN:
-				if (prev_fb == FB_BLANK_UNBLANK) {
+			if (prev_fb == FB_BLANK_UNBLANK) {
 					/* display off */
 					__alucard_hotplug_suspend();
 					prev_fb = FB_BLANK_POWERDOWN;
@@ -402,7 +403,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 				break;
 		}
 	}
-
 	return NOTIFY_OK;
 }
 #endif
