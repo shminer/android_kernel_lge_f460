@@ -1436,8 +1436,8 @@ static void do_freq_control(long temp)
 	uint32_t max_freq = cpus[cpu].limited_max_freq;
 
 	if (safety == 1) {
-		if (msm_thermal_info.limit_temp_degC > 82)
-			msm_thermal_info.limit_temp_degC = 82;
+		if (msm_thermal_info.limit_temp_degC > 88)
+			msm_thermal_info.limit_temp_degC = 88;
 	}
 
 	if (temp >= msm_thermal_info.limit_temp_degC) {
