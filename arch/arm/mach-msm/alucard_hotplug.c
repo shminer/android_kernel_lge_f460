@@ -116,7 +116,6 @@ static void start_rq_work(void)
 static void stop_rq_work(void)
 {
 	if (rq_data->nr_run_wq)
-		flush_workqueue(rq_data->nr_run_wq);
 		cancel_delayed_work(&rq_data->work);
 	return;
 }
@@ -220,6 +219,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 #endif
 		unsigned int cur_load = 0;
 		unsigned int cur_freq = 0;
+		int ret;
 
 #ifdef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 		cur_load = cpufreq_quick_get_util(cpu);
@@ -250,25 +250,27 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 
 		if (cpu > 0
 			&& ((online_cpus - offline_cpu) > upmaxcoreslimit)) {
-				pcpu_info->cur_up_rate = 1;
-				pcpu_info->cur_down_rate = 1;
-				++offline_cpu;
-				cpu_down(cpu);
-				continue;
+				ret = cpu_down(cpu);
+				if (!ret) {
+#ifdef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+					pcpu_info->cur_up_rate = 1;
+					pcpu_info->cur_down_rate = 1;
+#endif
+					++offline_cpu;
+				}
 		} else if (force_up == true ||
 				(online_cpus + online_cpu) < min_cpus_online) {
 				if (upcpu < upmaxcoreslimit) {
 					if (cpu_is_offline(upcpu)) {
-						pcpu_info->cur_up_rate = 1;
-						pcpu_info->cur_down_rate = 1;
-						++online_cpu;
-						cpu_up(upcpu);
+						ret = cpu_up(upcpu);
+						if (!ret) {
+							pcpu_info->cur_up_rate = 1;
+							pcpu_info->cur_down_rate = 1;
+							++online_cpu;
+						}
 					}
 				}
-				continue;
-		}
-
-		if (upcpu > 0
+		} else if (upcpu > 0
 			&& upcpu < upmaxcoreslimit
 			&& (cpu_is_offline(upcpu))
 			&& (online_cpus + online_cpu) < upmaxcoreslimit
@@ -285,10 +287,12 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 						cur_load, rq_avg,
 						pcpu_info->cur_up_rate);
 #endif
-					pcpu_info->cur_up_rate = 1;
-					pcpu_info->cur_down_rate = 1;
-					++online_cpu;
-					cpu_up(upcpu);
+					ret = cpu_up(upcpu);
+					if (!ret) {
+						pcpu_info->cur_up_rate = 1;
+						pcpu_info->cur_down_rate = 1;
+						++online_cpu;
+					}
 				} else {
 					if (pcpu_info->cur_up_rate < pcpu_info->up_rate)
 						++pcpu_info->cur_up_rate;
@@ -312,10 +316,14 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 							pcpu_info->
 							cur_down_rate);
 #endif
-						pcpu_info->cur_up_rate = 1;
-						pcpu_info->cur_down_rate = 1;
-						++offline_cpu;
-						cpu_down(cpu);
+						ret = cpu_down(cpu);
+						if (!ret) {
+#ifdef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+							pcpu_info->cur_up_rate = 1;
+							pcpu_info->cur_down_rate = 1;
+#endif
+							++offline_cpu;
+						}
 					} else {
 						if (pcpu_info->cur_down_rate < pcpu_info->down_rate)
 							++pcpu_info->cur_down_rate;
@@ -388,14 +396,14 @@ static int fb_notifier_callback(struct notifier_block *self,
 		blank = evdata->data;
 		switch (*blank) {
 			case FB_BLANK_UNBLANK:
-			if (prev_fb == FB_BLANK_POWERDOWN) {
+				if (prev_fb == FB_BLANK_POWERDOWN) {
 					/* display on */
 					__alucard_hotplug_resume();
 					prev_fb = FB_BLANK_UNBLANK;
 				}
 				break;
 			case FB_BLANK_POWERDOWN:
-			if (prev_fb == FB_BLANK_UNBLANK) {
+				if (prev_fb == FB_BLANK_UNBLANK) {
 					/* display off */
 					__alucard_hotplug_suspend();
 					prev_fb = FB_BLANK_POWERDOWN;
@@ -403,8 +411,37 @@ static int fb_notifier_callback(struct notifier_block *self,
 				break;
 		}
 	}
+
 	return NOTIFY_OK;
 }
+#endif
+
+#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+static int alucard_hotplug_callback(struct notifier_block *nb,
+			unsigned long action, void *data)
+{
+	struct hotplug_cpuinfo *pcpu_info;
+	unsigned int cpu = (int)data;
+
+	switch (action & (~CPU_TASKS_FROZEN)) {
+	case CPU_ONLINE:
+		pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
+		pcpu_info->prev_cpu_wall = ktime_to_us(ktime_get());
+		pcpu_info->prev_cpu_idle = get_cpu_idle_time(cpu,
+				&pcpu_info->prev_cpu_wall,
+				hotplug_tuners_ins.hp_io_is_busy);
+		pcpu_info->cur_up_rate = 1;
+		pcpu_info->cur_down_rate = 1;
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block alucard_hotplug_nb =
+{
+   .notifier_call = alucard_hotplug_callback,
+};
 #endif
 
 static int hotplug_start(void)
@@ -420,18 +457,28 @@ static int hotplug_start(void)
 	hotplug_tuners_ins.suspended = false;
 	hotplug_tuners_ins.force_cpu_up = false;
 
+#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+	get_online_cpus();
+	register_hotcpu_notifier(&alucard_hotplug_nb);
+#endif
 	for_each_possible_cpu(cpu) {
 		struct hotplug_cpuinfo *pcpu_info =
 				&per_cpu(od_hotplug_cpuinfo, cpu);
 
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
-		pcpu_info->prev_cpu_idle = get_cpu_idle_time(cpu,
-				&pcpu_info->prev_cpu_wall,
-				hotplug_tuners_ins.hp_io_is_busy);
+		if (cpu_online(cpu)) {
+			pcpu_info->prev_cpu_wall = ktime_to_us(ktime_get());
+			pcpu_info->prev_cpu_idle = get_cpu_idle_time(cpu,
+					&pcpu_info->prev_cpu_wall,
+					hotplug_tuners_ins.hp_io_is_busy);
+		}
 #endif
 		pcpu_info->cur_up_rate = 1;
 		pcpu_info->cur_down_rate = 1;
 	}
+#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+	put_online_cpus();
+#endif
 
 	start_rq_work();
 
@@ -462,6 +509,11 @@ static void hotplug_stop(void)
 #else
 	fb_unregister_client(&notif);
 	notif.notifier_call = NULL;
+#endif
+#ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
+	get_online_cpus();
+	unregister_hotcpu_notifier(&alucard_hotplug_nb);
+	put_online_cpus();
 #endif
 	stop_rq_work();
 	exit_rq_avg();
