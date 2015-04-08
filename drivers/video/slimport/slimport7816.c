@@ -33,14 +33,14 @@
 #ifdef CONFIG_SLIMPORT_DYNAMIC_HPD
 #include "../msm/mdss/mdss_hdmi_slimport.h"
 #endif
-/*            
-                                                          
-                                   
+/*
+
+
  */
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <mach/board_lge.h>
-#include "../../arch/arm/mach-msm/smd_private.h"
+#include "../../drivers/soc/qcom/smd_private.h"
 
 /* Enable or Disable HDCP by default */
 /* hdcp_enable = 1: Enable,  0: Disable */
@@ -56,11 +56,11 @@ static bool irq_enable;
 /* to access global platform data */
 static struct anx7816_platform_data *g_pdata;
 
-/*            
-                                          
-                                             
-                                                                      
-                                   
+/*
+
+
+
+
  */
 /* #define USE_HDMI_SWITCH */
 #define TRUE 1
@@ -154,9 +154,9 @@ bool slimport_is_connected(void)
 }
 EXPORT_SYMBOL(slimport_is_connected);
 
-/*            
-                
-                                   
+/*
+
+
  */
 static int slimport7816_avdd_power(unsigned int onoff)
 {
@@ -1061,9 +1061,9 @@ static void anx7816_work_func(struct work_struct *work)
 #endif
 }
 
-/*            
-                                    
-                                   
+/*
+
+
  */
 #ifdef CONFIG_OF
 int anx7816_regulator_configure(
@@ -1148,10 +1148,10 @@ static int anx7816_parse_dt(
 		pdata->gpio_int,
 		pdata->gpio_cbl_det);
 	/*
-                                                           
-                                    
-                                          
-                                                     
+
+
+
+
   */
 	rc = of_property_read_u32(np, "lge,external-ldo-control",
 			&pdata->external_ldo_control);

@@ -30,7 +30,7 @@
 #include <mach/gpiomux.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_memtypes.h>
-#include <mach/msm_smd.h>
+#include <soc/qcom/smd.h>
 #include <mach/restart.h>
 #include <soc/qcom/socinfo.h>
 #include <soc/qcom/rpm-smd.h>
@@ -44,9 +44,9 @@
 #include <mach/board_lge.h>
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/*
+
+
 */
 #include <linux/module.h>
 #include "../../../../drivers/video/msm/mdss/mdss_fb.h"
@@ -79,9 +79,9 @@ static void __init apq8084_early_memory(void)
 }
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/*
+
+
 */
 int kcal_set_values(int kcal_r, int kcal_g, int kcal_b)
 {
@@ -184,9 +184,9 @@ void __init apq8084_add_drivers(void)
 #endif
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-	/*             
-                           
-                                 
+	/*
+
+
  */
 	lge_add_lcd_kcal_devices();
 #endif /*                     */

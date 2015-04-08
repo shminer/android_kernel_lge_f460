@@ -22,7 +22,7 @@
 #include <linux/slab.h>
 
 #include <linux/power/lge_battery_id.h>
-#include <mach/msm_smsm.h>
+#include <soc/qcom/smsm.h>
 
 #define MODULE_NAME "lge_battery_id"
 

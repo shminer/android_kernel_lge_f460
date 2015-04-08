@@ -33,7 +33,7 @@
 #include <linux/power/max17048_battery.h>
 #endif /*                                          */
 #include <linux/qpnp/qpnp-adc.h>
-#include "../../arch/arm/mach-msm/smd_private.h"
+#include "../../drivers/soc/qcom/smd_private.h"
 #include <linux/usb/otg.h>
 #include "../usb/dwc3/dwc3_otg.h"
 #include "../usb/dwc3/core.h"
@@ -1936,10 +1936,10 @@ static int bq24296_batt_power_get_property(struct power_supply *psy,
 				!= POWER_SUPPLY_CHARGE_TYPE_NONE;
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/*                                                    
-                                                       
-                                                            
-                                                     
+		/*
+
+
+
    */
 		val->intval = 0;
 		break;
@@ -2005,10 +2005,10 @@ static int bq24296_batt_power_set_property(struct power_supply *psy,
 			val->intval ? "inserted" : "removed");
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/*                                                    
-                                                       
-                                                            
-                                                     
+		/*
+
+
+
    */
 		break;
 #if defined CONFIG_LGE_PM_VZW_POWER_REQ
