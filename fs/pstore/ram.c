@@ -44,7 +44,7 @@
 #endif
 
 #define RAMOOPS_KERNMSG_HDR "===="
-#define MIN_MEM_SIZE 4096UL
+#define MIN_MEM_SIZE 8192UL
 
 static ulong record_size = MIN_MEM_SIZE;
 module_param(record_size, ulong, 0400);
