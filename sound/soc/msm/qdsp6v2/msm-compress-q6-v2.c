@@ -126,7 +126,7 @@ struct msm_compr_gapless_state {
 };
 
 static unsigned int supported_sample_rates[] = {
-	8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
+       8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
 };
 
 struct msm_compr_pdata {
@@ -1879,11 +1879,8 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 		codec->num_descriptors = 2;
 #endif
 		codec->descriptor[0].max_ch = 2;
-		memcpy(codec->descriptor[0].sample_rates,
-		       supported_sample_rates,
-		       sizeof(supported_sample_rates));
-		codec->descriptor[0].num_sample_rates =
-			sizeof(supported_sample_rates)/sizeof(unsigned int);
+		/* FIXME sample_rates in Hz */
+		codec->descriptor[0].sample_rates = SNDRV_PCM_RATE_8000_48000;
 		codec->descriptor[0].bit_rate[0] = 320; /* 320kbps */
 		codec->descriptor[0].bit_rate[1] = 128;
 		codec->descriptor[0].num_bitrates = 2;
@@ -1898,11 +1895,8 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 		codec->num_descriptors = 2;
 #endif
 		codec->descriptor[1].max_ch = 2;
-		memcpy(codec->descriptor[1].sample_rates,
-		       supported_sample_rates,
-		       sizeof(supported_sample_rates));
-		codec->descriptor[1].num_sample_rates =
-			sizeof(supported_sample_rates)/sizeof(unsigned int);
+		/* FIXME sample_rates in Hz */
+		codec->descriptor[1].sample_rates = SNDRV_PCM_RATE_8000_48000;
 		codec->descriptor[1].bit_rate[0] = 320; /* 320kbps */
 		codec->descriptor[1].bit_rate[1] = 128;
 		codec->descriptor[1].num_bitrates = 2;
