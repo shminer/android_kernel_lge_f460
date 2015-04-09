@@ -713,9 +713,17 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 		.rampingcurve = SOFT_VOLUME_CURVE_LINEAR,
 	};
 	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 24;
+#else
 		bits_per_sample = 24;
+#endif
 	else if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 32;
+#else
 		bits_per_sample = 32;
+#endif
 
 	if (prtd->compr_passthr != LEGACY_PCM) {
 		ret = q6asm_open_write_compressed(ac, prtd->codec,
@@ -732,8 +740,13 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 				SNDRV_PCM_STREAM_PLAYBACK,
 				prtd->compr_passthr);
 	} else {
-		pr_debug("%s: stream_id %d bits_per_sample %d\n",
-				__func__, ac->stream_id, bits_per_sample);
+#ifdef CONFIG_HIFI_SOUND
+	pr_debug("%s: stream_id %d bits_per_sample %d\n",
+			__func__, ac->stream_id, prtd->bits_per_sample);
+#else
+	pr_debug("%s: stream_id %d bits_per_sample %d\n",
+			__func__, ac->stream_id, bits_per_sample);
+#endif
 #ifdef CONFIG_HIFI_SOUND
 		ret = q6asm_open_write_v2(prtd->audio_client,
 				prtd->codec, prtd->bits_per_sample);
