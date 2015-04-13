@@ -343,6 +343,7 @@ static int msm_bus_dbg_record_client(const struct msm_bus_scale_pdata *pdata,
 	cldata->file = file;
 	cldata->size = 0;
 	list_add_tail(&cldata->list, &cl_list);
+	mutex_unlock(&cl_list_lock);
 	return 0;
 }
 
