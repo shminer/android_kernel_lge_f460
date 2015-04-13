@@ -1482,7 +1482,7 @@ static void bke_switch(
 	uint32_t reg_val, val, cur_val;
 
 	val = req << M_BKE_EN_EN_SHFT;
-	reg_val = readl_relaxed(M_BKE_EN_ADDR(baddr, mas_index)); 
+	reg_val = readl_relaxed(M_BKE_EN_ADDR(baddr, mas_index));
 	cur_val = reg_val & M_BKE_EN_RMSK;
 	if (val == cur_val)
 		return;
@@ -1738,16 +1738,16 @@ static void msm_bus_bimc_config_limiter(
 		for (i = 0; i < ports; i++)
 			bke_switch(binfo->base, info->node_info->qport[i],
 				BKE_OFF, mode);
-		trace_bus_bimc_config_limiter(info->node_info->id,
-					0, mode);
 		break;
 	case BIMC_QOS_MODE_REGULATOR:
 	case BIMC_QOS_MODE_LIMITER:
-		MSM_BUS_DBG("Enabled BKE throttling node %d to %llu\n",
-				info->node_info->id, info->cur_lim_bw);
-		/* If not in fixed mode, update bandwidth */
-		for (i = 0; i < ports; i++) {
-			if (info->cur_lim_bw != info->cur_prg_bw) {
+		if (info->cur_lim_bw != info->cur_prg_bw) {
+			MSM_BUS_DBG("Enabled BKE throttling node %d to %llu\n",
+					info->node_info->id, info->cur_lim_bw);
+			trace_bus_bimc_config_limiter(info->node_info->id,
+					info->cur_lim_bw);
+			for (i = 0; i < ports; i++) {
+				/* If not in fixed mode, update bandwidth */
 				struct msm_bus_bimc_qos_bw qbw;
 
 				qbw.ws = info->node_info->ws;
@@ -1757,13 +1757,11 @@ static void msm_bus_bimc_config_limiter(
 				bimc_set_static_qos_bw(binfo->base,
 					binfo->qos_freq,
 					info->node_info->qport[i], &qbw);
-				info->cur_prg_bw = qbw.bw;
-			}
-			bke_switch(binfo->base,
+				bke_switch(binfo->base,
 					info->node_info->qport[i],
 					BKE_ON, mode);
-			trace_bus_bimc_config_limiter(info->node_info->id,
-					info->cur_lim_bw, mode);
+				info->cur_prg_bw = qbw.bw;
+			}
 		}
 		break;
 	default:
