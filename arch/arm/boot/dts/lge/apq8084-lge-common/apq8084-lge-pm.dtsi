@@ -108,7 +108,7 @@
 			<41 141>;
 	};
 
-	qcom,clock-krait@f9016000 {
+	clock_krait:  qcom,clock-krait@f9016000 {
 		compatible = "qcom,clock-krait-8974";
 		qcom,factory-mode-ctable =
 			<          0       0    0 >,
