@@ -77,12 +77,11 @@
 		qcom,active-only;
 		qcom,master-id = <86>;
 	};
-
 	cpubw: qcom,cpubw {
 		compatible = "qcom,devbw";
 		qcom,src-dst-ports = <1 512>;
-		qcom,active-only;
 		governor = "cpufreq";
+		qcom,active-only;
 		qcom,bw-tbl =
 			<   762 /*   50 MHz */ >,
 			<  1144 /*   75 MHz */ >,
@@ -98,6 +97,7 @@
 			< 12145 /*  796 MHz */ >,
 			< 16250 /* 1065 MHz */ >,
 			< 20355 /* 1333 MHz */ >; /* overclock */
+	};
 
 	qcom,wdt@f9017000 {
 		qcom,bark-time = <16000>;
