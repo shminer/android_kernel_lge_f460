@@ -24,11 +24,7 @@
 #include <linux/slab.h>
 #include "acpuclock.h"
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#else
 #include <linux/fb.h>
-#endif
 
 struct hotplug_cpuinfo {
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
@@ -49,9 +45,8 @@ struct hotplug_cpuinfo {
 
 static DEFINE_PER_CPU(struct hotplug_cpuinfo, od_hotplug_cpuinfo);
 
-#ifndef CONFIG_POWERSUSPEND
 static struct notifier_block notif;
-#endif
+
 static struct delayed_work alucard_hotplug_work;
 
 static struct hotplug_tuners {
@@ -345,11 +340,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 				hotplug_tuners_ins.hotplug_sampling_rate));
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void __alucard_hotplug_suspend(struct power_suspend *handler)
-#else
 static void __alucard_hotplug_suspend(void)
-#endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
 				&& hotplug_tuners_ins.hotplug_suspend == 1 &&
@@ -361,11 +352,7 @@ static void __alucard_hotplug_suspend(void)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void __ref __alucard_hotplug_resume(struct power_suspend *handler)
-#else
 static void __ref __alucard_hotplug_resume(void)
-#endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
 		&& hotplug_tuners_ins.hotplug_suspend == 1) {
@@ -378,12 +365,6 @@ static void __ref __alucard_hotplug_resume(void)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static struct power_suspend alucard_hotplug_power_suspend_driver = {
-	.suspend = __alucard_hotplug_suspend,
-	.resume = __alucard_hotplug_resume,
-};
-#else
 static int prev_fb = FB_BLANK_UNBLANK;
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -414,7 +395,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	return NOTIFY_OK;
 }
-#endif
 
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 static int alucard_hotplug_callback(struct notifier_block *nb,
@@ -489,13 +469,9 @@ static int hotplug_start(void)
 				hotplug_tuners_ins.hotplug_sampling_rate));
 
 	mutex_init(&hotplug_tuners_ins.alu_hotplug_mutex);
-#ifdef CONFIG_POWERSUSPEND
-	register_power_suspend(&alucard_hotplug_power_suspend_driver);
-#else
 	notif.notifier_call = fb_notifier_callback;
 	if (fb_register_client(&notif))
 		pr_err("Failed to register FB notifier callback for Alucard Hotplug\n");
-#endif
 
 	return 0;
 }
@@ -504,12 +480,8 @@ static void hotplug_stop(void)
 {
 	mutex_destroy(&hotplug_tuners_ins.alu_hotplug_mutex);
 	cancel_delayed_work_sync(&alucard_hotplug_work);
-#ifdef CONFIG_POWERSUSPEND
-	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
-#else
 	fb_unregister_client(&notif);
 	notif.notifier_call = NULL;
-#endif
 #ifndef CONFIG_ALUCARD_HOTPLUG_USE_CPU_UTIL
 	get_online_cpus();
 	unregister_hotcpu_notifier(&alucard_hotplug_nb);
