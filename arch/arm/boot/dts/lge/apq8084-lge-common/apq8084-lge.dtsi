@@ -77,6 +77,7 @@
 		qcom,active-only;
 		qcom,master-id = <86>;
 	};
+
 	cpubw: qcom,cpubw {
 		compatible = "qcom,devbw";
 		qcom,src-dst-ports = <1 512>;
@@ -95,8 +96,7 @@
 			<  8056 /*  528 MHz */ >,
 			< 10101 /*  662 MHz */ >,
 			< 12145 /*  796 MHz */ >,
-			< 16250 /* 1065 MHz */ >,
-			< 16830 /* 1068 MHz */ >;
+			< 16650 /* 1065+ MHz */ >;
 	};
 
 	qcom,wdt@f9017000 {
