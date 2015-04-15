@@ -275,6 +275,8 @@ struct msm_thermal_stat_data {
 static struct msm_thermal_stat_data msm_thermal_stats;
 
 /* module parameters */
+module_param_named(sensor_id, msm_thermal_info.sensor_id,
+			int, 0664);
 module_param_named(poll_ms, msm_thermal_info.poll_ms, uint, 0664);
 module_param_named(limit_temp_degC, msm_thermal_info.limit_temp_degC,
 			int, 0664);
