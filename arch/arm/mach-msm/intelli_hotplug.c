@@ -25,16 +25,16 @@
 #define INTELLI_PLUG_MAJOR_VERSION	5
 #define INTELLI_PLUG_MINOR_VERSION	1
 
-#define DEF_SAMPLING_MS			30
+#define DEF_SAMPLING_MS			268
 #define RESUME_SAMPLING_MS		HZ / 10
-#define START_DELAY_MS			HZ * 10
+#define START_DELAY_MS			HZ * 20
 #define MIN_INPUT_INTERVAL		150 * 1000L
-#define BOOST_LOCK_DUR			500 * 1000L
-#define DEFAULT_NR_CPUS_BOOSTED		2
+#define BOOST_LOCK_DUR			2500 * 1000L
+#define DEFAULT_NR_CPUS_BOOSTED		1
 #define DEFAULT_MIN_CPUS_ONLINE		1
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
-#define DEFAULT_DOWN_LOCK_DUR		2000
+#define DEFAULT_DOWN_LOCK_DUR		2500
 #define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 
@@ -354,7 +354,7 @@ static void __intelli_plug_suspend(void)
 		return;
 
 	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
-	 mod_delayed_work_on(0, susp_wq, &suspend_work,
+	mod_delayed_work_on(0, susp_wq, &suspend_work,
 				 msecs_to_jiffies(suspend_defer_time * 1000));
 }
 
@@ -534,11 +534,12 @@ static int __ref intelli_plug_start(void)
 	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
 	INIT_WORK(&resume_work, intelli_plug_resume);
 
-	/* Put all sibling cores to sleep */
-	for_each_online_cpu(cpu) {
+	/* Fire up all CPUs */
+	for_each_cpu_not(cpu, cpu_online_mask) {
 		if (cpu == 0)
 			continue;
-		cpu_down(cpu);
+		cpu_up(cpu);
+		apply_down_lock(cpu);
 	}
 
 	mod_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
