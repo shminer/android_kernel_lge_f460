@@ -2116,17 +2116,6 @@ int mdss_mdp_pp_init(struct device *dev)
 
 	}
 
-#if defined(CONFIG_LGE_LCD_KCAL)
-	/*
-
-
- */
-	if (!ret) {
-		mdss_mdp_pp_argc();
-		update_preset_lcdc_lut();
-	}
-#endif
-
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
 }
