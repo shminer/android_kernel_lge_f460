@@ -112,13 +112,6 @@ config LGE_ECO_MODE
 	help
 	  LGE ECO mode support
 
-config LGE_LCD_KCAL
-	bool "Enable sysfs for LCD KCAL"
-	default n
-	depends on MACH_LGE
-	help
-	  Enable sysfs for LCD color temperature callibration
-
 config LGE_ENABLE_MMC_STRENGTH_CONTROL
 	bool "Support MMC Strength Control"
 	default n

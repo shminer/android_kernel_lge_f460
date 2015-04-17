@@ -111,24 +111,6 @@ void __init lge_add_android_usb_devices(void);
 int lge_get_battery_low(void);
 #endif
 
-#if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
-*/
-struct kcal_data {
-		int red;
-		int green;
-		int blue;
-};
-
-struct kcal_platform_data {
-	int (*set_values) (int r, int g, int b);
-	int (*get_values) (int *r, int *g, int *b);
-	int (*refresh_display) (void);
-};
-#endif /*                     */
-
 enum lge_boot_mode_type lge_get_boot_mode(void);
 
 enum lge_laf_mode_type {
@@ -161,19 +143,6 @@ extern bool lge_get_cont_splash_enabled(void);
 
 extern unsigned int lge_get_uart_mode(void);
 extern void lge_set_uart_mode(unsigned int um);
-
-#if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
-*/
-extern int g_kcal_r;
-extern int g_kcal_g;
-extern int g_kcal_b;
-extern int kcal_set_values(int kcal_r, int kcal_g, int kcal_b);
-extern int update_preset_lcdc_lut(void);
-void __init lge_add_lcd_kcal_devices(void);
-#endif
 
 #ifdef CONFIG_LGE_LCD_TUNING
 void __init lge_add_lcd_misc_devices(void);

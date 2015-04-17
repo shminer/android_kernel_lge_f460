@@ -43,15 +43,6 @@
 
 #include <mach/board_lge.h>
 
-#if defined(CONFIG_LGE_LCD_KCAL)
-/*
-
-
-*/
-#include <linux/module.h>
-#include "../../../../drivers/video/msm/mdss/mdss_fb.h"
-#endif /* CONFIG_LCD_KCAL */
-
 static struct of_dev_auxdata apq8084_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("qcom,msm-sdcc", 0xF9824000, "msm_sdcc.1", NULL),
 	OF_DEV_AUXDATA("qcom,sdhci-msm", 0xF9824900, "msm_sdcc.1", NULL),
@@ -77,71 +68,6 @@ static void __init apq8084_early_memory(void)
 {
 	of_scan_flat_dt(dt_scan_for_memory_hole, NULL);
 }
-
-#if defined(CONFIG_LGE_LCD_KCAL)
-/*
-
-
-*/
-int kcal_set_values(int kcal_r, int kcal_g, int kcal_b)
-{
-#if 0
-	int is_update = 0;
-
-	int kcal_r_limit = 250;
-	int kcal_g_limit = 250;
-	int kcal_b_limit = 253;
-
-	g_kcal_r = kcal_r < kcal_r_limit ? kcal_r_limit : kcal_r;
-	g_kcal_g = kcal_g < kcal_g_limit ? kcal_g_limit : kcal_g;
-	g_kcal_b = kcal_b < kcal_b_limit ? kcal_b_limit : kcal_b;
-
-	if (kcal_r < kcal_r_limit || kcal_g < kcal_g_limit
-			|| kcal_b < kcal_b_limit)
-		is_update = 1;
-
-	if (is_update)
-		update_preset_lcdc_lut();
-#else
-	g_kcal_r = kcal_r;
-	g_kcal_g = kcal_g;
-	g_kcal_b = kcal_b;
-#endif
-	return 0;
-}
-
-static int kcal_get_values(int *kcal_r, int *kcal_g, int *kcal_b)
-{
-	*kcal_r = g_kcal_r;
-	*kcal_g = g_kcal_g;
-	*kcal_b = g_kcal_b;
-	return 0;
-}
-
-static int kcal_refresh_values(void)
-{
-	return update_preset_lcdc_lut();
-}
-
-static struct kcal_platform_data kcal_pdata = {
-	.set_values = kcal_set_values,
-	.get_values = kcal_get_values,
-	.refresh_display = kcal_refresh_values
-};
-
-static struct platform_device kcal_platrom_device = {
-	.name   = "kcal_ctrl",
-	.dev = {
-		.platform_data = &kcal_pdata,
-	}
-};
-
-void __init lge_add_lcd_kcal_devices(void)
-{
-	pr_info(" KCAL_DEBUG : %s\n", __func__);
-	platform_device_register(&kcal_platrom_device);
-}
-#endif /* CONFIG_LCD_KCAL */
 
 #ifdef CONFIG_LGE_LCD_TUNING
 static struct platform_device lcd_misc_device = {
@@ -182,14 +108,6 @@ void __init apq8084_add_drivers(void)
 #ifdef CONFIG_LGE_QFPROM_INTERFACE
        lge_add_qfprom_devices();
 #endif
-
-#if defined(CONFIG_LGE_LCD_KCAL)
-	/*
-
-
- */
-	lge_add_lcd_kcal_devices();
-#endif /*                     */
 
 #ifdef CONFIG_USB_G_LGE_ANDROID
 	lge_add_android_usb_devices();

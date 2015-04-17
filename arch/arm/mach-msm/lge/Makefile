@@ -16,7 +16,6 @@ obj-$(CONFIG_LGE_PM) += lge_charging_scenario.o
 obj-$(CONFIG_LGE_PM) += lge_gpio_debug.o
 obj-$(CONFIG_LGE_PM) += lge_monitor_thermal.o
 obj-$(CONFIG_HAS_EARLYSUSPEND) += lge_suspend_autotest.o
-obj-$(CONFIG_LGE_LCD_KCAL) += lge_kcal_ctrl.o
 obj-$(CONFIG_TBD) += lge_blocking_monitor.o
 obj-$(CONFIG_LGE_MSM_HSIC_TTY) += hsic_tty.o
 obj-$(CONFIG_LGE_ENABLE_MMC_STRENGTH_CONTROL) += lge_mmc0_strength_control.o
