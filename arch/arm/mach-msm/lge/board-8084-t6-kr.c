@@ -64,11 +64,6 @@ void __init apq8084_reserve(void)
 #endif
 }
 
-static void __init apq8084_early_memory(void)
-{
-	of_scan_flat_dt(dt_scan_for_memory_hole, NULL);
-}
-
 #ifdef CONFIG_LGE_LCD_TUNING
 static struct platform_device lcd_misc_device = {
 	.name = "lcd_misc_msm",
@@ -147,11 +142,6 @@ void __init apq8084_init(void)
 	regulator_suppress_info_printing();
 #endif
 	apq8084_add_drivers();
-}
-
-void __init apq8084_init_very_early(void)
-{
-	apq8084_early_memory();
 }
 
 static const char *apq8084_dt_match[] __initconst = {
