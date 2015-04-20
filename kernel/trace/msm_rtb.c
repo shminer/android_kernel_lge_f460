@@ -318,4 +318,3 @@ static void __exit msm_rtb_exit(void)
 }
 module_init(msm_rtb_init)
 module_exit(msm_rtb_exit)
-module_exit(msm_rtb_exit)
