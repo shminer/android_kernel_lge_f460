@@ -155,7 +155,7 @@ static unsigned long zone_reclaimable_pages(struct zone *zone)
 	nr = zone_page_state(zone, NR_ACTIVE_FILE) +
 	     zone_page_state(zone, NR_INACTIVE_FILE);
 
-	if (get_nr_swap_pages() > 0)
+	if (get_nr_swap_pages() > 0 && total_swap_pages >= totalram_pages)
 		nr += zone_page_state(zone, NR_ACTIVE_ANON) +
 		      zone_page_state(zone, NR_INACTIVE_ANON);
 
@@ -354,8 +354,6 @@ unsigned long shrink_slab(struct shrink_control *shrink,
 			if (total_scan < batch_size)
 				batch_size = total_scan;
 
-			if (total_scan < batch_size)
-				batch_size = total_scan;
 			nr_before = do_shrinker_shrink(shrinker, shrink, 0);
 			shrink_ret = do_shrinker_shrink(shrinker, shrink,
 							batch_size);

@@ -316,6 +316,6 @@ static void __exit msm_rtb_exit(void)
 {
 	platform_driver_unregister(&msm_rtb_driver);
 }
-arch_initcall(msm_rtb_init);
-//module_init(msm_rtb_init)
+module_init(msm_rtb_init)
+module_exit(msm_rtb_exit)
 module_exit(msm_rtb_exit)
