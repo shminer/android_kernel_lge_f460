@@ -96,9 +96,6 @@ static void set_cpu_work(struct work_struct *work)
 	complete(&cpu_work->complete);
 }
 
-extern uint32_t msm_jtag_save_cntr[NR_CPUS];
-extern uint32_t msm_jtag_restore_cntr[NR_CPUS];
-
 static int msm_cpufreq_target(struct cpufreq_policy *policy,
 				unsigned int target_freq,
 				unsigned int relation)
@@ -108,7 +105,6 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 	struct cpufreq_frequency_table *table;
 
 	struct cpufreq_work_struct *cpu_work = NULL;
-	unsigned int pc;
 
 	mutex_lock(&per_cpu(cpufreq_suspend, policy->cpu).suspend_mutex);
 
@@ -131,24 +127,18 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		policy->cpu, target_freq, relation,
 		policy->min, policy->max, table[index].frequency);
 
-	pc = msm_jtag_save_cntr[policy->cpu] - msm_jtag_restore_cntr[policy->cpu];
+	cpu_work = &per_cpu(cpufreq_work, policy->cpu);
+	cpu_work->policy = policy;
+	cpu_work->frequency = table[index].frequency;
+	cpu_work->index = table[index].driver_data;
+	cpu_work->status = -ENODEV;
 
-	if (pc) {
-		cpu_work = &per_cpu(cpufreq_work, policy->cpu);
-		cpu_work->policy = policy;
-		cpu_work->frequency = table[index].frequency;
-		cpu_work->index = table[index].driver_data;
-		cpu_work->status = -ENODEV;
+	cancel_work_sync(&cpu_work->work);
+	INIT_COMPLETION(cpu_work->complete);
+	queue_work_on(policy->cpu, msm_cpufreq_wq, &cpu_work->work);
+	wait_for_completion(&cpu_work->complete);
 
-		cancel_work_sync(&cpu_work->work);
-		INIT_COMPLETION(cpu_work->complete);
-		queue_work_on(policy->cpu, msm_cpufreq_wq, &cpu_work->work);
-		wait_for_completion(&cpu_work->complete);
-
-		ret = cpu_work->status;
-	}
-	else
-		ret = set_cpu_freq(policy, table[index].frequency, table[index].driver_data);
+	ret = cpu_work->status;
 
 done:
 	mutex_unlock(&per_cpu(cpufreq_suspend, policy->cpu).suspend_mutex);
