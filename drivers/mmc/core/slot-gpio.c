@@ -22,12 +22,12 @@ struct mmc_gpio {
 	int cd_gpio;
 	char *ro_label;
 	bool status;
-	char cd_label[0]; /* Must be last entry */
+	char cd_label[0];
 };
 
 #ifdef CONFIG_MACH_LGE
-/*
-
+/*           
+                                                   
  */
 int mmc_gpio_get_status(struct mmc_host *host)
 #else
