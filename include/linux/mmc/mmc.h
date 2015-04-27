@@ -277,6 +277,8 @@ struct _mmc_csd {
 #define EXT_CSD_POWER_OFF_LONG_TIME	247	/* RO */
 #define EXT_CSD_GENERIC_CMD6_TIME	248	/* RO */
 #define EXT_CSD_CACHE_SIZE		249	/* RO, 4 bytes */
+#define EXT_CSD_PWR_CL_DDR_200_195	253	/* RO */
+#define EXT_CSD_PWR_CL_DDR_200_360	254	/* RO */
 #if defined(CONFIG_MMC_FFU)
 #define EXT_CSD_NUM_OF_FW_SEC_PROG  302 /* RO */
 #define EXT_CSD_FFU_ARG             487 /* RO, 4 bytes */
@@ -284,16 +286,6 @@ struct _mmc_csd {
 #define EXT_CSD_FFU_FEATURES        492 /* RO */
 #define EXT_CSD_SUPPORTED_MODE      493 /* RO */
 #endif
-#define EXT_CSD_PWR_CL_DDR_200_360	253	/* RO */
-#define EXT_CSD_FIRMWARE_VERSION	254	/* RO, 8 bytes */
-#define EXT_CSD_DEVICE_VERSION		262	/* RO, 2 bytes */
-#define EXT_CSD_OPTIMAL_TRIM_UNIT_SIZE	264	/* RO */
-#define EXT_CSD_OPTIMAL_WRITE_SIZE	265	/* RO */
-#define EXT_CSD_OPTIMAL_READ_SIZE	266	/* RO */
-#define EXT_CSD_PRE_EOL_INFO		267	/* RO */
-#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A 268	/* RO */
-#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B 269	/* RO */
-#define EXT_CSD_VENDOR_PROPRIETARY_HEALTH_REPORT 270	/* RO, 32 bytes */
 #define EXT_CSD_TAG_UNIT_SIZE		498	/* RO */
 #define EXT_CSD_DATA_TAG_SUPPORT	499	/* RO */
 #define EXT_CSD_MAX_PACKED_WRITES	500	/* RO */
