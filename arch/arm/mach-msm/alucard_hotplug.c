@@ -103,7 +103,7 @@ static void start_rq_work(void)
 		rq_data->nr_run_wq =
 			create_singlethread_workqueue("nr_run_avg");
 
-	mod_delayed_work_on(BOOT_CPU, rq_data->nr_run_wq, &rq_data->work,
+	queue_delayed_work_on(BOOT_CPU, rq_data->nr_run_wq, &rq_data->work,
 			   msecs_to_jiffies(rq_data->update_rate));
 	return;
 }
@@ -124,7 +124,7 @@ static int init_rq_avg(void)
 	}
 	spin_lock_init(&rq_data->lock);
 	rq_data->update_rate = RQ_AVG_TIMER_RATE;
-	INIT_DEFERRABLE_WORK(&rq_data->work, rq_work_fn);
+	INIT_DELAYED_WORK(&rq_data->work, rq_work_fn);
 
 	return 0;
 }
@@ -162,7 +162,7 @@ static void rq_work_fn(struct work_struct *work)
 	rq_data->last_time = cur_time;
 
 	if (rq_data->update_rate != 0)
-		mod_delayed_work_on(BOOT_CPU, rq_data->nr_run_wq, &rq_data->work,
+		queue_delayed_work_on(BOOT_CPU, rq_data->nr_run_wq, &rq_data->work,
 				   msecs_to_jiffies(rq_data->update_rate));
 
 	spin_unlock_irqrestore(&rq_data->lock, flags);
@@ -334,7 +334,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	if (force_up == true)
 		hotplug_tuners_ins.force_cpu_up = false;
 
-	mod_delayed_work_on(BOOT_CPU, system_wq,
+	queue_delayed_work_on(BOOT_CPU, system_wq,
 				&alucard_hotplug_work,
 				msecs_to_jiffies(
 				hotplug_tuners_ins.hotplug_sampling_rate));
@@ -462,8 +462,8 @@ static int hotplug_start(void)
 
 	start_rq_work();
 
-	INIT_DEFERRABLE_WORK(&alucard_hotplug_work, hotplug_work_fn);
-	mod_delayed_work_on(BOOT_CPU, system_wq,
+	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
+	queue_delayed_work_on(BOOT_CPU, system_wq,
 				&alucard_hotplug_work,
 				msecs_to_jiffies(
 				hotplug_tuners_ins.hotplug_sampling_rate));
