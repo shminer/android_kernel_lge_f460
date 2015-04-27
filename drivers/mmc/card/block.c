@@ -74,7 +74,7 @@ MODULE_ALIAS("mmc:block");
 #define PACKED_TRIGGER_MAX_ELEMENTS	5000
 
 #define MMC_BLK_MAX_RETRIES 5 /* max # of retries before aborting a command */
-#define MMC_SANITIZE_REQ_TIMEOUT (60*60*1000) /* 1 hour in msec */
+#define MMC_SANITIZE_REQ_TIMEOUT 240000 /* msec */
 #define MMC_EXTRACT_INDEX_FROM_ARG(x) ((x & 0x00FF0000) >> 16)
 #define MMC_BLK_UPDATE_STOP_REASON(stats, reason)			\
 	do {								\
@@ -1679,8 +1679,8 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	int ecc_err = 0, gen_err = 0;
 
 #ifdef CONFIG_MACH_LGE
-	/*
-
+	/*           
+                                                        
   */
 	if (mmc_card_sd(card) && !mmc_gpio_get_status(card->host)) {
 		printk(KERN_INFO "[LGE][MMC][%-18s( )] sd-no-exist, "
