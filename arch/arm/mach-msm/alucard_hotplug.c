@@ -180,6 +180,8 @@ static unsigned int get_nr_run_avg(void)
 	return nr_run_avg;
 }
 
+#define MAX_FREQ_LIMIT 2880000
+
 static void __ref hotplug_work_fn(struct work_struct *work)
 {
 	unsigned int upmaxcoreslimit = 0;
