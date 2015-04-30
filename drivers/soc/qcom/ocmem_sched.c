@@ -709,6 +709,8 @@ static int __sched_grow(struct ocmem_req *req, bool can_block)
 	struct ocmem_zone *zone = get_zone(owner);
 	struct ocmem_region *region = NULL;
 
+	BUG_ON(!zone);
+
 	matched_region = find_region_match(req->req_start, req->req_end);
 	matched_req = find_req_match(req->req_id, matched_region);
 
@@ -766,7 +768,7 @@ retry_next_step:
 			region = create_region();
 			if (!region) {
 				pr_err("ocmem: Unable to create region\n");
-				goto region_error;
+				goto internal_error;
 			}
 		}
 
@@ -849,8 +851,8 @@ region_error:
 	detach_req(region, req);
 	update_region_prio(region);
 	/* req is going to be destroyed by the caller anyways */
-internal_error:
 	destroy_region(region);
+internal_error:
 invalid_op_error:
 	return OP_FAIL;
 }
@@ -1597,6 +1599,8 @@ static void ocmem_rdm_worker(struct work_struct *work)
 	struct ocmem_handle *handle = work_data->handle;
 	struct ocmem_req *req = handle_to_req(handle);
 	struct ocmem_buf *buffer = handle_to_buffer(handle);
+
+	BUG_ON(!req);
 
 	down_write(&req->rw_sem);
 	offset = phys_to_offset(req->req_start);

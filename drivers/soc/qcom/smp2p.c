@@ -510,6 +510,7 @@ static void smp2p_find_entry_v1(struct smp2p_smem __iomem *item,
 {
 	int i;
 	struct smp2p_entry_v1 *pos;
+	char entry_name[SMP2P_MAX_ENTRY_NAME];
 
 	if (!item || !name || !entry_ptr) {
 		SMP2P_ERR("%s: invalid arguments %p, %p, %p\n",
@@ -523,8 +524,9 @@ static void smp2p_find_entry_v1(struct smp2p_smem __iomem *item,
 
 	pos = (struct smp2p_entry_v1 *)(char *)(item + 1);
 	for (i = 0; i < entries_total; i++, ++pos) {
-		if (pos->name[0]) {
-			if (!strncmp(pos->name, name, SMP2P_MAX_ENTRY_NAME)) {
+		memcpy_fromio(entry_name, pos->name, SMP2P_MAX_ENTRY_NAME);
+		if (entry_name[0]) {
+			if (!strcmp(entry_name, name)) {
 				*entry_ptr = &pos->entry;
 				break;
 			}
@@ -584,8 +586,8 @@ static int smp2p_out_create_v1(struct msm_smp2p_out *out_entry)
 
 		entry_ptr = (struct smp2p_entry_v1 *)((char *)(smp2p_h_ptr + 1)
 			+ empty_spot * sizeof(struct smp2p_entry_v1));
-		strlcpy(entry_ptr->name, out_entry->name,
-				sizeof(entry_ptr->name));
+		memcpy_toio(entry_ptr->name, out_entry->name,
+						sizeof(entry_ptr->name));
 		out_entry->l_smp2p_entry = &entry_ptr->entry;
 		++entries_valid;
 		SMP2P_DBG("%s: item '%s':%d fully created as entry %d of %d\n",
