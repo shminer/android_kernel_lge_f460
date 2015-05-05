@@ -149,7 +149,7 @@ static void dbs_freq_increase(struct cpufreq_policy *policy, unsigned int freq)
 }
 
 /*
- * Every sampling_rate, we check, if current idle time is less than 37%
+ * Every sampling_rate, we check, if current idle time is less than 20%
  * (default), then we try to increase frequency. Else, we adjust the frequency
  * proportional to load.
  */
@@ -165,7 +165,7 @@ static void od_check_cpu(int cpu, unsigned int load)
 	dbs_info->freq_lo = 0;
 
 	now = ktime_to_us(ktime_get());
-	boosted = now < (last_input_time + get_input_boost_duration());
+	boosted = now < (get_input_time() + get_input_boost_duration());
 
 	/* Check for frequency increase */
 	if (load > od_tuners->up_threshold) {
