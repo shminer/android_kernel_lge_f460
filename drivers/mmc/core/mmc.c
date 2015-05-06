@@ -1496,6 +1496,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			pr_err("%s: %s: mmc_decode_csd() fails %d\n",
 					mmc_hostname(host), __func__, err);
 			goto free_card;
+		}
 #ifndef CONFIG_MACH_LGE
 		/*
 
@@ -1538,6 +1539,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			pr_err("%s: %s: mmc_read_ext_csd() fails %d\n",
 					mmc_hostname(host), __func__, err);
 			goto free_card;
+		}
 #ifdef CONFIG_MACH_LGE
 		/*
 
