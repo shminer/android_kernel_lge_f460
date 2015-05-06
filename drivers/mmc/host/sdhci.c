@@ -1692,7 +1692,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 					SDHCI_CARD_PRESENT;
 	}
-	present = mmc_gpio_get_cd(host->mmc);
 
 	present = mmc_gpio_get_cd(host->mmc);
 
@@ -2768,8 +2767,8 @@ static int lge_asctodec(char *buff, int num)
 		tmp = 1;
 		for (j = 0; j < (num - (i + 1)); j++) {
 			tmp = tmp * 10;
-		}
-		val += tmp * (buff[i] - 48);
+		}   
+		val += tmp * (buff[i] - 48); 
 	}
 	return val;
 }
@@ -2787,9 +2786,9 @@ static void record_crc_error(int crctype, char *hostname)
 	mm_segment_t old_fs = get_fs();
 
 	if (crctype == CMD_CRC_ERROR) {
-		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_crc_error.txt", hostname);
+		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_crc_error.txt", hostname);		
 	} else if (crctype == DAT_CRC_ERROR) {
-		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_dat_error.txt", hostname);
+		sprintf(filename, "/data/data/com.example.fs_bench/files/%s_dat_error.txt", hostname);		
 	}
 
 	set_fs(KERNEL_DS);
@@ -2817,7 +2816,7 @@ static void record_crc_error(int crctype, char *hostname)
 			count++;
 		else
 			break;
-	} while (1);
+	} while (1);  
 
 	for (i = 0; i < count; i++) {
 		tmp = num_crc%10;

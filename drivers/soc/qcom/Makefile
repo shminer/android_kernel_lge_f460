@@ -21,7 +21,7 @@ obj-$(CONFIG_MSM_JTAG) += jtag-fuse.o jtag.o
 obj-$(CONFIG_MSM_JTAG_MM) +=  jtag-fuse.o jtag-mm.o
 obj-$(CONFIG_MSM_QMI_INTERFACE) += qmi_interface.o
 
-obj-$(CONFIG_MSM_SCM) += scm.o
+obj-$(CONFIG_MSM_SCM) += scm.o scm-boot.o
 
 obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o smd_private.o smd_init_dt.o smsm_debug.o
 obj-$(CONFIG_MSM_SMEM) += smem.o smem_debug.o
@@ -30,6 +30,7 @@ obj-$(CONFIG_MSM_SMP2P) += smp2p.o smp2p_debug.o
 obj-$(CONFIG_MSM_SMP2P_TEST) += smp2p_loopback.o smp2p_test.o smp2p_spinlock_test.o
 obj-$(CONFIG_MSM_WATCHDOG_V2) += watchdog_v2.o
 obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
+obj-$(CONFIG_MSM_SPM_V2) += spm-v2.o spm_devices.o
 obj-y		+= socinfo.o
 
 obj-$(CONFIG_MSM_PIL) += peripheral-loader.o
@@ -50,3 +51,4 @@ obj-$(CONFIG_MSM_SYSMON_COMM) += sysmon.o
 
 obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o
 obj-$(CONFIG_MSM_SHARED_HEAP_ACCESS) += shared_memory.o
+obj-$(CONFIG_MSM_XPU_ERR_FATAL) += scm-xpu.o

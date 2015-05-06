@@ -705,8 +705,7 @@ done:
 #endif
 
 static int ashmem_cache_op(struct ashmem_area *asma,
-	void (*cache_func)(unsigned long vstart, unsigned long length,
-				unsigned long pstart))
+	void (*cache_func)(const void *vstart, const void *vend))
 {
 	int ret = 0;
 	struct vm_area_struct *vma;
@@ -731,7 +730,8 @@ static int ashmem_cache_op(struct ashmem_area *asma,
 		goto done;
 	}
 #ifndef CONFIG_OUTER_CACHE
-	cache_func(asma->vm_start, asma->size, 0);
+		cache_func((void *)asma->vm_start,
+			(void *)(asma->vm_start + asma->size));
 #else
 	for (vaddr = asma->vm_start; vaddr < asma->vm_start + asma->size;
 		vaddr += PAGE_SIZE) {
@@ -795,13 +795,13 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case ASHMEM_CACHE_FLUSH_RANGE:
-		ret = ashmem_cache_op(asma, &clean_and_invalidate_caches);
+		ret = ashmem_cache_op(asma, &dmac_flush_range);
 		break;
 	case ASHMEM_CACHE_CLEAN_RANGE:
-		ret = ashmem_cache_op(asma, &clean_caches);
+		ret = ashmem_cache_op(asma, &dmac_clean_range);
 		break;
 	case ASHMEM_CACHE_INV_RANGE:
-		ret = ashmem_cache_op(asma, &invalidate_caches);
+		ret = ashmem_cache_op(asma, &dmac_inv_range);
 		break;
 	}
 

@@ -1685,8 +1685,8 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	int ecc_err = 0, gen_err = 0;
 
 #ifdef CONFIG_MACH_LGE
-	/*           
-                                                        
+	/*
+
   */
 	if (mmc_card_sd(card) && !mmc_gpio_get_status(card->host)) {
 		printk(KERN_INFO "[LGE][MMC][%-18s( )] sd-no-exist, "
