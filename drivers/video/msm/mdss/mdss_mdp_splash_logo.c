@@ -191,19 +191,11 @@ void mdss_mdp_release_splash_pipe(struct msm_fb_data_type *mfd)
 int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 					bool use_borderfill)
 {
-	struct mdss_overlay_private *mdp5_data;
-	struct mdss_mdp_ctl *ctl;
+	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
+	struct mdss_mdp_ctl *ctl = mdp5_data->ctl;
 	int rc = 0;
 
-	if (!mfd)
-		return -EINVAL;
-
-	mdp5_data = mfd_to_mdp5_data(mfd);
-	if (!mdp5_data)
-		return -EINVAL;
-
-	ctl = mdp5_data->ctl;
-	if (!ctl)
+	if (!mfd || !mdp5_data)
 		return -EINVAL;
 
 	if (mfd->splash_info.iommu_dynamic_attached ||
@@ -278,13 +270,7 @@ static struct mdss_mdp_pipe *mdss_mdp_splash_get_pipe(
 		return NULL;
 	}
 
-	buf = mdss_mdp_overlay_buf_alloc(mfd, pipe);
-	if (!buf) {
-		pr_err("unable to allocate memory for splash buffer\n");
-		mdss_mdp_pipe_unmap(pipe);
-		return NULL;
-	}
-
+	buf = &pipe->back_buf;
 	buf->p[0].addr = mfd->splash_info.iova;
 	buf->p[0].len = image_size;
 	buf->num_planes = 1;
@@ -504,7 +490,7 @@ done:
 static int mdss_mdp_splash_thread(void *data)
 {
 	struct msm_fb_data_type *mfd = data;
-	struct mdss_overlay_private *mdp5_data;
+	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
 	int ret = -EINVAL;
 
 	if (!mfd) {
@@ -512,7 +498,6 @@ static int mdss_mdp_splash_thread(void *data)
 		goto end;
 	}
 
-	mdp5_data = mfd_to_mdp5_data(mfd);
 	lock_fb_info(mfd->fbi);
 	ret = fb_blank(mfd->fbi, FB_BLANK_UNBLANK);
 	if (ret) {

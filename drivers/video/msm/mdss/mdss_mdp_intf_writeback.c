@@ -115,6 +115,9 @@ static int mdss_mdp_writeback_addr_setup(struct mdss_mdp_writeback_ctx *ctx,
 
 	pr_debug("wb_num=%d addr=0x%pa\n", ctx->wb_num, &data.p[0].addr);
 
+	if (ctx->bwc_mode)
+		data.bwc_enabled = 1;
+
 	ret = mdss_mdp_data_check(&data, &ctx->dst_planes);
 	if (ret)
 		return ret;
@@ -136,17 +139,13 @@ static int mdss_mdp_writeback_format_setup(struct mdss_mdp_writeback_ctx *ctx,
 	struct mdss_mdp_format_params *fmt;
 	u32 dst_format, pattern, ystride0, ystride1, outsize, chroma_samp;
 	u32 opmode = ctx->opmode;
-	bool rotation = false;
 	struct mdss_data_type *mdata;
 
 	pr_debug("wb_num=%d format=%d\n", ctx->wb_num, format);
 
-	if (ctx->rot90)
-		rotation = true;
-
 	mdss_mdp_get_plane_sizes(format, ctx->width, ctx->height,
 				 &ctx->dst_planes,
-				 ctx->opmode & MDSS_MDP_OP_BWC_EN, rotation);
+				 ctx->opmode & MDSS_MDP_OP_BWC_EN);
 
 	fmt = mdss_mdp_get_format_params(format);
 	if (!fmt) {
