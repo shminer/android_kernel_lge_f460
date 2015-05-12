@@ -58,6 +58,12 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	if (cs_tuners->freq_step == 0)
 		return;
 
+<<<<<<< HEAD
+=======
+	now = ktime_to_us(ktime_get());
+	boosted = now < (last_input_time + get_input_boost_duration());
+
+>>>>>>> 879f62a... input: touchboost: squish get_input_time()
 	/* Check for frequency increase */
 	if (load > cs_tuners->up_threshold) {
 		dbs_info->down_skip = 0;

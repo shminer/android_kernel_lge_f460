@@ -410,7 +410,11 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	cpu_load = loadadjfreq / pcpu->policy->cur;
+<<<<<<< HEAD
 	boosted = tunables->boost_val || now < tunables->boostpulse_endtime;
+=======
+	boosted = boost_val || now < (last_input_time + get_input_boost_duration());
+>>>>>>> 879f62a... input: touchboost: squish get_input_time()
 
 	if (cpu_load >= tunables->go_hispeed_load || boosted) {
 		if (pcpu->policy->cur < tunables->hispeed_freq) {
