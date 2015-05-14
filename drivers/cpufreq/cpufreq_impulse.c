@@ -23,6 +23,9 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <asm/cputime.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 
 struct cpufreq_impulse_cpuinfo {
 	struct timer_list cpu_timer;
@@ -49,6 +52,11 @@ struct cpufreq_impulse_cpuinfo {
 };
 
 static DEFINE_PER_CPU(struct cpufreq_impulse_cpuinfo, cpuinfo);
+
+#ifdef CONFIG_STATE_NOTIFIER
+static struct notifier_block notif;
+#endif
+static bool suspended;
 
 /* realtime thread handles frequency scaling */
 static struct task_struct *speedchange_task;
@@ -103,6 +111,7 @@ struct cpufreq_impulse_tunables {
 	int boostpulse_duration_val;
 	/* End time of boost pulse in ktime converted to usecs */
 	u64 boostpulse_endtime;
+	bool boosted;
 	/*
 	 * Max additional time to wait in idle, beyond timer_rate, at speeds
 	 * above minimum before wakeup to reduce speed, or -1 if unnecessary.
@@ -377,7 +386,7 @@ static void cpufreq_impulse_timer(unsigned long data)
 	unsigned int index;
 	unsigned long flags;
 	unsigned int this_hispeed_freq;
-	bool boosted;
+
 	struct cpufreq_govinfo int_info;
 
 	if (!down_read_trylock(&pcpu->enable_sem))
@@ -409,18 +418,21 @@ static void cpufreq_impulse_timer(unsigned long data)
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = tunables->boost_val || now < tunables->boostpulse_endtime ||
+	tunables->boosted = check_cpuboost(data) || tunables->boost_val ||
+			now < tunables->boostpulse_endtime ||
 			cpu_load >= tunables->go_hispeed_load;
+	tunables->boosted = tunables->boosted && !suspended;
 	this_hispeed_freq = max(tunables->hispeed_freq, pcpu->policy->min);
 
-	if (cpu_load <= tunables->go_lowspeed_load && !tunables->boost_val) {
-		boosted = false;
+	if (cpu_load <= tunables->go_lowspeed_load &&
+		!tunables->boost_val) {
+		tunables->boosted = false;
 		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
 		new_freq = choose_freq(pcpu, loadadjfreq);
 	}
 
-	if (boosted)
+	if (tunables->boosted)
 		new_freq = max(new_freq, this_hispeed_freq);
 
 	if (pcpu->policy->cur >= this_hispeed_freq &&
@@ -470,7 +482,7 @@ static void cpufreq_impulse_timer(unsigned long data)
 	 * (or the indefinite boost is turned off).
 	 */
 
-	if (!boosted || new_freq > this_hispeed_freq) {
+	if (!tunables->boosted || new_freq > this_hispeed_freq) {
 		pcpu->floor_freq = new_freq;
 		pcpu->floor_validate_time = now;
 	}
@@ -640,7 +652,7 @@ static int cpufreq_impulse_speedchange_task(void *data)
 
 			if (max_freq != pcpu->policy->cur) {
 				tunables = pcpu->policy->governor_data;
-				if (tunables->powersave_bias)
+				if (tunables->powersave_bias || suspended)
 					__cpufreq_driver_target(pcpu->policy,
 								max_freq,
 								CPUFREQ_RELATION_C);
@@ -661,19 +673,21 @@ static int cpufreq_impulse_speedchange_task(void *data)
 	return 0;
 }
 
-static void cpufreq_impulse_boost(void)
+static void cpufreq_impulse_boost(struct cpufreq_impulse_tunables *tunables)
 {
 	int i;
 	int anyboost = 0;
 	unsigned long flags[2];
 	struct cpufreq_impulse_cpuinfo *pcpu;
-	struct cpufreq_impulse_tunables *tunables;
+
+	tunables->boosted = true;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
 
 	for_each_online_cpu(i) {
 		pcpu = &per_cpu(cpuinfo, i);
-		tunables = pcpu->policy->governor_data;
+		if (tunables != pcpu->policy->governor_data)
+			continue;
 
 		spin_lock_irqsave(&pcpu->target_freq_lock, flags[1]);
 		if (pcpu->target_freq < tunables->hispeed_freq) {
@@ -1031,10 +1045,12 @@ static ssize_t store_boost(struct cpufreq_impulse_tunables *tunables,
 
 	tunables->boost_val = val;
 
-	if (tunables->boost_val)
-		cpufreq_impulse_boost();
-	else
+	if (tunables->boost_val) {
+		if (!tunables->boosted)
+			cpufreq_impulse_boost(tunables);
+	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
+	}
 
 	return count;
 }
@@ -1051,7 +1067,8 @@ static ssize_t store_boostpulse(struct cpufreq_impulse_tunables *tunables,
 
 	tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 		tunables->boostpulse_duration_val;
-	cpufreq_impulse_boost();
+	if (!tunables->boosted)
+		cpufreq_impulse_boost(tunables);
 	return count;
 }
 
@@ -1521,6 +1538,25 @@ static int cpufreq_governor_impulse(struct cpufreq_policy *policy,
 	return 0;
 }
 
+#ifdef CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			suspended = false;
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			suspended = true;
+			break;
+		default:
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
+
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_IMPULSE
 static
 #endif
@@ -1568,6 +1604,12 @@ static int __init cpufreq_impulse_init(void)
 	/* NB: wake up so the thread does not look hung to the freezer */
 	wake_up_process(speedchange_task);
 
+#ifdef CONFIG_STATE_NOTIFIER
+	notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&notif))
+		pr_err("Cannot register State notifier callback for impulse governor.\n");
+#endif
+
 	return cpufreq_register_governor(&cpufreq_gov_impulse);
 }
 
@@ -1581,6 +1623,10 @@ static void __exit cpufreq_impulse_exit(void)
 {
 	int cpu;
 	struct cpufreq_impulse_cpuinfo *pcpu;
+
+#ifdef CONFIG_STATE_NOTIFIER
+	state_unregister_client(&notif);
+#endif
 
 	cpufreq_unregister_governor(&cpufreq_gov_impulse);
 	kthread_stop(speedchange_task);
