@@ -288,7 +288,6 @@ void idle_notifier_call_chain(unsigned long val);
 
 #ifdef CONFIG_CPU_BOOST
 extern bool check_cpuboost(int cpu);
-extern bool wakeup_boost;
 #endif
 
 #endif /* _LINUX_CPU_H_ */
