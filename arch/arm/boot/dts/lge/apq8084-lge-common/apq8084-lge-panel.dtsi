@@ -46,7 +46,7 @@
 		qcom,mdss-dsi-v-bottom-border = <0>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
-		qcom,mdss-dsi-underflow-color = <0x00>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-on-command = [
 			// SW reset
@@ -101,9 +101,9 @@
 			// Color enhancement
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			// Selective Color. F4 ~ F7 : Color0 ~ Color4
-			39 01 00 00 00 00 02 F4 00
-			39 01 00 00 00 00 04 F5 01 00 61
-			39 01 00 00 00 00 04 F6 03 00 61
+			39 01 00 00 00 00 02 F4 05
+			39 01 00 00 00 00 04 F5 02 00 83
+			39 01 00 00 00 00 04 F6 00 00 00
 			39 01 00 00 00 00 04 F7 00 00 00
 			// Digital Gamma. RGB
 			39 01 00 00 00 00 11 F8 40 40 40 40 40 40 40 40 00 00 00 00 00 00 00 00
@@ -138,8 +138,6 @@
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_others";
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode";
 		qcom,mdss-dsi-reset-sequence = <1 5>;
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
@@ -164,7 +162,7 @@
 		qcom,panel-ief-off-cmds = [
 			15 01 00 00 00 00 02 B0 AC
 			15 01 00 00 00 00 02 55 81
-			15 01 00 00 00 00 02 F0 26
+			15 01 00 00 00 00 02 F0 33
 			39 01 00 00 00 00 05 F1 00 00 00 00
 			39 01 00 00 00 00 04 F2 01 00 00
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
@@ -203,7 +201,7 @@
 		qcom,mdss-dsi-v-bottom-border = <0>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
-		qcom,mdss-dsi-underflow-color = <0x00>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-on-command = [
 			// SW reset
@@ -258,9 +256,9 @@
 			// Color enhancement
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			// Selective Color. F4 ~ F7 : Color0 ~ Color4
-			39 01 00 00 00 00 02 F4 00
-			39 01 00 00 00 00 04 F5 01 00 61
-			39 01 00 00 00 00 04 F6 03 00 61
+			39 01 00 00 00 00 02 F4 05
+			39 01 00 00 00 00 04 F5 02 00 83
+			39 01 00 00 00 00 04 F6 00 00 00
 			39 01 00 00 00 00 04 F7 00 00 00
 			// Digital Gamma. RGB
 			39 01 00 00 00 00 11 F8 40 40 40 40 40 40 40 40 00 00 00 00 00 00 00 00
@@ -296,8 +294,6 @@
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_others";
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode";
 		qcom,mdss-dsi-reset-sequence = <1 5>;
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
@@ -322,7 +318,7 @@
 		qcom,panel-ief-off-cmds = [
 			15 01 00 00 00 00 02 B0 AC
 			15 01 00 00 00 00 02 55 81
-			15 01 00 00 00 00 02 F0 26
+			15 01 00 00 00 00 02 F0 33
 			39 01 00 00 00 00 05 F1 00 00 00 00
 			39 01 00 00 00 00 04 F2 01 00 00
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
