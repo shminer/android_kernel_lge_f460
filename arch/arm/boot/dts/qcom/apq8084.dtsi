@@ -4299,7 +4299,7 @@
 		compatible = "devfreq-simple-dev";
 		clock-names = "devfreq_clk";
 		clocks = <&clock_krait clk_l2_clk>;
-		governor = "cpufreq";
+		governor = "cache_hwmon";
 		freq-tbl-khz =
 			<  300000 >,
 			<  345600 >,
@@ -4328,7 +4328,7 @@
 		compatible = "qcom,devbw";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		governor = "cpufreq";
+		governor = "cpubw_hwmon";
 		qcom,bw-tbl =
 			<   762 /*   50 MHz */ >,
 			<  1144 /*   75 MHz */ >,
