@@ -203,8 +203,8 @@ static ssize_t kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 
 	kgsl_mutex_lock(&device->mutex, &device->mutex_owner);
 
-	if (level > pwr->num_pwrlevels - 1)
-		level = pwr->num_pwrlevels - 1;
+	if (level > pwr->num_pwrlevels - 2)
+		level = pwr->num_pwrlevels - 2;
 
 	pwr->thermal_pwrlevel = level;
 
@@ -392,9 +392,6 @@ static ssize_t kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 	level = _get_nearest_pwrlevel(pwr, val);
 	if (level < 0)
 		goto done;
-
-	if (level > 6)
-		level = 6;
 
 	/* if ROM set 600 max(pwr@1), set 750Max(pwr@0) thanks dorimanx hack*/
 	if (level == 1)
