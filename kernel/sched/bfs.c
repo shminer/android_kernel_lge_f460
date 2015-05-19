@@ -7281,7 +7281,8 @@ void __init sched_init(void)
 #endif
 
 #ifdef CONFIG_RT_MUTEXES
-	plist_head_init(&init_task.pi_waiters);
+	init_task.pi_waiters = RB_ROOT;
+	init_task.pi_waiters_leftmost = NULL;
 #endif
 
 	/*
