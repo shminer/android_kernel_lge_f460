@@ -258,7 +258,7 @@ static void hotplug_work_fn(struct work_struct *work)
 		online_cpus = num_online_cpus();
 
 		if (cpu > 0	&&
-			 online_cpus > upmaxcoreslimit && !check_cpuboost(cpu)) {
+			 online_cpus > upmaxcoreslimit) {
 				queue_work_on(cpu, alucardhp_wq, &pcpu_info->down_work);
 		} else if (online_cpus < min_cpus_online) {
 				if (upcpu < upmaxcoreslimit) {
@@ -293,7 +293,7 @@ static void hotplug_work_fn(struct work_struct *work)
 		} else if (cpu >= min_cpus_online && (
 				cur_load < pcpu_info->down_load
 				|| (cur_freq <= pcpu_info->down_freq
-				&& rq_avg <= pcpu_info->down_rq)) && !check_cpuboost(cpu)) {
+				&& rq_avg <= pcpu_info->down_rq))) {
 					if (pcpu_info->cur_down_rate %
 							pcpu_info->down_rate == 0) {
 #if 0
