@@ -23,6 +23,8 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <asm/cputime.h>
+#include <linux/touchboost.h>
+
 #ifdef CONFIG_STATE_NOTIFIER
 #include <linux/state_notifier.h>
 #endif
@@ -419,21 +421,24 @@ static void cpufreq_impulse_timer(unsigned long data)
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	tunables->boosted = tunables->boost_val ||
-			now < tunables->boostpulse_endtime ||
+			now < (last_input_time + get_input_boost_duration()) ||
 			cpu_load >= tunables->go_hispeed_load;
 	tunables->boosted = tunables->boosted && !suspended;
 	this_hispeed_freq = max(tunables->hispeed_freq, pcpu->policy->min);
 
-	if (cpu_load <= tunables->go_lowspeed_load &&
-		!tunables->boost_val) {
+	if (cpu_load <= tunables->go_lowspeed_load) {
 		tunables->boosted = false;
 		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
 		new_freq = choose_freq(pcpu, loadadjfreq);
 	}
 
-	if (tunables->boosted)
-		new_freq = max(new_freq, this_hispeed_freq);
+	if (tunables->boosted){
+		if (new_freq < input_boost_freq)
+			new_freq = input_boost_freq;
+		else
+			new_freq = max(new_freq, this_hispeed_freq);
+	}
 
 	if (pcpu->policy->cur >= this_hispeed_freq &&
 	    new_freq > pcpu->policy->cur &&
