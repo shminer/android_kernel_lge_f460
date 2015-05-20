@@ -152,12 +152,6 @@ static int msm_pm_get_pc_mode(struct device_node *node,
 	return ret;
 }
 
-static inline void msm_arch_idle(void)
-{
-	mb();
-	wfi();
-}
-
 static bool msm_pm_is_L1_writeback(void)
 {
 	u32 sel = 0, cache_id;
