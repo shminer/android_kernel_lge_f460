@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.10.77 Kernel Configuration
+# Linux/arm 3.10.79 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1401,10 +1401,7 @@ CONFIG_SCSI_LOWLEVEL=y
 # CONFIG_MEGARAID_SAS is not set
 # CONFIG_SCSI_MPT2SAS is not set
 # CONFIG_SCSI_MPT3SAS is not set
-CONFIG_SCSI_UFSHCD=y
-# CONFIG_SCSI_UFSHCD_PCI is not set
-CONFIG_SCSI_UFSHCD_PLATFORM=y
-CONFIG_SCSI_UFS_MSM=y
+# CONFIG_SCSI_UFSHCD is not set
 # CONFIG_SCSI_HPTIOP is not set
 # CONFIG_LIBFC is not set
 # CONFIG_LIBFCOE is not set
