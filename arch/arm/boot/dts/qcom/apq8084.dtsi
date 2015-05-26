@@ -4299,7 +4299,7 @@
 		compatible = "devfreq-simple-dev";
 		clock-names = "devfreq_clk";
 		clocks = <&clock_krait clk_l2_clk>;
-		governor = "cpufreq";
+		governor = "cache_hwmon";
 		freq-tbl-khz =
 			<  300000 >,
 			<  345600 >,
@@ -4374,7 +4374,7 @@
 				<  652800  499200 >,
 				<  883200  576000 >,
 				<  960000  960000 >,
-				< 1497600 1420800 >,
+				< 1497600 1036800 >,
 				< 1574400 1574400 >,
 				< 1728000 1651200 >,
 				< 2496000 1958400 >,
