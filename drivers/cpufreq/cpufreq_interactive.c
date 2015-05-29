@@ -74,11 +74,11 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 90
+#define DEFAULT_GO_HISPEED_LOAD 60
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 85
+#define DEFAULT_TARGET_LOAD 55
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -1183,7 +1183,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		freq_table =
 			cpufreq_frequency_get_table(policy->cpu);
 		if (!hispeed_freq)
-			hispeed_freq = policy->max;
+			hispeed_freq = 1497600;
 
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
