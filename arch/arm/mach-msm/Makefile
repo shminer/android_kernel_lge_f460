@@ -102,4 +102,5 @@ obj-$(CONFIG_MACH_LGE) += lge/
 obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
 obj-$(CONFIG_BRICKED_HOTPLUG) += bricked_hotplug.o
+obj-$(CONFIG_MAKO_HOTPLUG) += mako_hotplug.o
 obj-$(CONFIG_ZEN_DECISION) += msm_zen_decision.o
