@@ -282,7 +282,7 @@ static void bricked_hotplug_suspend(struct work_struct *work)
 
 static void __ref bricked_hotplug_resume(struct work_struct *work)
 {
-	int cpu, required_reschedule = 0, required_wakeup = 0;
+	int cpu, required_wakeup = 0;
 
 	if (hotplug.suspended) {
 		mutex_lock(&hotplug.bricked_hotplug_mutex);
