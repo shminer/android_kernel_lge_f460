@@ -269,7 +269,7 @@ static void bricked_hotplug_suspend(struct work_struct *work)
 	}
 
 	/* main work thread can sleep now */
-	cancel_delayed_work_sync(&hotplug_work);
+	// cancel_delayed_work_sync(&hotplug_work);
 
 	for_each_possible_cpu(cpu) {
 		if ((cpu >= 1) && (cpu_online(cpu)))
@@ -292,10 +292,12 @@ static void __ref bricked_hotplug_resume(struct work_struct *work)
 		mutex_unlock(&hotplug.bricked_hotplug_mutex);
 		required_wakeup = 1;
 		/* Initiate hotplug work if it was cancelled */
+/*
 		if (hotplug.max_cpus_online_susp <= 1) {
 			required_reschedule = 1;
 			INIT_DELAYED_WORK(&hotplug_work, bricked_hotplug_work);
 		}
+ */
 	}
 
 	if (required_wakeup) {
@@ -309,11 +311,13 @@ static void __ref bricked_hotplug_resume(struct work_struct *work)
 	}
 
 	/* Resume hotplug workqueue if required */
+/*
 	if (required_reschedule) {
 		queue_delayed_work(hotplug_wq, &hotplug_work, 0);
 		pr_info(MPDEC_TAG": Screen -> on. Activated bricked hotplug. | Mask=[%d%d%d%d]\n",
 				cpu_online(0), cpu_online(1), cpu_online(2), cpu_online(3));
 	}
+*/
 }
 
 static void __bricked_hotplug_resume(void)
