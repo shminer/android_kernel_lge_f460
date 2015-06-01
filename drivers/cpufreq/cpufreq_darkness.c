@@ -252,7 +252,7 @@ static void do_darkness_timer(struct work_struct *work)
 		delay = max(delay - (jiffies % delay), usecs_to_jiffies(darkness_tuners_ins.sampling_rate / 2));
 	}
 
-	mod_delayed_work_on(this_darkness_cpuinfo->cpu,
+	queue_delayed_work_on(this_darkness_cpuinfo->cpu,
 		system_wq, &this_darkness_cpuinfo->work, delay);
 	mutex_unlock(&this_darkness_cpuinfo->timer_mutex);
 }
@@ -310,8 +310,8 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 			delay = max(delay - (jiffies % delay), usecs_to_jiffies(darkness_tuners_ins.sampling_rate / 2));
 		}
 
-		INIT_DEFERRABLE_WORK(&this_darkness_cpuinfo->work, do_darkness_timer);
-		mod_delayed_work_on(this_darkness_cpuinfo->cpu,
+		INIT_DELAYED_WORK(&this_darkness_cpuinfo->work, do_darkness_timer);
+		queue_delayed_work_on(this_darkness_cpuinfo->cpu,
 				system_wq, &this_darkness_cpuinfo->work,
 				delay);
 
