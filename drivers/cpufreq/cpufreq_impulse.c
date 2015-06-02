@@ -68,7 +68,7 @@ static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 55
+#define DEFAULT_TARGET_LOAD 65
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 
 #define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
@@ -81,7 +81,7 @@ struct cpufreq_impulse_tunables {
 	/* Hi speed to bump to from lo speed when load burst (default max) */
 	unsigned int hispeed_freq;
 	/* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 60
+#define DEFAULT_GO_HISPEED_LOAD 70
 	unsigned long go_hispeed_load;
 /* Go to lowest speed when CPU load at or below this value. */
 #define DEFAULT_GO_LOWSPEED_LOAD 8
