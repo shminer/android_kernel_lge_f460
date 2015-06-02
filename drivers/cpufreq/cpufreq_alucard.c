@@ -592,7 +592,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 			&& next_freq < input_boost_freq)
 			next_freq = input_boost_freq;
 
-	if (this_alucard_cpuinfo->freq_table[index].frequency != policy->cur) {
+	if (next_freq != policy->cur) {
 		__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
 	}
 }
