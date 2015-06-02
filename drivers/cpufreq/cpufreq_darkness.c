@@ -29,6 +29,7 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/touchboost.h>
 
 #define MIN_SAMPLING_RATE	10000
 
@@ -205,6 +206,11 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 	unsigned int next_freq = 0;
 	unsigned int cur_load = 0;
 	int io_busy = darkness_tuners_ins.io_is_busy;
+	bool boosted;
+	u64 now;
+
+	now = ktime_to_us(ktime_get());
+	boosted = now < (last_input_time + get_input_boost_duration());
 
 	policy = this_darkness_cpuinfo->cur_policy;
 	if (!policy->cur)
@@ -230,9 +236,14 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 	cpufreq_notify_utilization(policy, cur_load);
 
 	/* CPUs Online Scale Frequency*/
-	next_freq = adjust_cpufreq_frequency_target(policy, this_darkness_cpuinfo->freq_table,
-												cur_load * (policy->max / 100));
-	if (next_freq != policy->cur && next_freq > 0)
+	next_freq = adjust_cpufreq_frequency_target(policy,
+							this_darkness_cpuinfo->freq_table,cur_load * (policy->max / 100));
+
+	if (boosted && policy->cur < input_boost_freq
+			&& next_freq < input_boost_freq)
+			next_freq = input_boost_freq;
+
+	if (next_freq != policy->cur)
 		__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
 }
 

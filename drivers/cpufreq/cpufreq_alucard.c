@@ -29,6 +29,8 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/touchboost.h>
+
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -505,10 +507,16 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	u64 cur_wall_time, cur_idle_time;
 	unsigned int wall_time, idle_time;
 	unsigned int cur_load = 0;
+	unsigned int next_freq = 0;
 	int io_busy = alucard_tuners_ins.io_is_busy;
 	unsigned int cpus_up_rate = alucard_tuners_ins.cpus_up_rate;
 	unsigned int cpus_down_rate = alucard_tuners_ins.cpus_down_rate;
 	unsigned int min_index = 0, max_index = 0, index = 0;
+	bool boosted;
+	u64 now;
+
+	now = ktime_to_us(ktime_get());
+	boosted = now < (last_input_time + get_input_boost_duration());
 
 	policy = this_alucard_cpuinfo->cur_policy;
 	if (!policy->cur)
@@ -579,8 +587,13 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 		}
 	}
 
+	next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
+	if (boosted && policy->cur < input_boost_freq
+			&& next_freq < input_boost_freq)
+			next_freq = input_boost_freq;
+
 	if (this_alucard_cpuinfo->freq_table[index].frequency != policy->cur) {
-		__cpufreq_driver_target(policy, this_alucard_cpuinfo->freq_table[index].frequency, CPUFREQ_RELATION_L);
+		__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
 	}
 }
 
