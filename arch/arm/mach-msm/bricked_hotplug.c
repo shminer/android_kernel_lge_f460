@@ -261,7 +261,7 @@ static void __bricked_hotplug_resume(void)
 				  cpu_online(0), cpu_online(1), cpu_online(2), cpu_online(3));
 }
 
-static void __bricked_hotplug_suspend(void)
+static void __ref __bricked_hotplug_suspend(void)
 {
 	int cpu;
 	if (!hotplug.bricked_enabled || hotplug.suspended)
@@ -348,14 +348,12 @@ static int bricked_hotplug_start(void)
 	if (state_register_client(&notif)) {
 		pr_err("%s: Failed to register State notifier callback\n",
 			MPDEC_TAG);
-		return -EFAULT;
 	}
 #else
 	notif.notifier_call = fb_notifier_callback;
 	if (fb_register_client(&notif)) {
 		pr_err("%s: Failed to register FB notifier callback\n",
 			MPDEC_TAG);
-		return -EFAULT;
 	}
 #endif
 
