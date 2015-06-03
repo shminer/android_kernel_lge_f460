@@ -70,8 +70,10 @@ ssize_t bhi_write(struct file *file,
 			       align_len)));
 
 	mhi_log(MHI_MSG_INFO, "Aligned Img Loc: %p\n", bhi_ctxt->image_loc);
-	if (NULL == bhi_ctxt->image_loc)
+	if (NULL == bhi_ctxt->image_loc){
 		ret_val = MHI_STATUS_ERROR;
+		return ret_val;
+	}
 	bhi_ctxt->image_size = count;
 
 	if (0 != copy_from_user(bhi_ctxt->image_loc, buf, count)) {

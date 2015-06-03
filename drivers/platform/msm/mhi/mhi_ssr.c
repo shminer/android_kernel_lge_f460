@@ -154,21 +154,21 @@ int mhi_ssr_notify_cb(struct notifier_block *nb,
 {
 	int ret_val = 0;
 	mhi_device_ctxt *mhi_dev_ctxt = mhi_devices.device_list[0].mhi_ctxt;
-	mhi_pcie_dev_info *mhi_pcie_dev = NULL;
-	mhi_pcie_dev = &mhi_devices.device_list[mhi_devices.nr_of_devices];
 	if (NULL != mhi_dev_ctxt)
 		mhi_dev_ctxt->esoc_notif = action;
 	switch (action) {
-	case SUBSYS_AFTER_SHUTDOWN:
-		mhi_log(MHI_MSG_INFO, "Received Subsystem event AFTER_SHUTDOWN\n");
-		ret_val = mhi_init_state_transition(mhi_dev_ctxt,
-				STATE_TRANSITION_LINK_DOWN);
-		if (MHI_STATUS_SUCCESS != ret_val) {
-			mhi_log(MHI_MSG_CRITICAL,
-				"Failed to init state transition, to %d\n",
-				STATE_TRANSITION_LINK_DOWN);
-		}
-		break;
+		case SUBSYS_BEFORE_SHUTDOWN:
+			mhi_log(MHI_MSG_INFO, "Received Subsystem event BEFORE_SHUTDOWN\n");
+			if(mhi_dev_ctxt != NULL) {
+				ret_val = mhi_init_state_transition(mhi_dev_ctxt,
+						STATE_TRANSITION_LINK_DOWN);
+				if (MHI_STATUS_SUCCESS != ret_val) {
+					mhi_log(MHI_MSG_CRITICAL,
+							"Failed to init state transition, to %d\n",
+							STATE_TRANSITION_LINK_DOWN);
+				}
+			}
+			break;
 	}
 	return NOTIFY_OK;
 }

@@ -259,14 +259,14 @@ MHI_STATUS mhi_init_ctrl_zone(mhi_pcie_dev_info *dev_info,
 MHI_STATUS mhi_spawn_threads(mhi_device_ctxt *mhi_dev_ctxt)
 {
 	mhi_dev_ctxt->event_thread_handle = kthread_run(parse_event_thread,
-							mhi_dev_ctxt,
-							"MHI_EV_THREAD");
-	if (-ENOMEM == (int)mhi_dev_ctxt->event_thread_handle)
+			mhi_dev_ctxt,
+			"MHI_EV_THREAD");
+	if (-ENOMEM == (long)mhi_dev_ctxt->event_thread_handle)
 		return MHI_STATUS_ERROR;
 	mhi_dev_ctxt->st_thread_handle = kthread_run(mhi_state_change_thread,
-							mhi_dev_ctxt,
-							"MHI_STATE_THREAD");
-	if (-ENOMEM == (int)mhi_dev_ctxt->event_thread_handle)
+			mhi_dev_ctxt,
+			"MHI_STATE_THREAD");
+	if (-ENOMEM == (long)mhi_dev_ctxt->event_thread_handle)
 		return MHI_STATUS_ERROR;
 	return MHI_STATUS_SUCCESS;
 }
@@ -375,16 +375,16 @@ MHI_STATUS mhi_init_event_ring(mhi_device_ctxt *mhi_dev_ctxt, u32 nr_ev_el,
 	u32 i = 0;
 	unsigned long flags = 0;
 	MHI_STATUS ret_val = MHI_STATUS_SUCCESS;
-	spinlock_t *lock =
-		&mhi_dev_ctxt->mhi_ev_spinlock_list[event_ring_index];
+	spinlock_t *lock ;
 	mhi_ring *event_ctxt = NULL;
-	event_ctxt =
-		&mhi_dev_ctxt->mhi_local_event_ctxt[event_ring_index];
 
 	if (NULL == mhi_dev_ctxt || 0 == nr_ev_el) {
 		mhi_log(MHI_MSG_ERROR, "Bad Input data, quitting\n");
 		return MHI_STATUS_ERROR;
 	}
+
+	lock = &mhi_dev_ctxt->mhi_ev_spinlock_list[event_ring_index];
+	event_ctxt = &mhi_dev_ctxt->mhi_local_event_ctxt[event_ring_index];
 
 	spin_lock_irqsave(lock, flags);
 
@@ -423,10 +423,11 @@ MHI_STATUS mhi_init_device_ctrl(mhi_device_ctxt *mhi_device)
 	u32 align_len = sizeof(u64)*2;
 	MHI_STATUS ret_val = MHI_STATUS_SUCCESS;
 
-	mhi_device->enable_lpm = 1;
 	if (NULL == mhi_device || NULL == mhi_device->mhi_ctrl_seg_info ||
 			NULL == mhi_device->mhi_ctrl_seg_info->dev)
 		return MHI_STATUS_ERROR;
+
+	mhi_device->enable_lpm = 1;
 
 	mhi_log(MHI_MSG_INFO, "Allocating control segment.\n");
 	ctrl_seg_size += sizeof(mhi_control_seg);

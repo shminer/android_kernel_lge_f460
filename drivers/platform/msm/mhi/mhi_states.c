@@ -908,7 +908,8 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 {
 
 	unsigned long flags;
-	int r;
+	int r = 0;
+	int abort_m3 = 0;
 
 	mhi_log(MHI_MSG_INFO, "Entered MHI state %d, Pending M0 %d Pending M3 %d\n",
 			mhi_dev_ctxt->mhi_state, mhi_dev_ctxt->flags.pending_M0,
@@ -921,6 +922,7 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 		mhi_log(MHI_MSG_INFO,
 			"Triggering wake out of M2\n");
 		write_lock_irqsave(&mhi_dev_ctxt->xfer_lock, flags);
+		mhi_dev_ctxt->flags.pending_M3 = 1;
 		mhi_assert_device_wake(mhi_dev_ctxt);
 		write_unlock_irqrestore(&mhi_dev_ctxt->xfer_lock, flags);
 		r = wait_event_interruptible_timeout(*mhi_dev_ctxt->M0_event,
@@ -938,11 +940,23 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 			"MHI state %d, link state %d.\n",
 				mhi_dev_ctxt->mhi_state,
 				mhi_dev_ctxt->flags.link_up);
-		if (mhi_dev_ctxt->flags.link_up)
-			r = -EPERM;
-		else
+		if (mhi_dev_ctxt->flags.link_up) {
+			write_lock_irqsave(&mhi_dev_ctxt->xfer_lock, flags);
+			if (mhi_dev_ctxt->flags.pending_M0) {
+				write_unlock_irqrestore(&mhi_dev_ctxt->xfer_lock, flags);
+				mhi_log(MHI_MSG_INFO,
+						"Pending M0 detected, aborting M3 procedure\n");
+				r = -EPERM;
+				goto exit;
+			}
+			write_unlock_irqrestore(&mhi_dev_ctxt->xfer_lock, flags);
+			mhi_log(MHI_MSG_ERROR, "goto m3_pcie_off\n");
+			goto m3_pcie_off;
+		}
+		else {
 			r = 0;
-		goto exit;
+			goto exit;
+		}
 	case MHI_STATE_RESET:
 		mhi_log(MHI_MSG_INFO,
 				"MHI in RESET turning link off and quitting\n");
@@ -965,10 +979,13 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 			atomic_read(&mhi_dev_ctxt->counters.outbound_acks));
 			mhi_wake(mhi_dev_ctxt);
 			mhi_wake_relax(mhi_dev_ctxt);
+			abort_m3 = 1;
 		goto exit;
 	}
-	if (atomic_read(&mhi_dev_ctxt->flags.data_pending))
+	if (atomic_read(&mhi_dev_ctxt->flags.data_pending)) {
+		abort_m3 = 1;
 		goto exit;
+	}
 	r = hrtimer_cancel(&mhi_dev_ctxt->m1_timer);
 	if (r)
 		mhi_log(MHI_MSG_INFO, "Cancelled M1 timer, timer was active\n");
@@ -998,6 +1015,7 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 			MHI_MAX_SUSPEND_TIMEOUT);
 		mhi_dev_ctxt->counters.m3_event_timeouts++;
 		mhi_dev_ctxt->flags.pending_M3 = 0;
+			r = -EAGAIN;
 		goto exit;
 		break;
 	case -ERESTARTSYS:
@@ -1010,6 +1028,7 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 			"M3 completion received\n");
 		break;
 	}
+m3_pcie_off:
 	mhi_deassert_device_wake(mhi_dev_ctxt);
 	/* Turn off PCIe link*/
 	mhi_turn_off_pcie_link(mhi_dev_ctxt);
@@ -1017,6 +1036,14 @@ int mhi_initiate_m3(mhi_device_ctxt *mhi_dev_ctxt)
 	if (r)
 		mhi_log(MHI_MSG_INFO, "Failed to set bus freq ret %d\n", r);
 exit:
+	if (abort_m3) {
+		write_lock_irqsave(&mhi_dev_ctxt->xfer_lock, flags);
+		atomic_inc(&mhi_dev_ctxt->flags.data_pending);
+		write_unlock_irqrestore(&mhi_dev_ctxt->xfer_lock, flags);
+		ring_all_chan_dbs(mhi_dev_ctxt);
+		atomic_dec(&mhi_dev_ctxt->flags.data_pending);
+		r = -EAGAIN;
+	}
 	/* We have to be careful here, we are setting a pending_M3 to 0
 	 * even if we did not set it above. This works since the only other
 	 * entity that sets this flag must also acquire the pm_lock */
