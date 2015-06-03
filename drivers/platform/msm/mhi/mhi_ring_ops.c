@@ -27,9 +27,10 @@ MHI_STATUS add_element(mhi_ring *ring, void * volatile *rp,
 {
 	uintptr_t d_wp = 0, d_rp = 0, ring_size = 0;
 
-	if (0 == ring->el_size || NULL == ring
+	if (ring == NULL || 0 == ring->el_size
 		|| NULL == ring->base || 0 == ring->len) {
-		mhi_log(MHI_MSG_ERROR, "Bad input parameters, quitting.\n");
+		mhi_log(MHI_MSG_ERROR,
+			"Bad input parameters, quitting.\n");
 		return MHI_STATUS_ERROR;
 	}
 
@@ -71,19 +72,22 @@ MHI_STATUS delete_element(mhi_ring *ring, void * volatile *rp,
 {
 	uintptr_t d_wp = 0, d_rp = 0, ring_size = 0;
 
-	if (0 == ring->el_size || NULL == ring ||
+	if (ring == NULL || 0 == ring->el_size ||
 		NULL == ring->base || 0 == ring->len) {
-		mhi_log(MHI_MSG_ERROR, "Bad input parameters, quitting.\n");
+		mhi_log(MHI_MSG_ERROR,
+			"Bad input parameters, quitting.\n");
 		return MHI_STATUS_ERROR;
 	}
 	ring_size = ring->len / ring->el_size;
 
 	if (MHI_STATUS_SUCCESS != get_element_index(ring, *rp, &d_rp)) {
-		mhi_log(MHI_MSG_CRITICAL, "Bad element index.\n");
+		mhi_log(MHI_MSG_CRITICAL,
+			"Bad element index.\n");
 		return MHI_STATUS_ERROR;
 	}
 	if (MHI_STATUS_SUCCESS != get_element_index(ring, *wp, &d_wp)) {
-		mhi_log(MHI_MSG_CRITICAL, "Bad element index.\n");
+		mhi_log(MHI_MSG_CRITICAL,
+			"Bad element index.\n");
 		return MHI_STATUS_ERROR;
 	}
 	if (d_wp == d_rp) {
@@ -132,9 +136,10 @@ MHI_STATUS get_nr_enclosed_el(mhi_ring *ring, void *rp, void *wp, u32 *nr_el)
 	uintptr_t index_rp = 0;
 	uintptr_t index_wp = 0;
 	uintptr_t ring_size = 0;
-	if (0 == ring->el_size || NULL == ring ||
+	if (ring == NULL || 0 == ring->el_size ||
 		NULL == ring->base || 0 == ring->len) {
-		mhi_log(MHI_MSG_ERROR, "Bad input parameters, quitting.\n");
+		mhi_log(MHI_MSG_ERROR,
+			"Bad input parameters, quitting.\n");
 		return MHI_STATUS_ERROR;
 	}
 	if (MHI_STATUS_SUCCESS != get_element_index(ring, rp, &index_rp)) {

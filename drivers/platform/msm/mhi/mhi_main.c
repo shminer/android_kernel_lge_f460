@@ -32,7 +32,7 @@ int mhi_init_pcie_device(mhi_pcie_dev_info *mhi_pcie_dev)
 			mhi_log(MHI_MSG_ERROR,
 				"Sleeping for ~ %li uS, and retrying.\n",
 				sleep_time);
-			usleep(sleep_time);
+			usleep_range(sleep_time,sleep_time);
 		}
 	} while (ret_val != 0);
 
@@ -102,19 +102,27 @@ int mhi_cpu_notifier_cb(struct notifier_block *nfb, unsigned long action,
 		return NOTIFY_BAD;
 
 	switch(action) {
-	case CPU_ONLINE:
-		if (cpu > 0)
-			mhi_move_interrupts(mhi_dev_ctxt, cpu);
-		break;
-
-	case CPU_DEAD:
-		for_each_online_cpu(cpu) {
-			if (cpu > 0) {
-				mhi_move_interrupts(mhi_dev_ctxt, cpu);
-				break;
+		case CPU_ONLINE:
+			cpu = 3;
+			while(cpu > 0) {
+				if (cpu_online(cpu)) {
+					mhi_move_interrupts(mhi_dev_ctxt, cpu);
+					break;
+				}
+				cpu--;
 			}
-		}
-		break;
+			break;
+
+		case CPU_DEAD:
+			cpu = 3;
+			while(cpu > 0) {
+				if (cpu_online(cpu)) {
+					mhi_move_interrupts(mhi_dev_ctxt, cpu);
+					break;
+				}
+				cpu--;
+			}
+			break;
 
 	default:
 		break;
@@ -223,8 +231,8 @@ MHI_STATUS mhi_open_channel(mhi_client_handle **client_handle,
 	init_completion(&(*client_handle)->chan_close_complete);
 	(*client_handle)->msi_vec =
 		mhi_ctrl_seg->mhi_ec_list[
-			(*client_handle)->event_ring_index].mhi_msi_vector;
-	if (client_info->cb_mod != 0)
+		(*client_handle)->event_ring_index].mhi_msi_vector;
+	if (NULL != client_info && client_info->cb_mod != 0)
 		(*client_handle)->cb_mod = client_info->cb_mod;
 	else
 		(*client_handle)->cb_mod = 1;
@@ -234,8 +242,10 @@ MHI_STATUS mhi_open_channel(mhi_client_handle **client_handle,
 	if (MHI_CLIENT_IP_HW_0_IN  == chan)
 		(*client_handle)->intmod_t = 10;
 	mhi_log(MHI_MSG_VERBOSE,
-		"Successfuly started chan 0x%x\n", chan);
+			"Successfuly started chan 0x%x\n", chan);
 
+	mhi_log(MHI_MSG_INFO, "Move interrupts to CPU3\n");
+	mhi_move_interrupts((*client_handle)->mhi_dev_ctxt, 3);
 error_handle:
 	return ret_val;
 }
@@ -465,7 +475,7 @@ MHI_STATUS mhi_notify_device(mhi_device_ctxt *mhi_dev_ctxt, u32 chan)
 						mhi_dev_ctxt->channel_db_addr,
 						chan, db_value);
 			}
-		} else {
+		} else if(VALID_CHAN_NR(chan)){
 			MHI_WRITE_DB(mhi_dev_ctxt,
 			     mhi_dev_ctxt->channel_db_addr,
 			     chan, db_value);
@@ -534,8 +544,8 @@ MHI_STATUS mhi_send_cmd(mhi_device_ctxt *mhi_dev_ctxt,
 	if (chan >= MHI_MAX_CHANNELS ||
 		cmd >= MHI_COMMAND_MAX_NR || NULL == mhi_dev_ctxt) {
 		mhi_log(MHI_MSG_ERROR,
-			"Invalid channel id, received id: 0x%x", chan);
-		goto error_general;
+				"Invalid channel id, received id: 0x%x", chan);
+		return MHI_STATUS_ERROR;
 	}
 	mhi_assert_device_wake(mhi_dev_ctxt);
 	/*If there is a cmd pending a device confirmation, do not send anymore
@@ -644,7 +654,7 @@ error_general:
 MHI_STATUS parse_xfer_event(mhi_device_ctxt *ctxt, mhi_event_pkt *event)
 {
 	mhi_device_ctxt *mhi_dev_ctxt = (mhi_device_ctxt *)ctxt;
-	mhi_result *result;
+	mhi_result *result = NULL;
 	u32 chan = MHI_MAX_CHANNELS;
 	u16 xfer_len;
 	uintptr_t phy_ev_trb_loc;
@@ -747,7 +757,7 @@ MHI_STATUS parse_xfer_event(mhi_device_ctxt *ctxt, mhi_event_pkt *event)
 					(mhi_xfer_pkt *)local_chan_ctxt->rp;
 			}
 			i++;
-		} while (i < nr_trb_to_parse);
+		} while (i <= nr_trb_to_parse);
 		break;
 	} /* CC_EOT */
 	case MHI_EVENT_CC_OOB:
@@ -768,7 +778,7 @@ MHI_STATUS parse_xfer_event(mhi_device_ctxt *ctxt, mhi_event_pkt *event)
 				db_value);
 		}
 		client_handle = mhi_dev_ctxt->client_handle_list[chan];
-			if (NULL != client_handle) {
+		if (NULL != client_handle && result != NULL) {
 				result->transaction_status = MHI_STATUS_DEVICE_NOT_READY;
 			}
 		break;

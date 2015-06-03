@@ -155,23 +155,26 @@ static int mhi_uci_client_open(struct inode *mhi_inode,
 		&mhi_uci_ctxt.client_handle_list[iminor(mhi_inode)];
 
 	mhi_uci_log(UCI_DBG_VERBOSE,
-		"Client opened device node 0x%x, ref count 0x%x\n",
-		iminor(mhi_inode), atomic_read(&uci_client_handle->ref_count));
+			"Client opened device node 0x%x, ref count 0x%x\n",
+			iminor(mhi_inode), atomic_read(&uci_client_handle->ref_count));
+
+	if (NULL == uci_client_handle) {
+		ret_val = -ENOMEM;
+		goto open_exit;
+	}
+
 	if (1 == atomic_add_return(1, &uci_client_handle->ref_count)) {
 		if (!uci_client_handle->dev_node_enabled) {
 			ret_val = -EPERM;
 			goto handle_alloc_err;
 		}
-		if (NULL == uci_client_handle) {
-			ret_val = -ENOMEM;
-			goto handle_alloc_err;
-		}
+
 		uci_client_handle->uci_ctxt = &mhi_uci_ctxt;
 		ret_val = mhi_open_channel(&uci_client_handle->outbound_handle,
 				uci_client_handle->out_chan,
 				0,
 				&mhi_uci_ctxt.client_info,
-				(void *)uci_client_handle->out_chan);
+				(void *)(long)uci_client_handle->out_chan);
 
 		if (MHI_STATUS_SUCCESS != ret_val) {
 			mhi_uci_log(UCI_DBG_ERROR,
@@ -185,6 +188,7 @@ static int mhi_uci_client_open(struct inode *mhi_inode,
 
 handle_alloc_err:
 	atomic_dec(&uci_client_handle->ref_count);
+open_exit:
 	return ret_val;
 }
 
@@ -295,7 +299,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *buf,
 		}
 	} while (!phy_buf);
 
-	pkt_loc = dma_to_virt(NULL, (dma_addr_t)(uintptr_t)phy_buf);
+	pkt_loc = phys_to_virt((dma_addr_t)(uintptr_t)phy_buf);
 	mhi_uci_log(UCI_DBG_VERBOSE, "Mapped DMA for client avail_pkts:%d virt_adr 0x%p, chan %d\n",
 					atomic_read(&uci_handle->avail_pkts),
 					pkt_loc,
@@ -456,7 +460,7 @@ int mhi_uci_probe(struct platform_device *dev)
 				curr_client->in_chan,
 				0,
 				&mhi_uci_ctxt.client_info,
-				(void *)(curr_client->in_chan));
+				(void *)(long)(curr_client->in_chan));
 		if (i != (mhi_uci_ctxt.ctrl_chan_id / 2))
 			curr_client->dev_node_enabled = 1;
 
@@ -475,7 +479,7 @@ int mhi_uci_probe(struct platform_device *dev)
 					curr_client->out_chan,
 					0,
 					&mhi_uci_ctxt.client_info,
-					(void *)curr_client->out_chan);
+					(void *)(long)curr_client->out_chan);
 			if (MHI_STATUS_SUCCESS != ret_val)
 				mhi_uci_log(UCI_DBG_ERROR,
 				"Failed to init outbound 0x%x, ret 0x%x\n", i, ret_val);
@@ -531,7 +535,7 @@ int mhi_uci_probe(struct platform_device *dev)
 
 failed_char_add:
 failed_device_create:
-	while (--i >= 0) {
+	while (i-- >= 0) {
 		cdev_del(&mhi_uci_ctxt.cdev[i]);
 		device_destroy(mhi_uci_ctxt.mhi_uci_class,
 		MKDEV(MAJOR(mhi_uci_ctxt.start_ctrl_nr), i * 2));
@@ -726,6 +730,7 @@ void uci_xfer_cb(mhi_cb_info *cb_info)
 				uci_handle->mhi_status = -ENETRESET;
 				atomic_inc(&uci_handle->avail_pkts);
 				wake_up(&uci_handle->read_wait_queue);
+						wake_up(&uci_handle->write_wait_queue);
 				} else {
 					mhi_uci_log(UCI_DBG_CRITICAL,
 						"Chan %d state already reset.\n",
@@ -741,7 +746,7 @@ void uci_xfer_cb(mhi_cb_info *cb_info)
 				return;
 		}
 		result = cb_info->result;
-		chan_nr = (u32)result->user_data;
+			chan_nr = (long)result->user_data;
 		client_index = chan_nr / 2;
 			uci_handle =
 				&mhi_uci_ctxt.client_handle_list[client_index];
@@ -776,10 +781,10 @@ void uci_xfer_cb(mhi_cb_info *cb_info)
 }
 void process_rs232_state(mhi_result *result)
 {
-	rs232_ctrl_msg *rs232_pkt;
-	uci_client* client;
+	rs232_ctrl_msg *rs232_pkt = NULL;
+	uci_client* client = NULL;
 	u32 msg_id;
-	MHI_STATUS ret_val;
+	MHI_STATUS ret_val = MHI_STATUS_ERROR;
 	u32 chan;
 	mutex_lock(&mhi_uci_ctxt.ctrl_mutex);
 	if (result->transaction_status != MHI_STATUS_SUCCESS) {
@@ -796,7 +801,7 @@ void process_rs232_state(mhi_result *result)
 	}
 	dma_unmap_single(NULL, (dma_addr_t)(uintptr_t)result->payload_buf,
 			result->bytes_xferd, DMA_BIDIRECTIONAL);
-	rs232_pkt = dma_to_virt(NULL, (dma_addr_t)(uintptr_t)result->payload_buf);
+	rs232_pkt = phys_to_virt((dma_addr_t)(uintptr_t)result->payload_buf);
 	MHI_GET_CTRL_DEST_ID(CTRL_DEST_ID, rs232_pkt, chan);
 	client = &mhi_uci_ctxt.client_handle_list[chan / 2];
 
@@ -816,10 +821,14 @@ void process_rs232_state(mhi_result *result)
 	}
 error_bad_xfer:
 error_size:
+	if(rs232_pkt != NULL){
 	memset(rs232_pkt, 0, sizeof(rs232_ctrl_msg));
 	dma_map_single(NULL, rs232_pkt,
 			sizeof(rs232_ctrl_msg),
 			DMA_BIDIRECTIONAL);
+	}
+
+	if(client != NULL)
 	ret_val = mhi_client_recycle_trb(client->inbound_handle);
 	if (MHI_STATUS_SUCCESS != ret_val){
 		mhi_uci_log(UCI_DBG_ERROR,

@@ -151,6 +151,8 @@ int mhi_startup_thread(void *ctxt)
 			ret_val);
 		goto msi_config_err;
 	}
+
+	mhi_pcie_dev->mhi_ctxt->base_state = STATE_TRANSITION_RESET;
 	ret_val = mhi_esoc_register(mhi_pcie_dev->mhi_ctxt);
 	if (ret_val) {
 		mhi_log(MHI_MSG_ERROR,
@@ -261,6 +263,7 @@ int mhi_startup_thread(void *ctxt)
 	mhi_log(MHI_MSG_INFO,
 			"Finished all driver probing returning ret_val %d.\n",
 			ret_val);
+
 	return ret_val;
 
 mhi_state_transition_error:
