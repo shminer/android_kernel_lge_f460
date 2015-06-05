@@ -48,6 +48,7 @@ static struct notifier_block notif;
 static struct delayed_work alucard_hotplug_work;
 
 static struct mutex alucard_hotplug_mutex;
+static struct mutex hotplug_work_mutex;
 
 static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
@@ -209,6 +210,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 
 	cpumask_copy(cpus, cpu_online_mask);
 
+	mutex_lock(&hotplug_work_mutex);
 	for_each_cpu(cpu, cpus) {
 		struct hotplug_cpuinfo *pcpu_info =
 				&per_cpu(od_hotplug_cpuinfo, cpu);
@@ -313,6 +315,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			pcpu_info->cur_down_rate = 1;
 		}
 	}
+	mutex_unlock(&hotplug_work_mutex);
 
 	mod_delayed_work_on(BOOT_CPU, system_wq,
 				&alucard_hotplug_work,
@@ -432,6 +435,7 @@ static int hotplug_start(void)
 	hotplug_tuners_ins.suspend_rq_flag = 0;
 
 	mutex_init(&alucard_hotplug_mutex);
+	mutex_init(&hotplug_work_mutex);
 
 	get_online_cpus();
 	register_hotcpu_notifier(&alucard_hotplug_nb);
@@ -475,6 +479,7 @@ static void hotplug_stop(void)
 
 	exit_rq_avg();
 	mutex_destroy(&alucard_hotplug_mutex);
+	mutex_destroy(&hotplug_work_mutex);
 }
 
 #define show_one(file_name, object)					\
