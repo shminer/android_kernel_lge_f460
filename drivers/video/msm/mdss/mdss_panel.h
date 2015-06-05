@@ -350,7 +350,6 @@ struct mdss_panel_info {
 	struct ion_handle *splash_ihdl;
 	int panel_power_state;
 	int blank_state;
-	bool is_split_display;
 
 	uint32_t panel_dead;
 
