@@ -47,6 +47,8 @@ static struct notifier_block notif;
 
 static struct delayed_work alucard_hotplug_work;
 
+static struct mutex alucard_hotplug_mutex;
+
 static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
 	unsigned int hotplug_enable;
@@ -67,8 +69,8 @@ static struct hotplug_tuners {
 #endif
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
-	.maxcoreslimit_sleep = 2,
-	.hotplug_resume_time = 10,
+	.maxcoreslimit_sleep = 1,
+	.hotplug_resume_time = 1,
 	.hp_io_is_busy = 0,
 	.hotplug_suspend = 1,
 	.suspended = false,
@@ -197,11 +199,12 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			}
 			return;
 		}else{
+		    mutex_lock(&alucard_hotplug_mutex);
 			upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit_sleep;
+			mutex_unlock(&alucard_hotplug_mutex);
 		}
 	}else
 		upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit;
-
 	rq_avg = get_nr_run_avg();
 
 	cpumask_copy(cpus, cpu_online_mask);
@@ -322,7 +325,9 @@ static void __alucard_hotplug_suspend(void)
 	if (hotplug_tuners_ins.hotplug_enable > 0
 				&& hotplug_tuners_ins.hotplug_suspend == 1 &&
 				hotplug_tuners_ins.suspended == false) {
+		mutex_lock(&alucard_hotplug_mutex);
 		hotplug_tuners_ins.suspended = true;
+		mutex_unlock(&alucard_hotplug_mutex);
 		pr_info("Alucard suspended.\n");
 	}
 }
@@ -333,7 +338,9 @@ static void __ref __alucard_hotplug_resume(void)
 	if (hotplug_tuners_ins.hotplug_enable > 0
 		&& hotplug_tuners_ins.suspended == true &&
 		hotplug_tuners_ins.hotplug_suspend == 1) {
+			mutex_lock(&alucard_hotplug_mutex);
 			hotplug_tuners_ins.suspended = false;
+			mutex_unlock(&alucard_hotplug_mutex);
 			/* wake up everyone */
 			if (hotplug_tuners_ins.hotplug_suspend == 1)
 				for_each_cpu_not(cpu, cpu_online_mask) {
@@ -424,6 +431,8 @@ static int hotplug_start(void)
 	hotplug_tuners_ins.suspended = false;
 	hotplug_tuners_ins.suspend_rq_flag = 0;
 
+	mutex_init(&alucard_hotplug_mutex);
+
 	get_online_cpus();
 	register_hotcpu_notifier(&alucard_hotplug_nb);
 	for_each_online_cpu(cpu) {
@@ -465,6 +474,7 @@ static void hotplug_stop(void)
 	stop_rq_work();
 
 	exit_rq_avg();
+	mutex_destroy(&alucard_hotplug_mutex);
 }
 
 #define show_one(file_name, object)					\
