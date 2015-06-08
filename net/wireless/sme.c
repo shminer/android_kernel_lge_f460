@@ -738,12 +738,21 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 	ASSERT_WDEV_LOCK(wdev);
 
 	if (WARN_ON(wdev->iftype != NL80211_IFTYPE_STATION &&
-		    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT))
+		    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT)
+#ifdef CONFIG_BCMDHD
+	&& !((wdev->iftype == NL80211_IFTYPE_AP)
+		&& (reason == WLAN_REASON_UNSPECIFIED))
+#endif
+)
 		return;
 
 #ifndef CONFIG_CFG80211_ALLOW_RECONNECT
-	if (wdev->sme_state != CFG80211_SME_CONNECTED)
+	/* Except: WLAN_REASON_UNSPECIFIED */
+#if 0 /* for sending Hang Event when device state is "disconnect". by moon_wifi. jw*/
+	if ((wdev->sme_state != CFG80211_SME_CONNECTED)
+			&& (reason != WLAN_REASON_UNSPECIFIED))
 		return;
+#endif
 #endif
 
 	if (wdev->current_bss) {
