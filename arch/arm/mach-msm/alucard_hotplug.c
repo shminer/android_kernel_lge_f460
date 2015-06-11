@@ -23,9 +23,11 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 
-#define MAX_FREQ_LIMIT 2880000
-
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#else
 #include <linux/fb.h>
+#endif
 
 struct hotplug_cpuinfo {
 	u64 prev_cpu_wall;
@@ -44,8 +46,9 @@ struct hotplug_cpuinfo {
 
 static DEFINE_PER_CPU(struct hotplug_cpuinfo, od_hotplug_cpuinfo);
 
+#ifndef CONFIG_POWERSUSPEND
 static struct notifier_block notif;
-
+#endif
 static struct delayed_work alucard_hotplug_work;
 
 static struct hotplug_tuners {
@@ -67,9 +70,9 @@ static struct hotplug_tuners {
 #endif
 	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
-	.maxcoreslimit_sleep = 1,
+	.maxcoreslimit_sleep = 2,
 	.hp_io_is_busy = 0,
-	.hotplug_suspend = 1,
+	.hotplug_suspend = 0,
 	.suspended = false,
 	.force_cpu_up = false,
 };
@@ -184,16 +187,12 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	unsigned int min_cpus_online = hotplug_tuners_ins.min_cpus_online;
 	unsigned int cpu = 0;
 	unsigned int rq_avg;
-	int online_cpus;
 	cpumask_var_t cpus;
 
 	if (hotplug_tuners_ins.suspended)
 		upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit_sleep;
 	else
 		upmaxcoreslimit = hotplug_tuners_ins.maxcoreslimit;
-
-	/* get nr online cpus */
-	online_cpus = num_online_cpus();
 
 	cpumask_copy(cpus, cpu_online_mask);
 
@@ -208,6 +207,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			unsigned int wall_time, idle_time;
 			unsigned int cur_load = 0;
 			unsigned int cur_freq = 0;
+			int online_cpus;
 			int ret;
 
 			cur_idle_time = get_cpu_idle_time(
@@ -232,6 +232,9 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 
 			/* get the cpu current frequency */
 			cur_freq = cpufreq_quick_get(cpu);
+
+			/* get nr online cpus */
+			online_cpus = num_online_cpus();
 
 			if (cpu > 0	&&
 				 online_cpus > upmaxcoreslimit) {
@@ -304,8 +307,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 		}
 	} else {
 		for_each_cpu_not(cpu, cpus) {
-			if (online_cpus < min_cpus_online
-				 && cpu < (upmaxcoreslimit - 1)) {
+			if (cpu < (upmaxcoreslimit - 1)) {
 				cpu_up(cpu);
 			}
 		}
@@ -318,7 +320,11 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 				hotplug_tuners_ins.hotplug_sampling_rate));
 }
 
+#ifdef CONFIG_POWERSUSPEND
+static void __alucard_hotplug_suspend(struct power_suspend *handler)
+#else
 static void __alucard_hotplug_suspend(void)
+#endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
 				&& hotplug_tuners_ins.hotplug_suspend == 1 &&
@@ -327,7 +333,11 @@ static void __alucard_hotplug_suspend(void)
 	}
 }
 
+#ifdef CONFIG_POWERSUSPEND
+static void __ref __alucard_hotplug_resume(struct power_suspend *handler)
+#else
 static void __ref __alucard_hotplug_resume(void)
+#endif
 {
 	if (hotplug_tuners_ins.hotplug_enable > 0
 		&& hotplug_tuners_ins.suspended == true) {
@@ -338,6 +348,12 @@ static void __ref __alucard_hotplug_resume(void)
 	}
 }
 
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend alucard_hotplug_power_suspend_driver = {
+	.suspend = __alucard_hotplug_suspend,
+	.resume = __alucard_hotplug_resume,
+};
+#else
 static int prev_fb = FB_BLANK_UNBLANK;
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -368,6 +384,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 
 	return NOTIFY_OK;
 }
+#endif
 
 static int alucard_hotplug_callback(struct notifier_block *nb,
 			unsigned long action, void *data)
@@ -429,17 +446,25 @@ static int hotplug_start(void)
 				msecs_to_jiffies(
 				hotplug_tuners_ins.hotplug_sampling_rate));
 
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&alucard_hotplug_power_suspend_driver);
+#else
 	notif.notifier_call = fb_notifier_callback;
 	if (fb_register_client(&notif))
 		pr_err("Failed to register FB notifier callback for Alucard Hotplug\n");
+#endif
 
 	return 0;
 }
 
 static void hotplug_stop(void)
 {
+#ifdef CONFIG_POWERSUSPEND
+	unregister_power_suspend(&alucard_hotplug_power_suspend_driver);
+#else
 	fb_unregister_client(&notif);
 	notif.notifier_call = NULL;
+#endif
 	cancel_delayed_work_sync(&alucard_hotplug_work);
 	get_online_cpus();
 	unregister_hotcpu_notifier(&alucard_hotplug_nb);
