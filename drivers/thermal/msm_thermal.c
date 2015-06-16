@@ -132,6 +132,7 @@ static bool gfx_crit_phase_ctrl_enabled;
 static bool gfx_warm_phase_ctrl_enabled;
 static bool cx_phase_ctrl_enabled;
 static bool therm_reset_enabled;
+static bool cx_gfx_kobj_enabled = false;
 static int *tsens_id_map;
 static DEFINE_MUTEX(vdd_rstr_mutex);
 static DEFINE_MUTEX(psm_mutex);
@@ -2366,6 +2367,8 @@ static int msm_thermal_add_gfx_nodes(void)
 	if (!gfx_warm_phase_ctrl_enabled && !gfx_crit_phase_ctrl_enabled)
 		return -EINVAL;
 
+	cx_gfx_kobj_enabled = true;
+
 	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
 	if (!module_kobj) {
 		pr_err("cannot find kobject\n");
@@ -2415,6 +2418,7 @@ static int msm_thermal_add_cx_nodes(void)
 	if (!cx_phase_ctrl_enabled)
 		return -EINVAL;
 
+	cx_gfx_kobj_enabled = true;
 	module_kobj = kset_find_obj(module_kset, KBUILD_MODNAME);
 	if (!module_kobj) {
 		pr_err("cannot find kobject\n");
@@ -2496,8 +2500,10 @@ static void interrupt_mode_init(void)
 		hotplug_init();
 		freq_mitigation_init();
 		thermal_monitor_init();
-		msm_thermal_add_cx_nodes();
-		msm_thermal_add_gfx_nodes();
+		if(!cx_gfx_kobj_enabled){
+			msm_thermal_add_cx_nodes();
+			msm_thermal_add_gfx_nodes();
+		}
 	}
 }
 
