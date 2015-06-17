@@ -564,7 +564,7 @@ static void populate_codec_list(struct msm_compr_audio *prtd)
 			COMPR_PLAYBACK_MIN_NUM_FRAGMENTS;
 	prtd->compr_cap.max_fragments =
 			COMPR_PLAYBACK_MAX_NUM_FRAGMENTS;
-	prtd->compr_cap.num_codecs = 8;
+	prtd->compr_cap.num_codecs = 9;
 	prtd->compr_cap.codecs[0] = SND_AUDIOCODEC_MP3;
 	prtd->compr_cap.codecs[1] = SND_AUDIOCODEC_AAC;
 	prtd->compr_cap.codecs[2] = SND_AUDIOCODEC_AC3;
@@ -573,6 +573,7 @@ static void populate_codec_list(struct msm_compr_audio *prtd)
 	prtd->compr_cap.codecs[5] = SND_AUDIOCODEC_PCM;
 	prtd->compr_cap.codecs[6] = SND_AUDIOCODEC_WMA;
 	prtd->compr_cap.codecs[7] = SND_AUDIOCODEC_WMA_PRO;
+	prtd->compr_cap.codecs[8] = SND_AUDIOCODEC_FLAC;
 }
 
 static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
@@ -583,6 +584,7 @@ static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
 	struct asm_aac_cfg aac_cfg;
 	struct asm_wma_cfg wma_cfg;
 	struct asm_wmapro_cfg wma_pro_cfg;
+	struct asm_flac_cfg flac_cfg;
 	int ret = 0;
 #ifndef CONFIG_HIFI_SOUND
 	uint16_t bit_width = 16;
@@ -687,6 +689,30 @@ static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
 	case FORMAT_MP2:
 		pr_debug("%s: SND_AUDIOCODEC_MP2\n", __func__);
 		break;
+	case FORMAT_FLAC:
+		pr_debug("%s: SND_AUDIOCODEC_FLAC\n", __func__);
+		memset(&flac_cfg, 0x0, sizeof(struct asm_flac_cfg));
+		flac_cfg.ch_cfg = prtd->num_channels;
+		flac_cfg.sample_rate = prtd->sample_rate;
+		flac_cfg.stream_info_present = 1;
+		flac_cfg.sample_size =
+			prtd->codec_param.codec.options.flac_dec.sample_size;
+		flac_cfg.min_blk_size =
+			prtd->codec_param.codec.options.flac_dec.min_blk_size;
+		flac_cfg.max_blk_size =
+			prtd->codec_param.codec.options.flac_dec.max_blk_size;
+		flac_cfg.max_frame_size =
+			prtd->codec_param.codec.options.flac_dec.max_frame_size;
+		flac_cfg.min_frame_size =
+			prtd->codec_param.codec.options.flac_dec.min_frame_size;
+
+		ret = q6asm_stream_media_format_block_flac(prtd->audio_client,
+							&flac_cfg, stream_id);
+		if (ret < 0)
+			pr_err("%s: CMD Format block failed ret %d\n",
+				__func__, ret);
+
+		break;
 	default:
 		pr_debug("%s, unsupported format, skip", __func__);
 		break;
@@ -716,6 +742,18 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 		.step = SOFT_VOLUME_STEP,
 		.rampingcurve = SOFT_VOLUME_CURVE_LINEAR,
 	};
+	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 24;
+#else
+		bits_per_sample = 24;
+#endif
+	else if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 32;
+#else
+		bits_per_sample = 32;
+#endif
 
 	if (prtd->compr_passthr != LEGACY_PCM) {
 		ret = q6asm_open_write_compressed(ac, prtd->codec,
@@ -732,7 +770,13 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 				SNDRV_PCM_STREAM_PLAYBACK,
 				prtd->compr_passthr);
 	} else {
-		pr_debug("%s: stream_id %d\n", __func__, ac->stream_id);
+#ifdef CONFIG_HIFI_SOUND
+	pr_debug("%s: stream_id %d bits_per_sample %d\n",
+			__func__, ac->stream_id, prtd->bits_per_sample);
+#else
+	pr_debug("%s: stream_id %d bits_per_sample %d\n",
+			__func__, ac->stream_id, bits_per_sample);
+#endif
 #ifdef CONFIG_HIFI_SOUND
 		ret = q6asm_open_write_v2(prtd->audio_client,
 				prtd->codec, prtd->bits_per_sample);
@@ -1202,6 +1246,12 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 		break;
 	}
 
+	case SND_AUDIOCODEC_FLAC: {
+		pr_debug("%s: SND_AUDIOCODEC_FLAC\n", __func__);
+		prtd->codec = FORMAT_FLAC;
+		break;
+	}
+
 	default:
 		pr_err("codec not supported, id =%d\n", params->codec.id);
 		return -EINVAL;
@@ -1308,6 +1358,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 	unsigned long flags;
 	int stream_id;
 	uint32_t stream_index;
+	uint16_t bits_per_sample = 16;
 
 	if (cstream->direction != SND_COMPRESS_PLAYBACK) {
 		pr_err("%s: Unsupported stream type\n", __func__);
@@ -1678,9 +1729,17 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			}
 			break;
 		}
-		pr_debug("%s: open_write stream_id %d", __func__, stream_id);
+
+		if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+			bits_per_sample = 24;
+		else if (prtd->codec_param.codec.format ==
+			 SNDRV_PCM_FORMAT_S32_LE)
+			bits_per_sample = 32;
+
+		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
+				__func__, stream_id, bits_per_sample);
 		rc = q6asm_stream_open_write_v2(prtd->audio_client,
-				prtd->codec, 16,
+				prtd->codec, bits_per_sample,
 				stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
 		if (rc < 0) {
@@ -1951,6 +2010,8 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 		codec->descriptor[4].formats = 0;
 		break;
 #endif
+	case SND_AUDIOCODEC_FLAC:
+		break;
 	default:
 		pr_err("%s: Unsupported audio codec %d\n",
 			__func__, codec->codec);
@@ -2154,7 +2215,6 @@ static int lge_dsp_sound_effect_outputdevicetype_put(struct snd_kcontrol *kcontr
 	} else {
 		prtd = cstream->runtime->private_data;
 	}
-
 	pr_info("+++++++++++++++++++++++++++++++++++++\n");
 	pr_info("%s:value %d\n", __func__, (int)ucontrol->value.integer.value[0]);
 	pr_info("+++++++++++++++++++++++++++++++++++++\n");
@@ -3202,6 +3262,7 @@ static int msm_compr_send_dec_params(struct snd_compr_stream *cstream,
 	switch (prtd->codec) {
 	case FORMAT_MP3:
 	case FORMAT_MPEG4_AAC:
+	case FORMAT_FLAC:
 		pr_debug("%s: no runtime parameters for codec: %d\n", __func__,
 			 prtd->codec);
 		break;
