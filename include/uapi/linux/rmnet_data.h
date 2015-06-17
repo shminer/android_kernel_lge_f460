@@ -29,7 +29,6 @@
 #define RMNET_INGRESS_FORMAT_DEAGGREGATION      (1<<2)
 #define RMNET_INGRESS_FORMAT_DEMUXING           (1<<3)
 #define RMNET_INGRESS_FORMAT_MAP_COMMANDS       (1<<4)
-#define RMNET_INGRESS_FORMAT_MAP_CKSUMV3        (1<<5)
 
 /* ***************** Netlink API ******************************************** */
 #define RMNET_NETLINK_PROTO 31
@@ -224,14 +223,10 @@ enum rmnet_netlink_message_types_e {
 };
 
 enum rmnet_config_endpoint_modes_e {
-	/* Pass the frame up the stack with no modifications to skb->dev      */
 	RMNET_EPMODE_NONE,
-	/* Replace skb->dev to a virtual rmnet device and pass up the stack   */
 	RMNET_EPMODE_VND,
-	/* Pass the frame directly to another device with dev_queue_xmit().   */
 	RMNET_EPMODE_BRIDGE,
-	/* Must be the last item in the list                                  */
-	RMNET_EPMODE_LENGTH
+	RMNET_EPMODE_LENGTH /* Must be the last item in the list */
 };
 
 enum rmnet_config_return_codes_e {

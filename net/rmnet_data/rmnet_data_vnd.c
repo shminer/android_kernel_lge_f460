@@ -215,7 +215,7 @@ static int _rmnet_vnd_do_qos_ioctl(struct net_device *dev,
 				   int cmd)
 {
 	struct rmnet_vnd_private_s *dev_conf;
-	int rc, qdisc_len = 0;
+	int rc;
 	struct rmnet_ioctl_data_s ioctl_data;
 	rc = 0;
 	dev_conf = (struct rmnet_vnd_private_s *) netdev_priv(dev);
@@ -249,9 +249,7 @@ static int _rmnet_vnd_do_qos_ioctl(struct net_device *dev,
 			rc = -EFAULT;
 			break;
 		}
-		qdisc_len = tc_qdisc_flow_control(dev,
-						  ioctl_data.u.tcm_handle, 1);
-		trace_rmnet_fc_qmi(ioctl_data.u.tcm_handle, qdisc_len, 1);
+		tc_qdisc_flow_control(dev, ioctl_data.u.tcm_handle, 1);
 		break;
 
 	case RMNET_IOCTL_FLOW_DISABLE:
@@ -261,9 +259,7 @@ static int _rmnet_vnd_do_qos_ioctl(struct net_device *dev,
 			rc = -EFAULT;
 		break;
 		}
-		qdisc_len = tc_qdisc_flow_control(dev,
-						  ioctl_data.u.tcm_handle, 0);
-		trace_rmnet_fc_qmi(ioctl_data.u.tcm_handle, qdisc_len, 0);
+		tc_qdisc_flow_control(dev, ioctl_data.u.tcm_handle, 0);
 		break;
 
 	default:
@@ -283,13 +279,10 @@ struct rmnet_vnd_fc_work {
 static void _rmnet_vnd_wq_flow_control(struct work_struct *work)
 {
 	struct rmnet_vnd_fc_work *fcwork;
-	int qdisc_len = 0;
 	fcwork = (struct rmnet_vnd_fc_work *)work;
 
 	rtnl_lock();
-	qdisc_len = tc_qdisc_flow_control(fcwork->dev, fcwork->tc_handle,
-				     fcwork->enable);
-	trace_rmnet_fc_map(fcwork->tc_handle, qdisc_len, fcwork->enable);
+	tc_qdisc_flow_control(fcwork->dev, fcwork->tc_handle, fcwork->enable);
 	rtnl_unlock();
 
 	LOGL("[%s] handle:%08X enable:%d",
@@ -549,10 +542,10 @@ int rmnet_vnd_init(void)
  *
  * Return:
  *      - 0 if successful
- *      - RMNET_CONFIG_BAD_ARGUMENTS if id is out of range or prefix is too long
- *      - RMNET_CONFIG_DEVICE_IN_USE if id already in use
- *      - RMNET_CONFIG_NOMEM if net_device allocation failed
- *      - RMNET_CONFIG_UNKNOWN_ERROR if register_netdevice() fails
+ *      - -EINVAL if id is out of range, or id already in use
+ *      - -EINVAL if net_device allocation failed
+ *      - -EINVAL if prefix does not fit in buffer
+ *      - return code of register_netdevice() on other errors
  */
 int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 			 const char *prefix)
@@ -561,14 +554,9 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 	char dev_prefix[IFNAMSIZ];
 	int p, rc = 0;
 
-	if (id < 0 || id >= RMNET_DATA_MAX_VND) {
+	if (id < 0 || id >= RMNET_DATA_MAX_VND || rmnet_devices[id] != 0) {
 		*new_device = 0;
-		return RMNET_CONFIG_BAD_ARGUMENTS;
-	}
-
-	if (rmnet_devices[id] != 0) {
-		*new_device = 0;
-		return RMNET_CONFIG_DEVICE_IN_USE;
+		return -EINVAL;
 	}
 
 	if (!prefix)
@@ -578,8 +566,8 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		p = scnprintf(dev_prefix, IFNAMSIZ, "%s%%d",
 			  prefix);
 	if (p >= (IFNAMSIZ-1)) {
-		LOGE("Specified prefix longer than IFNAMSIZ");
-		return RMNET_CONFIG_BAD_ARGUMENTS;
+		LOGE("Specified prefix (%d) longer than IFNAMSIZ", p);
+		return -EINVAL;
 	}
 
 	dev = alloc_netdev(sizeof(struct rmnet_vnd_private_s),
@@ -588,7 +576,7 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 	if (!dev) {
 		LOGE("Failed to to allocate netdev for id %d", id);
 		*new_device = 0;
-		return RMNET_CONFIG_NOMEM;
+		return -EINVAL;
 	}
 
 	rc = register_netdevice(dev);
@@ -596,7 +584,6 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		LOGE("Failed to to register netdev [%s]", dev->name);
 		free_netdev(dev);
 		*new_device = 0;
-		return RMNET_CONFIG_UNKNOWN_ERROR;
 	} else {
 		rmnet_devices[id] = dev;
 		*new_device = dev;
