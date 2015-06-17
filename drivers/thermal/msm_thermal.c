@@ -1545,8 +1545,8 @@ static void do_freq_control(long temp)
 	uint32_t max_freq = cpus[cpu].limited_max_freq;
 
 	if (safety == 1) {
-		if (msm_thermal_info.limit_temp_degC > 85)
-			msm_thermal_info.limit_temp_degC = 85;
+		if (msm_thermal_info_local.limit_temp_degC > 85)
+			msm_thermal_info_local.limit_temp_degC = 85;
 	}
 
 	if (debug_mode == 1)
@@ -1582,16 +1582,15 @@ static void do_freq_control(long temp)
 			max_freq = table[limit_idx].frequency;
 	}
 
+	if (max_freq == cpus[cpu].limited_max_freq)
+		return;
+
 	if (debug_mode == 1)
 		printk(KERN_ERR "do_freq_control temp[%ld], \
 				limit_idx[%d], max_freq[%d], \
 				limited_max_freq[%d]\n",
 				temp, limit_idx, max_freq,
 				cpus[cpu].limited_max_freq);
-
-	if (max_freq == cpus[cpu].limited_max_freq)
-		return;
-
 	/* Update new limits */
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info_local.freq_control_mask & BIT(cpu)))
@@ -1629,8 +1628,7 @@ static void check_temp(struct work_struct *work)
 	hist_index++;
 #endif
 
-	do_core_control(temp);
-	do_psm();
+
 	do_gfx_phase_cond();
 	do_cx_phase_cond();
 
@@ -1642,6 +1640,8 @@ static void check_temp(struct work_struct *work)
 			limit_init = 1;
 	}
 
+	do_core_control(temp);
+	do_psm();
 	do_vdd_restriction();
 	do_freq_control(temp);
 
@@ -1803,12 +1803,12 @@ static __ref int do_freq_mitigation(void *data)
 			;
 		INIT_COMPLETION(freq_mitigation_complete);
 
-		ret = therm_get_temp(msm_thermal_info.sensor_id,
+		ret = therm_get_temp(msm_thermal_info_local.sensor_id,
 			THERM_TSENS_ID, &temp);
 		if (ret)
 			pr_err("Unable to read TSENS sensor:%d\n",
-				msm_thermal_info.sensor_id);
-		else if (temp <= msm_thermal_info.limit_temp_degC)
+				msm_thermal_info_local.sensor_id);
+		else if (temp <= msm_thermal_info_local.limit_temp_degC)
 			skip_mitig = true;
 		else
 			skip_mitig = false;
