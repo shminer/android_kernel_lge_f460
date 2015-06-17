@@ -336,7 +336,7 @@ module_param_named(freq_control_mask, msm_thermal_info_local.freq_control_mask,
 module_param_named(core_control_mask, msm_thermal_info_local.core_control_mask,
 			uint, 0664);
 
-module_param_named(thermal_limit_high, limit_idx_high, int, 0664);
+//module_param_named(thermal_limit_high, limit_idx_high, int, 0664);
 module_param_named(thermal_limit_low, limit_idx_low, int, 0664);
 
 module_param_named(thermal_debug_mode, debug_mode, int, 0664);
