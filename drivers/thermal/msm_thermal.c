@@ -1646,7 +1646,7 @@ static void check_temp(struct work_struct *work)
 	do_vdd_restriction();
 	do_freq_control(temp);
 	if(last_temp != temp){
-		if(temp > msm_thermal_info.freq_mitig_temp_degc){
+		if(temp > msm_thermal_info_local.limit_safe_temp_degC && temp >= msm_thermal_info_local.limit_temp_degC){
 			last_temp = msm_thermal_info_local.limit_safe_temp_degC;
 			pr_info("intellithermal: temp[%ld] is over hot \
 			limit [%d]\n", temp, last_temp);
