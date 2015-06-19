@@ -77,6 +77,7 @@ static struct msm_thermal_data_intelli msm_thermal_info_local = {
 	.poll_ms = DEFAULT_POLLING_MS,
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 5,
+	.limit_safe_temp_degC = 95,
 	.freq_step = 2,
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 80,
@@ -116,6 +117,7 @@ static int max_tsens_num;
 static bool immediately_limit_stop = false;
 static struct cpufreq_frequency_table *table;
 static uint32_t usefreq;
+static uint32_t last_temp = 0;
 static int freq_table_get;
 static bool vdd_rstr_enabled;
 static bool vdd_rstr_nodes_called;
@@ -321,6 +323,8 @@ module_param_named(temp_hysteresis_degC,
 			msm_thermal_info_local.temp_hysteresis_degC,
 			int, 0664);
 module_param_named(freq_step, msm_thermal_info_local.freq_step,
+			int, 0664);
+module_param_named(limit_safe_temp_degC, msm_thermal_info_local.limit_safe_temp_degC,
 			int, 0664);
 module_param_named(immediately_limit_stop, immediately_limit_stop,
 			bool, 0664);
@@ -1548,13 +1552,15 @@ static void do_freq_control(long temp)
 	}
 
 	if (debug_mode == 1)
-		printk(KERN_ERR "pre-check do_freq_control temp[%ld], \
+		printk(KERN_ERR "intellithermal: pre-check do_freq_control temp[%ld], \
 				limit_idx[%d], limit_idx_low[%d], \
-				limited_idx_high[%d]\n,last_max_freq[%dHz]",
+				limited_idx_high[%d],last_max_freq[%dHz], \
+				last_temp[%d]\n",
 				temp, limit_idx, limit_idx_low,
-				limit_idx_high,cpus[cpu].limited_max_freq);
+				limit_idx_high,cpus[cpu].limited_max_freq,last_temp);
 
-	if (temp >= msm_thermal_info_local.limit_temp_degC) {
+	if (temp >= msm_thermal_info_local.limit_temp_degC &&
+			temp > last_temp) {
 		if (limit_idx == limit_idx_low)
 			return;
 
@@ -1563,7 +1569,8 @@ static void do_freq_control(long temp)
 			limit_idx = limit_idx_low;
 		max_freq = table[limit_idx].frequency;
 	} else if (temp < msm_thermal_info_local.limit_temp_degC -
-			msm_thermal_info_local.temp_hysteresis_degC) {
+			msm_thermal_info_local.temp_hysteresis_degC &&
+			temp <= last_temp) {
 		if (limit_idx == limit_idx_high)
 			return;
 
@@ -1580,7 +1587,7 @@ static void do_freq_control(long temp)
 		return;
 
 	if (debug_mode == 1)
-		printk(KERN_ERR "do_freq_control temp[%ld], cpu[%d] \
+		printk(KERN_ERR "intellithermal: do_freq_control temp[%ld], cpu[%d] \
 				limit_idx[%d], max_freq[%d], \
 				limited_max_freq[%d]\n",
 				temp, cpu, limit_idx, max_freq,
@@ -1625,7 +1632,6 @@ static void check_temp(struct work_struct *work)
 	hist_index++;
 #endif
 
-
 	do_gfx_phase_cond();
 	do_cx_phase_cond();
 
@@ -1639,7 +1645,15 @@ static void check_temp(struct work_struct *work)
 
 	do_vdd_restriction();
 	do_freq_control(temp);
-
+	if(last_temp != temp){
+		if(temp > msm_thermal_info.freq_mitig_temp_degc){
+			last_temp = msm_thermal_info_local.limit_safe_temp_degC;
+			pr_info("intellithermal: temp[%ld] is over hot \
+			limit [%d]\n", temp, last_temp);
+		}else{
+			last_temp = temp;
+		}
+	}
 reschedule:
 	if (intelli_enabled)
 		schedule_delayed_work(&check_temp_work, msecs_to_jiffies(
