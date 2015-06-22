@@ -82,7 +82,7 @@ static struct msm_thermal_data_intelli msm_thermal_info_local = {
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 80,
 	.core_temp_hysteresis_degC = 5,
-	.core_control_mask = 0xe,
+	.core_control_mask = 0xc,
 };
 
 static struct delayed_work check_temp_work;
