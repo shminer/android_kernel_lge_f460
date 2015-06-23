@@ -90,24 +90,6 @@ void afe_set_aanc_info(struct aanc_data *q6_aanc_info)
 		this_afe.aanc_info.aanc_tx_port);
 }
 
-static void afe_callback_debug_print(struct apr_client_data *data)
-{
-	uint32_t *payload;
-	payload = data->payload;
-
-	if (data->payload_size >= 8)
-		pr_debug("%s: code = 0x%x PL#0[0x%x], PL#1[0x%x], size = %d\n",
-			__func__, data->opcode, payload[0], payload[1],
-			data->payload_size);
-	else if (data->payload_size >= 4)
-		pr_debug("%s: code = 0x%x PL#0[0x%x], size = %d\n",
-			__func__, data->opcode, payload[0],
-			data->payload_size);
-	else
-		pr_debug("%s: code = 0x%x, size = %d\n",
-			__func__, data->opcode, data->payload_size);
-}
-
 static int32_t afe_callback(struct apr_client_data *data, void *priv)
 {
 	int i;
@@ -136,7 +118,11 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			this_afe.task->comm, this_afe.task->pid);
 		return 0;
 	}
-	afe_callback_debug_print(data);
+	pr_debug("%s: opcode = 0x%x cmd = 0x%x status = 0x%x size = %d\n",
+			__func__, data->opcode,
+			((uint32_t *)(data->payload))[0],
+			((uint32_t *)(data->payload))[1],
+			 data->payload_size);
 	if (data->opcode == AFE_PORT_CMDRSP_GET_PARAM_V2) {
 		u8 *payload = data->payload;
 		if ((data->payload_size < sizeof(this_afe.calib_data))
@@ -159,10 +145,10 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		uint32_t *payload;
 		uint16_t port_id = 0;
 		payload = data->payload;
+		pr_debug("%s: opcode = 0x%x cmd = 0x%x status = 0x%x token=%d\n",
+					__func__, data->opcode,
+					payload[0], payload[1], data->token);
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
-			pr_debug("%s:opcode = 0x%x cmd = 0x%x status = 0x%x token=%d\n",
-				__func__, data->opcode,
-				payload[0], payload[1], data->token);
 			/* payload[1] contains the error status for response */
 			if (payload[1] != 0) {
 				atomic_set(&this_afe.status, -1);
@@ -2934,7 +2920,7 @@ static ssize_t afe_debug_write(struct file *filp,
 				goto afe_error;
 			}
 
-			if (param[1] > 100) {
+			if (param[1] < 0 || param[1] > 100) {
 				pr_err("%s: Error, volume shoud be 0 to 100 percentage param = %lu\n",
 					__func__, param[1]);
 				rc = -EINVAL;
@@ -3172,7 +3158,6 @@ int afe_validate_port(u16 port_id)
 	case AFE_PORT_ID_PRIMARY_MI2S_TX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_RX:
 	case AFE_PORT_ID_QUATERNARY_MI2S_TX:
-	case AFE_PORT_ID_TERTIARY_MI2S_TX:
 	{
 		ret = 0;
 		break;
@@ -3593,7 +3578,7 @@ int afe_spk_prot_get_calib_data(struct afe_spkr_prot_get_vi_calib *calib_resp)
 	}
 	memcpy(&calib_resp->res_cfg , &this_afe.calib_data.res_cfg,
 		sizeof(this_afe.calib_data.res_cfg));
-	pr_info("%s: state %d resistance %d\n", __func__,
+	pr_debug("%s: state %d resistance %d\n", __func__,
 			 calib_resp->res_cfg.th_vi_ca_state,
 			 calib_resp->res_cfg.r0_cali_q24);
 	ret = 0;

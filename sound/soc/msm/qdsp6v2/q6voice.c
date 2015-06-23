@@ -1,4 +1,4 @@
-/*  Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/*  Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,7 +28,7 @@
 #include "q6voice.h"
 
 
-#define TIMEOUT_MS 500
+#define TIMEOUT_MS 300
 
 
 #define CMD_STATUS_SUCCESS 0
@@ -4872,12 +4872,11 @@ int voc_standby_voice_call(uint32_t session_id)
 	u16 mvm_handle;
 	int ret = 0;
 
+	pr_debug("%s: voc state=%d", __func__, v->voc_state);
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 		return -EINVAL;
 	}
-	pr_debug("%s: voc state=%d", __func__, v->voc_state);
-
 	if (v->voc_state == VOC_RUN) {
 		apr_mvm = common.apr_q6_mvm;
 		if (!apr_mvm) {
@@ -4918,12 +4917,12 @@ int voc_disable_device(uint32_t session_id)
 	struct voice_data *v = voice_get_session(session_id);
 	int ret = 0;
 
+	pr_debug("%s: voc state=%d\n", __func__, v->voc_state);
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 		return -EINVAL;
 	}
 
-	pr_debug("%s: voc state=%d\n", __func__, v->voc_state);
 	mutex_lock(&v->lock);
 	if (v->voc_state == VOC_RUN) {
 		ret = voice_pause_voice_call(v);
@@ -4956,12 +4955,12 @@ int voc_enable_device(uint32_t session_id)
 	struct voice_data *v = voice_get_session(session_id);
 	int ret = 0;
 
+	pr_debug("%s: voc state=%d\n", __func__, v->voc_state);
 	if (v == NULL) {
 		pr_err("%s: v is NULL\n", __func__);
 		return -EINVAL;
 	}
 
-	pr_debug("%s: voc state=%d\n", __func__, v->voc_state);
 	mutex_lock(&v->lock);
 	if (v->voc_state == VOC_CHANGE) {
 		ret = voice_send_tty_mode_cmd(v);
@@ -5202,12 +5201,10 @@ exit:
 
 void voc_register_mvs_cb(ul_cb_fn ul_cb,
 			   dl_cb_fn dl_cb,
-			   voip_ssr_cb ssr_cb,
 			   void *private_data)
 {
 	common.mvs_info.ul_cb = ul_cb;
 	common.mvs_info.dl_cb = dl_cb;
-	common.mvs_info.ssr_cb = ssr_cb;
 	common.mvs_info.private_data = private_data;
 }
 
@@ -5258,14 +5255,6 @@ static int32_t qdsp_mvm_callback(struct apr_client_data *data, void *priv)
 		} else {
 			pr_debug("%s: Reset event received in Voice service\n",
 				__func__);
-
-			if (common.mvs_info.ssr_cb) {
-				pr_debug("%s: Informing reset event to VoIP\n",
-					__func__);
-				common.mvs_info.ssr_cb(data->opcode,
-						common.mvs_info.private_data);
-			}
-
 			apr_reset(c->apr_q6_mvm);
 			c->apr_q6_mvm = NULL;
 
