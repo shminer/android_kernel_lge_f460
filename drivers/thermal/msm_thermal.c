@@ -1550,6 +1550,10 @@ static void do_freq_control(long temp)
 		if (msm_thermal_info_local.limit_temp_degC > 85)
 			msm_thermal_info_local.limit_temp_degC = 85;
 	}
+	if(msm_thermal_info_local.limit_safe_temp_degC <
+			msm_thermal_info_local.limit_temp_degC)
+		msm_thermal_info_local.limit_safe_temp_degC =
+			msm_thermal_info_local.limit_temp_degC;
 
 	if (debug_mode == 1)
 		printk(KERN_ERR "intellithermal: pre-check do_freq_control temp[%ld], \
