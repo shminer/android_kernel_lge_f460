@@ -431,8 +431,6 @@ static void cpufreq_impulse_timer(unsigned long data)
 	tunables->boosted = tunables->boosted && !suspended;
 	this_hispeed_freq = max(tunables->hispeed_freq, pcpu->policy->min);
 
-	cpufreq_notify_utilization(pcpu->policy, cpu_load);
-
 	if (cpu_load <= tunables->go_lowspeed_load) {
 		tunables->boosted = false;
 		new_freq = pcpu->policy->cpuinfo.min_freq;

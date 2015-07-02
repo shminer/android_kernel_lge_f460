@@ -413,8 +413,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	boosted = tunables->boost_val || now < (last_input_time + get_input_boost_duration());
 
-	cpufreq_notify_utilization(pcpu->policy, cpu_load);
-
 	if (cpu_load >= tunables->go_hispeed_load) {
 		if (pcpu->policy->cur < tunables->hispeed_freq) {
 			new_freq = tunables->hispeed_freq;
