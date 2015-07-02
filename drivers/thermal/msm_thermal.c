@@ -1546,15 +1546,6 @@ static void do_freq_control(long temp)
 	uint32_t cpu = 0;
 	uint32_t max_freq = cpus[cpu].limited_max_freq;
 
-	if (safety == 1) {
-		if (msm_thermal_info_local.limit_temp_degC > 85)
-			msm_thermal_info_local.limit_temp_degC = 85;
-	}
-	if(msm_thermal_info_local.limit_safe_temp_degC <
-			msm_thermal_info_local.limit_temp_degC)
-		msm_thermal_info_local.limit_safe_temp_degC =
-			msm_thermal_info_local.limit_temp_degC;
-
 	if (debug_mode == 1)
 		printk(KERN_ERR "intellithermal: pre-check do_freq_control temp[%ld], \
 				limit_idx[%d], limit_idx_low[%d], \
@@ -1615,6 +1606,14 @@ static void check_temp(struct work_struct *work)
 	long temp = 0;
 	int ret = 0;
 
+	if (safety == 1) {
+		if (msm_thermal_info_local.limit_temp_degC > 85)
+			msm_thermal_info_local.limit_temp_degC = 85;
+	}
+	if(msm_thermal_info_local.limit_safe_temp_degC <
+			msm_thermal_info_local.limit_temp_degC)
+		msm_thermal_info_local.limit_safe_temp_degC =
+			msm_thermal_info_local.limit_temp_degC;
 	do_therm_reset();
 
 	ret = therm_get_temp(msm_thermal_info_local.sensor_id, THERM_TSENS_ID, &temp);
