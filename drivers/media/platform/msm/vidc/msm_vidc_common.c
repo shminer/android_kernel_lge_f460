@@ -80,8 +80,9 @@ enum multi_stream msm_comm_get_stream_output_mode(struct msm_vidc_inst *inst)
 			return HAL_VIDEO_DECODER_SECONDARY;
 	}
 	return HAL_VIDEO_DECODER_PRIMARY;
-}
 
+
+}
 static int msm_comm_get_mbs_per_sec(struct msm_vidc_inst *inst)
 {
 	int height, width;
@@ -619,8 +620,6 @@ static void handle_session_init_done(enum command_response cmd, void *data)
 			inst->capability.capability_set = true;
 			inst->capability.buffer_mode[CAPTURE_PORT] =
 				session_init_done->alloc_mode_out;
-			inst->capability.secure_output2_threshold =
-				session_init_done->secure_output2_threshold;
 		} else {
 			dprintk(VIDC_ERR,
 				"Session init response from FW : 0x%x\n",
@@ -750,16 +749,8 @@ static void handle_event_change(enum command_response cmd, void *data)
 		}
 		msm_comm_init_dcvs_load(inst);
 		rc = msm_vidc_check_session_supported(inst);
-		if (!rc) {
+		if (!rc)
 			msm_vidc_queue_v4l2_event(inst, event);
-		} else if (rc == -ENOTSUPP) {
-			msm_vidc_queue_v4l2_event(inst,
-				V4L2_EVENT_MSM_VIDC_HW_UNSUPPORTED);
-		} else if (rc == -EBUSY) {
-			msm_vidc_queue_v4l2_event(inst,
-				V4L2_EVENT_MSM_VIDC_HW_OVERLOAD);
-		}
-
 		return;
 	} else {
 		dprintk(VIDC_ERR,
@@ -909,6 +900,7 @@ static void handle_session_flush(enum command_response cmd, void *data)
 static void handle_session_error(enum command_response cmd, void *data)
 {
 	struct msm_vidc_cb_cmd_done *response = data;
+	int rc;
 	struct hfi_device *hdev = NULL;
 	struct msm_vidc_inst *inst = NULL;
 
@@ -930,6 +922,15 @@ static void handle_session_error(enum command_response cmd, void *data)
 	hdev = inst->core->device;
 	dprintk(VIDC_WARN, "Session error received for session %p\n", inst);
 	change_inst_state(inst, MSM_VIDC_CORE_INVALID);
+
+	mutex_lock(&inst->lock);
+	dprintk(VIDC_DBG, "cleaning up inst: %p\n", inst);
+	rc = call_hfi_op(hdev, session_clean, inst->session);
+	if (rc)
+		dprintk(VIDC_ERR, "Session (%p) clean failed: %d\n", inst, rc);
+
+	inst->session = NULL;
+	mutex_unlock(&inst->lock);
 
 	if (response->status == VIDC_ERR_MAX_CLIENTS) {
 		dprintk(VIDC_WARN,
@@ -1368,10 +1369,6 @@ static void handle_fbd(enum command_response cmd, void *data)
 		vb->v4l2_planes[0].reserved[3] = fill_buf_done->start_y_coord;
 		vb->v4l2_planes[0].reserved[4] = fill_buf_done->frame_width;
 		vb->v4l2_planes[0].reserved[5] = fill_buf_done->frame_height;
-		vb->v4l2_planes[0].reserved[6] =
-			inst->prop.width[CAPTURE_PORT];
-		vb->v4l2_planes[0].reserved[7] =
-			inst->prop.height[CAPTURE_PORT];
 		if (vb->v4l2_planes[0].data_offset > vb->v4l2_planes[0].length)
 			dprintk(VIDC_INFO,
 				"fbd:Overflow data_offset = %d; length = %d\n",
@@ -1420,8 +1417,6 @@ static void handle_fbd(enum command_response cmd, void *data)
 			vb->v4l2_buf.flags |= V4L2_QCOM_BUF_DATA_CORRUPT;
 		if (fill_buf_done->flags1 & HAL_BUFFERFLAG_DROP_FRAME)
 			vb->v4l2_buf.flags |= V4L2_QCOM_BUF_DROP_FRAME;
-		if (fill_buf_done->flags1 & HAL_BUFFERFLAG_MBAFF)
-			vb->v4l2_buf.flags |= V4L2_MSM_BUF_FLAG_MBAFF;
 		if (fill_buf_done->flags1 &
 			HAL_BUFFERFLAG_TS_DISCONTINUITY)
 			vb->v4l2_buf.flags |= V4L2_QCOM_BUF_TS_DISCONTINUITY;
@@ -2402,11 +2397,9 @@ int msm_comm_suspend(int core_id)
 		return -EINVAL;
 	}
 
-	mutex_lock(&core->lock);
 	rc = call_hfi_op(hdev, suspend, hdev->hfi_device_data);
 	if (rc)
 		dprintk(VIDC_WARN, "Failed to suspend\n");
-	mutex_unlock(&core->lock);
 
 	return rc;
 }
@@ -3843,7 +3836,7 @@ static int msm_vidc_load_supported(struct msm_vidc_inst *inst)
 				num_mbs_per_sec,
 				inst->core->resources.max_load);
 			msm_vidc_print_running_insts(inst->core);
-			return -EBUSY;
+			return -EINVAL;
 		}
 	}
 	return 0;
@@ -4004,12 +3997,6 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 	capability = &inst->capability;
 	hdev = inst->core->device;
 	rc = msm_vidc_load_supported(inst);
-	if (rc) {
-		change_inst_state(inst, MSM_VIDC_CORE_INVALID);
-		dprintk(VIDC_WARN,
-			"%s: Hardware is overloaded\n", __func__);
-		return rc;
-	}
 	if (!rc && inst->capability.capability_set) {
 		rc = call_hfi_op(hdev, capability_check,
 			inst->fmts[OUTPUT_PORT]->fourcc,
@@ -4029,8 +4016,11 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 	}
 	if (rc) {
 		change_inst_state(inst, MSM_VIDC_CORE_INVALID);
-		dprintk(VIDC_ERR,
-			"%s: Resolution unsupported\n", __func__);
+		msm_vidc_queue_v4l2_event(inst,
+					V4L2_EVENT_MSM_VIDC_HW_OVERLOAD);
+		dprintk(VIDC_WARN,
+			"%s: Hardware is overloaded\n", __func__);
+		wake_up(&inst->kernel_event_queue);
 	}
 	return rc;
 }
@@ -4083,9 +4073,8 @@ int msm_comm_kill_session(struct msm_vidc_inst *inst)
 	 * the session send session_abort to firmware to clean up and release
 	 * the session, else just kill the session inside the driver.
 	 */
-	if ((inst->state >= MSM_VIDC_OPEN_DONE &&
-			inst->state < MSM_VIDC_CLOSE_DONE) ||
-			inst->state == MSM_VIDC_CORE_INVALID) {
+	if (inst->state >= MSM_VIDC_OPEN_DONE &&
+			inst->state < MSM_VIDC_CLOSE_DONE) {
 		struct hfi_device *hdev = inst->core->device;
 		int abort_completion = SESSION_MSG_INDEX(SESSION_ABORT_DONE);
 

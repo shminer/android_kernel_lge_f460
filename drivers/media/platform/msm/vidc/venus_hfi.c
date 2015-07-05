@@ -1343,17 +1343,11 @@ static int venus_hfi_suspend(void *dev)
 	}
 	dprintk(VIDC_INFO, "%s\n", __func__);
 
-	mutex_lock(&device->write_lock);
 	if (device->power_enabled) {
-		dprintk(VIDC_DBG, "Venus is busy\n");
-		rc = -EBUSY;
-	} else {
-		dprintk(VIDC_DBG, "Venus is power suspended\n");
-		rc = 0;
+		rc = flush_delayed_work(&venus_hfi_pm_work);
+		dprintk(VIDC_INFO, "%s flush delayed work %d\n", __func__, rc);
 	}
-	mutex_unlock(&device->write_lock);
-
-	return rc;
+	return 0;
 }
 
 static int venus_hfi_halt_axi(struct venus_hfi_device *device)
