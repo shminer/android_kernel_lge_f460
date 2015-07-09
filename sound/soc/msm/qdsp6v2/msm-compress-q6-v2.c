@@ -1228,11 +1228,11 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 		pr_err("%s: SND_AUDIOCODEC_PCM Format: %d BPS: %d\n",
 				__func__, prtd->codec_param.codec.format,
 				prtd->bits_per_sample);
-
 #else /* QCT original */
 		pr_debug("SND_AUDIOCODEC_PCM\n");
 		prtd->codec = FORMAT_LINEAR_PCM;
 #endif
+		is_format_gapless = true;
 		break;
 	}
 
