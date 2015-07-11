@@ -26,6 +26,7 @@
 #include "mdss_panel.h"
 #include "mdss_dsi.h"
 #include "mdss_debug.h"
+#include "mdss_livedisplay.h"
 
 #ifdef CONFIG_MACH_LGE
 static struct mdss_dsi_ctrl_pdata *left_dsi_ctrl;
@@ -640,6 +641,8 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		}
 	}
 #endif
+
+	mdss_livedisplay_update(ctrl_pdata, MODE_UPDATE_ALL);
 
 error:
 
