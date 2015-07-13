@@ -29,6 +29,7 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/touchboost.h>
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -36,23 +37,23 @@
 
 /* Tuning Interface */
 #ifdef CONFIG_MACH_LGE
-#define FREQ_RESPONSIVENESS		2265600
+#define FREQ_RESPONSIVENESS		1958400
 #else
 #define FREQ_RESPONSIVENESS		1134000
 #endif
 
 #define CPUS_DOWN_RATE			2
-#define CPUS_UP_RATE			2
+#define CPUS_UP_RATE			1
 
 #define DEC_CPU_LOAD			70
-#define DEC_CPU_LOAD_AT_MIN_FREQ	70
+#define DEC_CPU_LOAD_AT_MIN_FREQ	60
 
 #define INC_CPU_LOAD			70
-#define INC_CPU_LOAD_AT_MIN_FREQ	70
+#define INC_CPU_LOAD_AT_MIN_FREQ	60
 
 /* Pump Inc/Dec for all cores */
-#define PUMP_INC_STEP_AT_MIN_FREQ	4
-#define PUMP_INC_STEP			1
+#define PUMP_INC_STEP_AT_MIN_FREQ	2
+#define PUMP_INC_STEP			2
 #define PUMP_DEC_STEP			1
 
 /* sample rate */
@@ -521,6 +522,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	int inc_cpu_load = alucard_tuners_ins.inc_cpu_load;
 	int pump_inc_step = this_alucard_cpuinfo->pump_inc_step;
 	int pump_dec_step = this_alucard_cpuinfo->pump_dec_step;
+	unsigned int next_freq = 0;
 	unsigned int max_load = 0;
 	int io_busy = alucard_tuners_ins.io_is_busy;
 	unsigned int cpus_up_rate = alucard_tuners_ins.cpus_up_rate;
@@ -528,6 +530,11 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	unsigned int index = 0;
 	unsigned int cpu = this_alucard_cpuinfo->cpu;
 	unsigned int j;
+	bool boosted;
+	u64 now;
+
+	now = ktime_to_us(ktime_get());
+	boosted = now < (last_input_time + get_input_boost_duration());
 
 	policy = this_alucard_cpuinfo->cur_policy;
 	if (!policy->cur)
@@ -609,9 +616,14 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 		}
 	}
 
-	if (this_alucard_cpuinfo->freq_table[index].frequency != policy->cur) {
-		__cpufreq_driver_target(policy, this_alucard_cpuinfo->freq_table[index].frequency, CPUFREQ_RELATION_L);
-	}
+	next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
+       if (boosted && policy->cur < input_boost_freq
+                       && next_freq < input_boost_freq)
+                       next_freq = input_boost_freq;
+
+       if (next_freq != policy->cur) {
+              __cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
+		}
 }
 
 static void do_alucard_timer(struct work_struct *work)
