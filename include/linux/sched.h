@@ -1291,7 +1291,6 @@ struct task_struct {
 	unsigned long utime_pc, stime_pc;
 #endif
 	cputime_t gtime;
-	unsigned long long cpu_power;
 #ifndef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 	struct cputime prev_cputime;
 #endif
