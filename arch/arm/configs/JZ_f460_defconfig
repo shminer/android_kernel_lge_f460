@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.10.82 Kernel Configuration
+# Linux/arm 3.10.84 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -2051,6 +2051,7 @@ CONFIG_UNIX98_PTYS=y
 # CONFIG_TRACE_SINK is not set
 # CONFIG_DEVMEM is not set
 # CONFIG_DEVKMEM is not set
+CONFIG_FRANDOM=y
 
 #
 # Serial drivers
@@ -4185,6 +4186,7 @@ CONFIG_DEBUG_KERNEL=y
 # CONFIG_LOCKUP_DETECTOR is not set
 # CONFIG_PANIC_ON_OOPS is not set
 CONFIG_PANIC_ON_OOPS_VALUE=0
+# CONFIG_PANIC_ON_RECURSIVE_FAULT is not set
 # CONFIG_DETECT_HUNG_TASK is not set
 CONFIG_SCHED_DEBUG=y
 # CONFIG_SYSRQ_SCHED_DEBUG is not set
