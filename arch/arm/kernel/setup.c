@@ -74,7 +74,7 @@ __setup("fpe=", fpe_setup);
 
 extern void paging_init(const struct machine_desc *desc);
 extern void sanity_check_meminfo(void);
-extern void reboot_setup(char *str);
+extern void reboot_setup(const char *str);
 extern void setup_dma_zone(const struct machine_desc *desc);
 
 unsigned int processor_id;
