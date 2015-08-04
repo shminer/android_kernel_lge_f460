@@ -720,7 +720,9 @@ int a3xx_rb_init(struct adreno_device *adreno_dev,
  */
 void a3xx_a4xx_err_callback(struct adreno_device *adreno_dev, int bit)
 {
+	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	struct kgsl_device *device = &adreno_dev->dev;
+	unsigned int mask = gpudev->irq->mask;
 	unsigned int reg;
 
 	switch (bit) {
@@ -780,7 +782,7 @@ void a3xx_a4xx_err_callback(struct adreno_device *adreno_dev, int bit)
          * turned on again when device resets
          */
         adreno_writereg(adreno_dev, ADRENO_REG_RBBM_INT_0_MASK,
-                adreno_dev->gpudev->irq->mask & ~(1 << A3XX_INT_CP_HW_FAULT));
+                mask & ~(1 << A3XX_INT_CP_HW_FAULT));
         break;
 	case A3XX_INT_CP_REG_PROTECT_FAULT:
 		adreno_readreg(adreno_dev, ADRENO_REG_CP_PROTECT_STATUS, &reg);
