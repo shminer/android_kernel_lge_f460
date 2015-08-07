@@ -350,6 +350,8 @@ module_param_named(temp_safety, safety, int, 0664);
 static unsigned int freq_debug = 0;
 module_param_named(freq_debug, freq_debug, uint, 0644);
 
+module_param_named(therm_reset_temp_degC, msm_thermal_info.therm_reset_temp_degC, int, 0644);
+
 #define dprintk(msg...)		\
 do {				\
 	if (freq_debug)		\
