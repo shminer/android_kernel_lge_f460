@@ -720,9 +720,7 @@ int a3xx_rb_init(struct adreno_device *adreno_dev,
  */
 void a3xx_a4xx_err_callback(struct adreno_device *adreno_dev, int bit)
 {
-	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	struct kgsl_device *device = &adreno_dev->dev;
-	unsigned int mask = gpudev->irq->mask;
 	unsigned int reg;
 
 	switch (bit) {
