@@ -593,6 +593,12 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 
 			this_alucard_cpuinfo->up_rate = 1;
 			this_alucard_cpuinfo->down_rate = 1;
+
+			next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
+			if (boosted && policy->cur < input_boost_freq
+                       && next_freq < input_boost_freq)
+                       next_freq = input_boost_freq;
+					__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
 		} else {
 			if (this_alucard_cpuinfo->up_rate < cpus_up_rate)
 				++this_alucard_cpuinfo->up_rate;
@@ -608,6 +614,12 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 
 			this_alucard_cpuinfo->up_rate = 1;
 			this_alucard_cpuinfo->down_rate = 1;
+
+			next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
+			if (boosted && policy->cur < input_boost_freq
+                       && next_freq < input_boost_freq)
+                       next_freq = input_boost_freq;
+					__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
 		} else {
 			if (this_alucard_cpuinfo->down_rate < cpus_down_rate)
 				++this_alucard_cpuinfo->down_rate;
@@ -615,15 +627,6 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 				this_alucard_cpuinfo->down_rate = 1;
 		}
 	}
-
-	next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
-       if (boosted && policy->cur < input_boost_freq
-                       && next_freq < input_boost_freq)
-                       next_freq = input_boost_freq;
-
-       if (next_freq != policy->cur) {
-              __cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
-		}
 }
 
 static void do_alucard_timer(struct work_struct *work)
@@ -639,7 +642,7 @@ static void do_alucard_timer(struct work_struct *work)
 	delay = usecs_to_jiffies(alucard_tuners_ins.sampling_rate);
 
 	/* We want all CPUs to do sampling nearly on same jiffy */
-	if (num_online_cpus() > 1 
+	if (num_online_cpus() > 1
 		 && (jiffies % delay) < delay) {
 		delay -= jiffies % delay;
 	}
@@ -700,7 +703,7 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 		delay = usecs_to_jiffies(alucard_tuners_ins.sampling_rate);
 		/* We want all CPUs to do sampling nearly on same jiffy */
-		if (num_online_cpus() > 1 
+		if (num_online_cpus() > 1
 			 && (jiffies % delay) < delay) {
 			delay -= jiffies % delay;
 		}
