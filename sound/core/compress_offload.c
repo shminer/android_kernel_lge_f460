@@ -890,7 +890,7 @@ static long snd_compr_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 	case _IOC_NR(SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM):
 		retval = snd_compr_set_next_track_param(stream, arg);
 		break;
-		
+
 	default:
 		mutex_unlock(&stream->device->lock);
 		return snd_compress_simple_ioctls(f, stream, cmd, arg);
