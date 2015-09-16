@@ -536,7 +536,7 @@ static int cpuidle_latency_notify(struct notifier_block *b,
 	cpus = v ?: cpu_online_mask;
 
 	preempt_disable();
-	smp_call_function_many(cpus, smp_callback, NULL, 1);
+	wake_up_all_idle_cpus();
 	preempt_enable();
 	return NOTIFY_OK;
 }
