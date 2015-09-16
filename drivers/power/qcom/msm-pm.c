@@ -114,12 +114,6 @@ static enum msm_pm_l2_scm_flag msm_pm_get_l2_flush_flag(void)
 static cpumask_t retention_cpus;
 static DEFINE_SPINLOCK(retention_lock);
 
-static inline void msm_arch_idle(void)
-{
-	mb();
-	wfi();
-}
-
 static bool msm_pm_is_L1_writeback(void)
 {
 	u32 cache_id;
