@@ -21,6 +21,15 @@
 #include <linux/math64.h>
 #include <linux/module.h>
 
+/*
+ * Please note when changing the tuning values:
+ * If (MAX_INTERESTING-1) * RESOLUTION > UINT_MAX, the result of
+ * a scaling operation multiplication may overflow on 32 bit platforms.
+ * In that case, #define RESOLUTION as ULL to get 64 bit result:
+ * #define RESOLUTION 1024ULL
+ *
+ * The default values do not overflow.
+ */
 #define BUCKETS 12
 #define INTERVALS 8
 #define RESOLUTION 1024
@@ -220,7 +229,28 @@ again:
 		}
 	}
 	do_div(stddev, divisor);
-	stddev = int_sqrt(stddev);
+	/*
+	 * The typical interval is obtained when standard deviation is small
+	 * or standard deviation is small compared to the average interval.
+	 *
+	 * int_sqrt() formal parameter type is unsigned long. When the
+	 * greatest difference to an outlier exceeds ~65 ms * sqrt(divisor)
+	 * the resulting squared standard deviation exceeds the input domain
+	 * of int_sqrt on platforms where unsigned long is 32 bits in size.
+	 * In such case reject the candidate average.
+	 *
+	 * Use this result only if there is no timer to wake us up sooner.
+	 */
+	if (likely(stddev <= ULONG_MAX)) {
+		stddev = int_sqrt(stddev);
+		if (((avg > stddev * 6) && (divisor * 4 >= INTERVALS * 3))
+							|| stddev <= 20) {
+			if (data->expected_us > avg)
+				data->predicted_us = avg;
+			return;
+		}
+	}
+
 	/*
 	 * If we have outliers to the upside in our distribution, discard
 	 * those by setting the threshold to exclude these outliers, then
@@ -229,20 +259,12 @@ again:
 	 *
 	 * This can deal with workloads that have long pauses interspersed
 	 * with sporadic activity with a bunch of short pauses.
-	 *
-	 * The typical interval is obtained when standard deviation is small
-	 * or standard deviation is small compared to the average interval.
 	 */
-	if (((avg > stddev * 6) && (divisor * 4 >= INTERVALS * 3))
-							|| stddev <= 20) {
-		data->predicted_us = avg;
+	if ((divisor * 4) <= INTERVALS * 3)
 		return;
 
-	} else if ((divisor * 4) > INTERVALS * 3) {
-		/* Exclude the max interval */
-		thresh = max - 1;
-		goto again;
-	}
+	thresh = max - 1;
+	goto again;
 }
 
 /**
