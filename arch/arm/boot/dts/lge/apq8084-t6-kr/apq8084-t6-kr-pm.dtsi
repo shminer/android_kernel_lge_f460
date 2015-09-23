@@ -43,7 +43,7 @@
 		lge,cable-270k = <560000 2000 500>;
 		lge,cable-330k = <735000 2000 500>;
 		lge,cable-620k = <955000 2000 500>;
-		lge,cable-910k = <1200000 1500 1500>;
+		lge,cable-910k = <1200000 2000 1500>;
 		lge,cable-none = <1900000 2000 500>;
 
 		qcom,bq24296-vadc = <&pma8084_vadc>;
