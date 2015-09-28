@@ -16,20 +16,22 @@
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#else
 #include <linux/fb.h>
-#include <linux/notifier.h>
+#endif
 
 #include <soc/qcom/limiter.h>
 
 #define MSM_CPUFREQ_LIMIT_MAJOR		3
 #define MSM_CPUFREQ_LIMIT_MINOR		6
 
-static unsigned int debug = 0;
-module_param_named(debug_mask, debug, uint, 0644);
+static unsigned int debug_mask = 0;
 
 #define dprintk(msg...)		\
 do { 				\
-	if (debug)		\
+	if (debug_mask)		\
 		pr_info(msg);	\
 } while (0)
 
@@ -95,7 +97,7 @@ static void msm_limit_resume(struct work_struct *work)
 
 static void __msm_limit_suspend(void)
 {
-	if (!limit.limiter_enabled)
+	if (!limit.limiter_enabled || limit.suspended)
 		return;
 
 	INIT_DELAYED_WORK(&limit.suspend_work, msm_limit_suspend);
@@ -113,6 +115,26 @@ static void __msm_limit_resume(void)
 	queue_work_on(0, limiter_wq, &limit.resume_work);
 }
 
+#ifdef CONFIG_STATE_NOTIFIER
+static int state_notifier_callback(struct notifier_block *this,
+				unsigned long event, void *data)
+{
+	switch (event) {
+		case STATE_NOTIFIER_ACTIVE:
+			__msm_limit_resume();
+			break;
+		case STATE_NOTIFIER_SUSPEND:
+			__msm_limit_suspend();
+			break;
+		default:
+			break;
+	}
+
+	return NOTIFY_OK;
+}
+#else
+static int prev_fb = FB_BLANK_UNBLANK;
+
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
 {
@@ -123,22 +145,23 @@ static int fb_notifier_callback(struct notifier_block *self,
 		blank = evdata->data;
 		switch (*blank) {
 			case FB_BLANK_UNBLANK:
-				//display on
-				__msm_limit_resume();
+				if (prev_fb == FB_BLANK_POWERDOWN) {
+					__msm_limit_resume();
+					prev_fb = FB_BLANK_UNBLANK;
+				}
 				break;
 			case FB_BLANK_POWERDOWN:
-			case FB_BLANK_HSYNC_SUSPEND:
-			case FB_BLANK_VSYNC_SUSPEND:
-			case FB_BLANK_NORMAL:
-				//display off
-				__msm_limit_suspend();
+				if (prev_fb == FB_BLANK_UNBLANK) {
+					__msm_limit_suspend();
+					prev_fb = FB_BLANK_POWERDOWN;
+				}
 				break;
 		}
 	}
 
-	return 0;
+	return NOTIFY_OK;
 }
-
+#endif
 
 static int msm_cpufreq_limit_start(void)
 {
@@ -154,7 +177,21 @@ static int msm_cpufreq_limit_start(void)
 		goto err_out;
 	}
 
+#ifdef CONFIG_STATE_NOTIFIER
+	limit.notif.notifier_call = state_notifier_callback;
+	if (state_register_client(&limit.notif)) {
+		pr_err("%s: Failed to register State notifier callback\n",
+			MSM_LIMIT);
+		goto err_dev;
+	}
+#else
 	limit.notif.notifier_call = fb_notifier_callback;
+	if (fb_register_client(&limit.notif)) {
+		pr_err("%s: Failed to register FB notifier callback\n",
+			MSM_LIMIT);
+		goto err_dev;
+	}
+#endif
 
 	for_each_possible_cpu(cpu)
 		mutex_init(&limit.msm_limiter_mutex[cpu]);
@@ -166,6 +203,8 @@ static int msm_cpufreq_limit_start(void)
 	queue_work_on(0, limiter_wq, &limit.resume_work);
 
 	return ret;
+err_dev:
+	destroy_workqueue(limiter_wq);
 err_out:
 	limit.limiter_enabled = 0;
 	return ret;
@@ -181,9 +220,14 @@ static void msm_cpufreq_limit_stop(void)
 	cancel_work_sync(&limit.resume_work);
 	cancel_delayed_work_sync(&limit.suspend_work);
 	mutex_destroy(&limit.resume_suspend_mutex);
-	for_each_possible_cpu(cpu)	
+	for_each_possible_cpu(cpu)
 		mutex_destroy(&limit.msm_limiter_mutex[cpu]);
 
+#ifdef CONFIG_STATE_NOTIFIER
+	state_unregister_client(&limit.notif);
+#else
+	fb_unregister_client(&limit.notif);
+#endif
 	limit.notif.notifier_call = NULL;
 	destroy_workqueue(limiter_wq);
 }
@@ -217,6 +261,32 @@ static ssize_t limiter_enabled_store(struct kobject *kobj,
 
 	return count;
 }
+
+static ssize_t debug_mask_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", debug_mask);
+}
+
+static ssize_t debug_mask_store(struct kobject *kobj,
+				      struct kobj_attribute *attr,
+				      const char *buf, size_t count)
+{
+	int ret;
+	unsigned int val;
+
+	ret = sscanf(buf, "%u\n", &val);
+	if (ret != 1 || val < 0 || val > 1)
+		return -EINVAL;
+
+	if (val == debug_mask)
+		return count;
+
+	debug_mask = val;
+
+	return count;
+}
+
 
 static ssize_t suspend_defer_time_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -271,6 +341,7 @@ out:
 
 
 #define multi_cpu(cpu)					\
+/* I will rebuild it.
 static ssize_t store_resume_max_freq_##cpu		\
 (struct kobject *kobj, 					\
  struct kobj_attribute *attr, 				\
@@ -329,6 +400,7 @@ static ssize_t show_suspend_min_freq_##cpu(		\
 	return sprintf(buf, "%u\n",			\
 		limit.suspend_min_freq[cpu]);		\
 }							\
+*/
 static ssize_t store_scaling_governor_##cpu(		\
  struct kobject *kobj,					\
  struct kobj_attribute *attr,				\
@@ -370,6 +442,7 @@ static ssize_t show_live_cur_freq_##cpu(		\
 	return sprintf(buf, "%u\n",			\
 	cpufreq_quick_get(cpu));			\
 }							\
+/*
 static struct kobj_attribute resume_max_freq_##cpu =	\
 	__ATTR(resume_max_freq_##cpu, 0666,		\
 		show_resume_max_freq_##cpu,		\
@@ -378,6 +451,7 @@ static struct kobj_attribute suspend_min_freq_##cpu =	\
 	__ATTR(suspend_min_freq_##cpu, 0666,		\
 		show_suspend_min_freq_##cpu,		\
 		store_suspend_min_freq_##cpu);		\
+*/
 static struct kobj_attribute scaling_governor_##cpu =	\
 	__ATTR(scaling_governor_##cpu, 0666,		\
 		show_scaling_governor_##cpu,		\
@@ -416,6 +490,11 @@ static struct kobj_attribute limiter_enabled_attribute =
 		limiter_enabled_show,
 		limiter_enabled_store);
 
+static struct kobj_attribute debug_mask_attribute =
+	__ATTR(debug_mask, 0666,
+		debug_mask_show,
+		debug_mask_store);
+
 static struct kobj_attribute suspend_defer_time_attribute =
 	__ATTR(suspend_defer_time, 0666,
 		suspend_defer_time_show,
@@ -429,8 +508,10 @@ static struct kobj_attribute suspend_max_freq_attribute =
 static struct attribute *msm_cpufreq_limit_attrs[] =
 	{
 		&limiter_enabled_attribute.attr,
+		&debug_mask_attribute.attr,
 		&suspend_defer_time_attribute.attr,
 		&suspend_max_freq_attribute.attr,
+		/* I will rebuild it.
 		&resume_max_freq_0.attr,
 		&resume_max_freq_1.attr,
 		&resume_max_freq_2.attr,
@@ -439,6 +520,7 @@ static struct attribute *msm_cpufreq_limit_attrs[] =
 		&suspend_min_freq_1.attr,
 		&suspend_min_freq_2.attr,
 		&suspend_min_freq_3.attr,
+		*/
 		&scaling_governor_0.attr,
 		&scaling_governor_1.attr,
 		&scaling_governor_2.attr,
@@ -464,12 +546,14 @@ static struct attribute_group msm_cpufreq_limit_attr_group =
 		.attrs = msm_cpufreq_limit_attrs,
 	};
 
+static struct kobject *msm_cpufreq_limit_kobj;
+
 static int msm_cpufreq_limit_init(void)
 {
 	int ret;
-	struct kobject *msm_cpufreq_limit_kobj;
 
-	msm_cpufreq_limit_kobj = kset_find_obj(module_kset, MSM_LIMIT);
+	msm_cpufreq_limit_kobj =
+		kobject_create_and_add(MSM_LIMIT, kernel_kobj);
 	if (!msm_cpufreq_limit_kobj) {
 		pr_err("%s msm_cpufreq_limit_kobj kobject create failed!\n",
 			__func__);
@@ -497,6 +581,9 @@ err_dev:
 
 static void msm_cpufreq_limit_exit(void)
 {
+	if (msm_cpufreq_limit_kobj != NULL)
+		kobject_put(msm_cpufreq_limit_kobj);
+
 	if (limit.limiter_enabled)
 		msm_cpufreq_limit_stop();
 

@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.10.88 Kernel Configuration
+# Linux/arm 3.10.89 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -435,6 +435,7 @@ CONFIG_KRAIT_REGULATOR=y
 CONFIG_HAS_MACH_MEMUTILS=y
 CONFIG_BRICKED_HOTPLUG=y
 # CONFIG_MAKO_HOTPLUG is not set
+CONFIG_MSM_LIMITER=y
 # CONFIG_PLAT_SPEAR is not set
 
 #
