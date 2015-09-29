@@ -208,6 +208,7 @@ static int msm_cpufreq_limit_start(void)
 	INIT_DELAYED_WORK(&limit.suspend_work, msm_limit_suspend);
 	INIT_WORK(&limit.resume_work, msm_limit_resume);
 
+	limit.limit_max_ori = limit.limit_max_freq;
 	limit.suspended = 1;
 	queue_work_on(0, limiter_wq, &limit.resume_work);
 

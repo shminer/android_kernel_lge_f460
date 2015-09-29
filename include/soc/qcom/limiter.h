@@ -26,7 +26,7 @@ static struct cpu_limit {
 } limit = {
 	.limiter_enabled = LIMITER_ENABLED,
 	.suspend_max_freq = DEFAULT_SUSPEND_FREQUENCY,
-	.limit_max_ori = 0,
+	.limit_max_ori = DEFAULT_RESUME_FREQUENCY,
 	.limit_max_freq = DEFAULT_RESUME_FREQUENCY,
 	.limit_min_freq = DEFAULT_MIN_FREQUENCY,
 	.suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME,
