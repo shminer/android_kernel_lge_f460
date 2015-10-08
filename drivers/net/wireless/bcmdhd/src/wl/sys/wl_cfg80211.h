@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.h 503322 2014-09-18 07:29:37Z $
+ * $Id: wl_cfg80211.h 522024 2014-12-19 11:13:37Z $
  */
 
 /**
@@ -260,7 +260,7 @@ enum wl_prof_list {
 	WL_PROF_DTIMPERIOD
 };
 
-/*                    */
+/* donlge escan state */
 enum wl_escan_state {
     WL_ESCAN_STATE_IDLE,
     WL_ESCAN_STATE_SCANING
@@ -607,6 +607,9 @@ struct bcm_cfg80211 {
 	u8 block_gon_req_tx_count;
 	u8 block_gon_req_rx_count;
 #endif /* WL_CFG80211_GON_COLLISION */
+#if defined(P2P_IE_MISSING_FIX)
+	bool p2p_prb_noti;
+#endif
 	s32(*state_notifier) (struct bcm_cfg80211 *cfg,
 		struct net_info *_net_info, enum wl_status state, bool set);
 	unsigned long interrested_state;

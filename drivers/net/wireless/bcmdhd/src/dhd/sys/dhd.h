@@ -4,14 +4,14 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2015, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -19,12 +19,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 515169 2014-11-13 13:19:49Z $
+ * $Id: dhd.h 522006 2014-12-19 08:44:54Z $
  */
 
 /****************
@@ -64,10 +64,6 @@ int get_scheduler_policy(struct task_struct *p);
 #include <wdf.h>
 #include <WdfMiniport.h>
 #endif /* (BCMWDF)  */
-
-#if defined(WL11U) && !defined(MFP)
-#define MFP /* Applying interaction with MFP by spec HS2.0 REL2 */
-#endif /* WL11U */
 
 #if defined(KEEP_ALIVE)
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
@@ -128,7 +124,7 @@ enum dhd_op_flags {
 #endif /* BCMPCIE */
 
 #define DHD_SCAN_ASSOC_ACTIVE_TIME	40 /* ms: Embedded default Active setting from DHD */
-#define DHD_SCAN_UNASSOC_ACTIVE_TIME 70 /* ms: Embedded def. Unassoc Active setting from DHD */
+#define DHD_SCAN_UNASSOC_ACTIVE_TIME 70 /* ms: Embedded def. Unassoc Active setting from DHD dafault 80 */
 #define DHD_SCAN_PASSIVE_TIME		130 /* ms: Embedded default Passive setting from DHD */
 
 #ifndef POWERUP_MAX_RETRY
@@ -168,7 +164,10 @@ enum dhd_prealloc_index {
 	DHD_PREALLOC_DHD_INFO = 7,
 	DHD_PREALLOC_DHD_WLFC_INFO = 8,
 	DHD_PREALLOC_IF_FLOW_LKUP = 9,
-	DHD_PREALLOC_FLOWRING = 10
+	DHD_PREALLOC_FLOWRING = 10,
+#if defined(CUSTOMER_HW10)
+	DHD_PREALLOC_DHD_WLFC_HANGER = 11
+#endif /* defined(CUSTOMER_HW10) */
 };
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */
@@ -318,7 +317,7 @@ typedef struct dhd_pub {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25))
 	struct mutex 	wl_start_stop_lock; /* lock/unlock for Android start/stop */
 	struct mutex 	wl_softap_lock;		 /* lock/unlock for any SoftAP/STA settings */
-#endif
+#endif 
 
 #ifdef WLBTAMP
 	uint16	maxdatablks;
@@ -431,6 +430,8 @@ typedef struct dhd_pub {
 #if defined(WLTDLS) && defined(PCIE_FULL_DONGLE)
 	tdls_peer_tbl_t peer_tbl;
 #endif /* defined(WLTDLS) && defined(PCIE_FULL_DONGLE) */
+	uint8 *soc_ram;
+	uint32 soc_ram_length;
 } dhd_pub_t;
 #if defined(CUSTOMER_HW4)
 #define MAX_RESCHED_CNT 600
@@ -618,7 +619,7 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 #define DHD_OS_OOB_IRQ_WAKE_LOCK_TIMEOUT(pub, val) dhd_os_oob_irq_wake_lock_timeout(pub, val)
 #define DHD_OS_OOB_IRQ_WAKE_UNLOCK(pub)		dhd_os_oob_irq_wake_unlock(pub)
 #endif /* BCMPCIE_OOB_HOST_WAKE */
-#define DHD_PACKET_TIMEOUT_MS	150
+#define DHD_PACKET_TIMEOUT_MS	500
 #define DHD_EVENT_TIMEOUT_MS	1500
 
 
@@ -762,6 +763,10 @@ extern int dhd_get_instance(dhd_pub_t *pub);
 extern int dhd_keep_alive_onoff(dhd_pub_t *dhd);
 #endif /* KEEP_ALIVE */
 
+#ifdef DHD_DEBUG
+void dhd_schedule_memdump(dhd_pub_t *dhdp, uint8 *buf, uint32 size);
+#endif /* DHD_DEBUG */
+
 #ifdef SUPPORT_AP_POWERSAVE
 extern int dhd_set_ap_powersave(dhd_pub_t *dhdp, int ifidx, int enable);
 #endif
@@ -879,7 +884,6 @@ extern int dhd_bssidx2idx(dhd_pub_t *dhdp, uint32 bssidx);
 extern int dhd_os_d3ack_wait(dhd_pub_t * pub, uint * condition, bool * pending);
 extern int dhd_os_d3ack_wake(dhd_pub_t * pub);
 
-
 extern bool dhd_is_concurrent_mode(dhd_pub_t *dhd);
 extern int dhd_iovar(dhd_pub_t *pub, int ifidx, char *name, char *cmd_buf, uint cmd_len, int set);
 typedef enum cust_gpio_modes {
@@ -947,7 +951,7 @@ extern uint dhd_sdiod_drive_strength;
 /* Override to force tx queueing all the time */
 extern uint dhd_force_tx_queueing;
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
-#define DEFAULT_KEEP_ALIVE_VALUE 	30000 /* msec */
+#define DEFAULT_KEEP_ALIVE_VALUE 	30000 /* msec default 55000 */
 #ifndef CUSTOM_KEEP_ALIVE_SETTING
 #define CUSTOM_KEEP_ALIVE_SETTING 	DEFAULT_KEEP_ALIVE_VALUE
 #endif /* DEFAULT_KEEP_ALIVE_VALUE */
@@ -1034,7 +1038,7 @@ extern uint dhd_force_tx_queueing;
 
 #define MAX_DTIM_SKIP_BEACON_INTERVAL	100 /* max allowed associated AP beacon for DTIM skip */
 #ifndef MAX_DTIM_ALLOWED_INTERVAL
-#define MAX_DTIM_ALLOWED_INTERVAL 600 /* max allowed total beacon interval for DTIM skip */
+#define MAX_DTIM_ALLOWED_INTERVAL 900 /* max allowed total beacon interval for DTIM skip default 600*/
 #endif
 #define NO_DTIM_SKIP 1
 #ifdef SDTEST
@@ -1177,6 +1181,7 @@ typedef struct wl_io_pport {
 	uint ifidx;
 } wl_io_pport_t;
 
+extern void dhd_save_fwdump(dhd_pub_t *dhd_pub, void * buffer, uint32 length);
 extern void *dhd_pub_wlinfo(dhd_pub_t *dhd_pub);
 #ifdef CONFIG_MACH_UNIVERSAL5433
 extern int check_rev(void);
