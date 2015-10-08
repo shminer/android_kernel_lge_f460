@@ -511,9 +511,7 @@ static int bq24296_masked_write(struct i2c_client *client, int reg,
 	}
 
 	temp &= ~mask;
-	pr_info("jzout : 0x%02X 0x%02X",temp,mask);
 	temp |= val & mask;
-	pr_info("jzout :0x%02X 0x%02X",temp,val);
 
 	rc = bq24296_write_reg(client, reg, temp);
 	if (rc) {
