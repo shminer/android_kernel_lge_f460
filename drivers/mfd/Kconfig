@@ -304,7 +304,7 @@ config MFD_MAX77693
 
 config MFD_MAX77819
 	bool "Maxim Integrated MAX77819 PMIC Support"
-	depends on I2C=y && GENERIC_HARDIRQS
+	depends on I2C=y
 	select MFD_CORE
 	select REGMAP_I2C
 	select REGMAP_IRQ
