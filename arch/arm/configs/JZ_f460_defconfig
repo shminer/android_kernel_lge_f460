@@ -1851,6 +1851,7 @@ CONFIG_BCMDHD_GPIO_WL_RESET=82
 # CONFIG_BRCM_CCX is not set
 CONFIG_BCMDHD_USE_SCHED_SCAN=y
 CONFIG_BROADCOM_WIFI_RESERVED_MEM=y
+# CONFIG_BRCM_WAPI is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
