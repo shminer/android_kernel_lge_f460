@@ -1668,9 +1668,6 @@ static int mxhci_hsic_probe(struct platform_device *pdev)
 	ret = mxhci_hsic_debugfs_init();
 	if (ret)
 		dev_dbg(&pdev->dev, "debugfs is not availabile\n");
-
-	pm_qos_add_request(&mxhci->pm_qos_req_dma, PM_QOS_CPU_DMA_LATENCY,
-			PM_QOS_DEFAULT_VALUE);
 	return 0;
 
 delete_wq:
@@ -1699,8 +1696,6 @@ static int mxhci_hsic_remove(struct platform_device *pdev)
 	u32 reg;
 
 	xhci_dbg_log_event(&dbg_hsic, NULL,  "mxhci_hsic_remove", 0);
-
-	pm_qos_remove_request(&mxhci->pm_qos_req_dma);
 
 	/* disable STROBE_PAD_CTL */
 	reg = readl_relaxed(TLMM_GPIO_HSIC_STROBE_PAD_CTL);
