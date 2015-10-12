@@ -77,12 +77,16 @@ static void msm_limit_suspend(struct work_struct *work)
 	mutex_lock(&limit.resume_suspend_mutex);
 	/* Store freq befor suspend */
 	limit.limit_max_ori = limit.limit_max_freq;
+	limit.limit_min_ori = limit.limit_min_freq;
 	limit.limit_max_freq = limit.suspend_max_freq;
+	limit.limit_min_freq = DEFAULT_MIN_FREQUENCY;
 	limit.suspended = 1;
 	mutex_unlock(&limit.resume_suspend_mutex);
 
-	for_each_possible_cpu(cpu)
+	for_each_possible_cpu(cpu){
 		update_cpu_max_freq(cpu);
+		update_cpu_min_freq(cpu);
+	}
 }
 
 static void msm_limit_resume(struct work_struct *work)
@@ -96,12 +100,15 @@ static void msm_limit_resume(struct work_struct *work)
 	mutex_lock(&limit.resume_suspend_mutex);
 	/* Restore freq befor resume */
 	limit.limit_max_freq = limit.limit_max_ori;
+	limit.limit_min_freq = limit.limit_min_ori;
 	limit.suspended = 0;
 	mutex_unlock(&limit.resume_suspend_mutex);
 
 	/* Restore max allowed freq */
-	for_each_possible_cpu(cpu)
+	for_each_possible_cpu(cpu){
 		update_cpu_max_freq(cpu);
+		update_cpu_min_freq(cpu);
+	}
 }
 
 static void __msm_limit_suspend(void)
