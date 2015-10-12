@@ -1563,7 +1563,7 @@ static void do_freq_control(long temp)
 		if (limit_idx < limit_idx_low)
 			limit_idx = limit_idx_low;
 		max_freq = table[limit_idx].frequency;
-	} else if (temp < msm_thermal_info_local.limit_safe_temp_degC -
+	} else if (temp < msm_thermal_info_local.limit_temp_degC -
 			msm_thermal_info_local.temp_hysteresis_degC &&
 			temp <= last_temp) {
 		if (limit_idx == limit_idx_high)
