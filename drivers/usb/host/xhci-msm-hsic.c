@@ -914,8 +914,6 @@ static int mxhci_hsic_suspend(struct mxhci_hsic_hcd *mxhci)
 	/* disable force-on mode for periph_on */
 	clk_set_flags(mxhci->system_clk, CLKFLAG_NORETAIN_PERIPH);
 
-	pm_qos_update_request(&mxhci->pm_qos_req_dma, PM_QOS_DEFAULT_VALUE);
-
 	pm_relax(mxhci->dev);
 
 #ifdef CONFIG_LGE_USB_XHCI_MSM_HSIC
@@ -942,8 +940,6 @@ static int mxhci_hsic_resume(struct mxhci_hsic_hcd *mxhci)
 	if (wl_divide == 1) pm_stay_awake(mxhci->dev);
 	else if (wl_divide > 1) pm_wakeup_event(mxhci->dev,
 		WL_TIMEOUT/wl_divide);
-
-	pm_qos_update_request(&mxhci->pm_qos_req_dma, PM_QOS_CPU_DMA_LATENCY);
 
 	/* enable force-on mode for periph_on */
 	clk_set_flags(mxhci->system_clk, CLKFLAG_RETAIN_PERIPH);
