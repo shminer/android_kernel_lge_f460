@@ -904,8 +904,9 @@ int create_pkt_cmd_session_set_property(
 		struct hfi_enable *hfi;
 		pkt->rg_property_data[0] = HFI_PROPERTY_CONFIG_REALTIME;
 		hfi = (struct hfi_enable *) &pkt->rg_property_data[1];
-		hfi->enable = ((struct hfi_enable *) pdata)->enable;
+		hfi->enable = !(((struct hfi_enable *) pdata)->enable);
 		pkt->size += sizeof(u32) * 2;
+		dprintk(VIDC_DBG, "Setting Final Priority to %d\n", hfi->enable);
 		break;
 	}
 	case HAL_PARAM_BUFFER_COUNT_ACTUAL:
@@ -1313,6 +1314,31 @@ int create_pkt_cmd_session_set_property(
 			sizeof(struct hfi_quantization_range);
 		break;
 	}
+	case HAL_PARAM_VENC_SEARCH_RANGE:
+	{
+		struct hfi_vc1e_perf_cfg_type *hfi;
+		struct hal_vc1e_perf_cfg_type *hal_mv_searchrange =
+			(struct hal_vc1e_perf_cfg_type *) pdata;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_VC1_PERF_CFG;
+		hfi = (struct hfi_vc1e_perf_cfg_type *)
+				&pkt->rg_property_data[1];
+		hfi->search_range_x_subsampled[0] =
+			hal_mv_searchrange->i_frame.x_subsampled;
+		hfi->search_range_x_subsampled[1] =
+			hal_mv_searchrange->p_frame.x_subsampled;
+		hfi->search_range_x_subsampled[2] =
+			hal_mv_searchrange->b_frame.x_subsampled;
+		hfi->search_range_y_subsampled[0] =
+			hal_mv_searchrange->i_frame.y_subsampled;
+		hfi->search_range_y_subsampled[1] =
+			hal_mv_searchrange->p_frame.y_subsampled;
+		hfi->search_range_y_subsampled[2] =
+			hal_mv_searchrange->b_frame.y_subsampled;
+		pkt->size += sizeof(u32) +
+			sizeof(struct hfi_vc1e_perf_cfg_type);
+		break;
+	}
 	case HAL_PARAM_VENC_MAX_NUM_B_FRAMES:
 	{
 		struct hfi_max_num_b_frames *hfi;
@@ -1327,21 +1353,12 @@ int create_pkt_cmd_session_set_property(
 	case HAL_CONFIG_VENC_INTRA_PERIOD:
 	{
 		struct hfi_intra_period *hfi;
-		int period = 0;
 		pkt->rg_property_data[0] =
 			HFI_PROPERTY_CONFIG_VENC_INTRA_PERIOD;
 		hfi = (struct hfi_intra_period *) &pkt->rg_property_data[1];
 		memcpy(hfi, (struct hfi_intra_period *) pdata,
 				sizeof(struct hfi_intra_period));
 		pkt->size += sizeof(u32) + sizeof(struct hfi_intra_period);
-		period = hfi->pframes + hfi->bframes + 1;
-		if (hfi->bframes) {
-			hfi->pframes = period / (hfi->bframes + 1);
-			hfi->bframes = period - hfi->pframes;
-		} else {
-			hfi->pframes = period - 1;
-			hfi->bframes = 0;
-		}
 		break;
 	}
 	case HAL_CONFIG_VENC_IDR_PERIOD:
@@ -1635,39 +1652,39 @@ int create_pkt_cmd_session_set_property(
 	}
 	case HAL_PARAM_VENC_LTRMODE:
 	{
-		struct hfi_ltrmode *hfi;
-		struct hal_ltrmode *hal = pdata;
+		struct hfi_ltr_mode *hfi;
+		struct hal_ltr_mode *hal = pdata;
 		pkt->rg_property_data[0] =
 			HFI_PROPERTY_PARAM_VENC_LTRMODE;
-		hfi = (struct hfi_ltrmode *) &pkt->rg_property_data[1];
-		hfi->ltrmode = get_hfi_ltr_mode(hal->ltrmode);
-		hfi->ltrcount = hal->ltrcount;
-		hfi->trustmode = hal->trustmode;
-		pkt->size += sizeof(u32) + sizeof(struct hfi_ltrmode);
+		hfi = (struct hfi_ltr_mode *) &pkt->rg_property_data[1];
+		hfi->ltr_mode = get_hfi_ltr_mode(hal->mode);
+		hfi->ltr_count = hal->count;
+		hfi->trust_mode = hal->trust_mode;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_ltr_mode);
 		break;
 	}
 	case HAL_CONFIG_VENC_USELTRFRAME:
 	{
-		struct hfi_ltruse *hfi;
-		struct hal_ltruse *hal = pdata;
+		struct hfi_ltr_use *hfi;
+		struct hal_ltr_use *hal = pdata;
 		pkt->rg_property_data[0] =
 			HFI_PROPERTY_CONFIG_VENC_USELTRFRAME;
-		hfi = (struct hfi_ltruse *) &pkt->rg_property_data[1];
+		hfi = (struct hfi_ltr_use *) &pkt->rg_property_data[1];
 		hfi->frames = hal->frames;
-		hfi->refltr = hal->refltr;
-		hfi->useconstrnt = hal->useconstrnt;
-		pkt->size += sizeof(u32) + sizeof(struct hfi_ltruse);
+		hfi->ref_ltr = hal->ref_ltr;
+		hfi->use_constrnt = hal->use_constraint;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_ltr_use);
 		break;
 	}
 	case HAL_CONFIG_VENC_MARKLTRFRAME:
 	{
-		struct hfi_ltrmark *hfi;
-		struct hal_ltrmark *hal = pdata;
+		struct hfi_ltr_mark *hfi;
+		struct hal_ltr_mark *hal = pdata;
 		pkt->rg_property_data[0] =
 			HFI_PROPERTY_CONFIG_VENC_MARKLTRFRAME;
-		hfi = (struct hfi_ltrmark *) &pkt->rg_property_data[1];
-		hfi->markframe = hal->markframe;
-		pkt->size += sizeof(u32) + sizeof(struct hfi_ltrmark);
+		hfi = (struct hfi_ltr_mark *) &pkt->rg_property_data[1];
+		hfi->mark_frame = hal->mark_frame;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_ltr_mark);
 		break;
 	}
 	case HAL_PARAM_VENC_HIER_P_MAX_ENH_LAYERS:
@@ -1702,6 +1719,16 @@ int create_pkt_cmd_session_set_property(
 				sizeof(struct hfi_vpe_color_space_conversion);
 		break;
 	}
+	case HAL_PARAM_VENC_DISABLE_RC_TIMESTAMP:
+	{
+		struct hfi_enable *hfi;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_DISABLE_RC_TIMESTAMP;
+		hfi = (struct hfi_enable *)&pkt->rg_property_data[1];
+		hfi->enable = ((struct hfi_enable *)pdata)->enable;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
 	case HAL_PARAM_VENC_ENABLE_INITIAL_QP:
 	{
 		struct hfi_initial_quantization *hfi;
@@ -1716,6 +1743,64 @@ int create_pkt_cmd_session_set_property(
 		hfi->qp_b = quant->qpb;
 		pkt->size += sizeof(u32) +
 			sizeof(struct hfi_initial_quantization);
+		break;
+	}
+	case HAL_PARAM_VENC_VPX_ERROR_RESILIENCE_MODE:
+	{
+		struct hfi_enable *hfi;
+		struct hal_enable *err_res = pdata;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_VPX_ERROR_RESILIENCE_MODE;
+		hfi = (struct hfi_enable *)&pkt->rg_property_data[1];
+		hfi->enable = err_res->enable;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VDEC_NON_SECURE_OUTPUT2:
+	{
+		struct hfi_enable *hfi;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VDEC_NONCP_OUTPUT2;
+		hfi = (struct hfi_enable *) &pkt->rg_property_data[1];
+		hfi->enable = ((struct hfi_enable *) pdata)->enable;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VENC_H264_NAL_SVC_EXT:
+	{
+		struct hfi_enable *hfi;
+		struct hal_enable *svc_nal = pdata;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_H264_NAL_SVC_EXT;
+		hfi = (struct hfi_enable *)&pkt->rg_property_data[1];
+		hfi->enable = svc_nal->enable;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_CONFIG_VENC_PERF_MODE:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_CONFIG_VENC_PERF_MODE;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_PARAM_VENC_HIER_B_MAX_ENH_LAYERS:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_HIER_B_MAX_NUM_ENH_LAYER;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_PARAM_VENC_HIER_P_HYBRID_MODE:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_HIER_P_HYBRID_MODE;
+		pkt->rg_property_data[1] =
+			((struct hfi_hybrid_hierp *)pdata)->layers;
+		pkt->size += sizeof(u32) +
+			sizeof(struct hfi_hybrid_hierp);
 		break;
 	}
 	/* FOLLOWING PROPERTIES ARE NOT IMPLEMENTED IN CORE YET */

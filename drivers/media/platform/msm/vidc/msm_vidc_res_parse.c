@@ -276,7 +276,7 @@ static int msm_vidc_load_bus_vectors(struct msm_vidc_platform_resources *res)
 		bus->sessions_supported = configs;
 		bus->pdata = msm_bus_pdata_from_node(pdev, child_node);
 		if (IS_ERR_OR_NULL(bus->pdata)) {
-			rc = PTR_ERR(bus->pdata);
+			rc = PTR_ERR(bus->pdata) ?: -EBADHANDLE;
 			dprintk(VIDC_ERR, "Failed to get bus pdata: %d\n", rc);
 			break;
 		}
@@ -640,6 +640,11 @@ static int msm_vidc_load_clock_table(
 					"qcom,sw-power-collapse");
 	dprintk(VIDC_DBG, "Power collapse supported = %s\n",
 		res->sw_power_collapsible ? "yes" : "no");
+
+	res->early_fw_load = of_property_read_bool(pdev->dev.of_node,
+				"qcom,early-fw-load");
+	dprintk(VIDC_DBG, "Early fw load = %s\n",
+				res->early_fw_load ? "yes" : "no");
 
 	return 0;
 

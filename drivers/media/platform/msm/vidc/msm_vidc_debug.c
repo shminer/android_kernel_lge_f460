@@ -24,6 +24,7 @@ int msm_vidc_hw_rsp_timeout = 1000;
 int msm_vidc_vpe_csc_601_to_709 = 0x0;
 int msm_vidc_dcvs_mode = 0x1;
 int msm_vidc_sys_idle_indicator = 0x0;
+u32 msm_vidc_firmware_unload_delay = 15000;
 
 struct debug_buffer {
 	char ptr[MAX_DBG_BUF_SIZE];
@@ -183,6 +184,12 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 			"debugfs_create_file: sys_idle_indicator fail\n");
 		goto failed_create_dir;
 	}
+	if (!debugfs_create_u32("firmware_unload_delay", S_IRUGO | S_IWUSR,
+			dir, &msm_vidc_firmware_unload_delay)) {
+		dprintk(VIDC_ERR,
+			"debugfs_create_file: firmware_unload_delay fail\n");
+		goto failed_create_dir;
+	}
 	return dir;
 
 failed_create_dir:
@@ -230,21 +237,18 @@ static int inst_info_open(struct inode *inode, struct file *file)
 static int publish_unreleased_reference(struct msm_vidc_inst *inst)
 {
 	struct buffer_info *temp = NULL;
-	struct buffer_info *dummy = NULL;
-	struct list_head *list = NULL;
 
 	if (!inst) {
 		dprintk(VIDC_ERR, "%s: invalid param\n", __func__);
 		return -EINVAL;
 	}
 
-	list = &inst->registered_bufs;
-	mutex_lock(&inst->lock);
 	if (inst->buffer_mode_set[CAPTURE_PORT] == HAL_BUFFER_MODE_DYNAMIC) {
-		list_for_each_entry_safe(temp, dummy, list, list) {
-			if (temp && temp->type ==
-			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
-			!temp->inactive && atomic_read(&temp->ref_count)) {
+
+		mutex_lock(&inst->registeredbufs.lock);
+		list_for_each_entry(temp, &inst->registeredbufs.list, list) {
+			if (temp->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
+ 			!temp->inactive && atomic_read(&temp->ref_count)) {
 				write_str(&dbg_buf,
 				"\tpending buffer: 0x%x fd[0] = %d ref_count = %d held by: %s\n",
 				temp->device_addr[0],
@@ -253,8 +257,8 @@ static int publish_unreleased_reference(struct msm_vidc_inst *inst)
 				DYNAMIC_BUF_OWNER(temp));
 			}
 		}
+		mutex_unlock(&inst->registeredbufs.lock);
 	}
-	mutex_unlock(&inst->lock);
 	return 0;
 }
 

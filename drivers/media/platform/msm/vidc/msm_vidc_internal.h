@@ -44,8 +44,7 @@
 #define DEFAULT_WIDTH 1920
 #define MIN_SUPPORTED_WIDTH 32
 #define MIN_SUPPORTED_HEIGHT 32
-#define MAX_SUPPORTED_WIDTH 3820
-#define MAX_SUPPORTED_HEIGHT 2160
+#define MAX_SUPPORTED_INSTANCES_COUNT 13
 
 #define V4L2_EVENT_VIDC_BASE  10
 
@@ -133,6 +132,17 @@ struct buf_info {
 	struct list_head list;
 	struct vb2_buffer *buf;
 };
+
+struct msm_vidc_list {
+	struct list_head list;
+	struct mutex lock;
+};
+
+static inline void INIT_MSM_VIDC_LIST(struct msm_vidc_list *mlist)
+{
+	mutex_init(&mlist->lock);
+	INIT_LIST_HEAD(&mlist->list);
+}
 
 enum buffer_owner {
 	DRIVER,
@@ -246,6 +256,7 @@ struct msm_vidc_core_capability {
 	struct hal_capability_supported hier_p;
 	struct hal_capability_supported mbs_per_frame;
 	struct hal_capability_supported ltr_count;
+	struct hal_capability_supported secure_output2_threshold;
 	u32 capability_set;
 	enum buffer_mode_type buffer_mode[MAX_PORT_NUM];
 	u32 buffer_size_limit;
@@ -259,6 +270,7 @@ struct msm_vidc_core {
 	struct msm_video_device vdev[MSM_VIDC_MAX_DEVICES];
 	struct v4l2_device v4l2_dev;
 	struct list_head instances;
+	u32 max_supported_instances;
 	struct dentry *debugfs_root;
 	enum vidc_core_state state;
 	struct completion completions[SYS_MSG_END - SYS_MSG_START + 1];
@@ -279,11 +291,12 @@ struct msm_vidc_inst {
 	int state;
 	struct msm_vidc_format *fmts[MAX_PORT_NUM];
 	struct buf_queue bufq[MAX_PORT_NUM];
-	struct list_head pendingq;
-	struct list_head internalbufs;
-	struct list_head persistbufs;
-	struct list_head outputbufs;
-	struct list_head pending_getpropq;
+	struct msm_vidc_list pendingq;
+	struct msm_vidc_list scratchbufs;
+	struct msm_vidc_list persistbufs;
+	struct msm_vidc_list pending_getpropq;
+	struct msm_vidc_list outputbufs;
+	struct msm_vidc_list registeredbufs;
 	struct buffer_requirements buff_req;
 	void *mem_client;
 	struct v4l2_ctrl_handler ctrl_handler;
@@ -305,7 +318,6 @@ struct msm_vidc_inst {
 	enum msm_vidc_modes flags;
 	struct msm_vidc_core_capability capability;
 	enum buffer_mode_type buffer_mode_set[MAX_PORT_NUM];
-	struct list_head registered_bufs;
 	bool map_output_buffer;
 	atomic_t get_seq_hdr_cnt;
 	struct v4l2_ctrl **ctrls;
@@ -360,8 +372,8 @@ struct buffer_info {
 	struct timeval timestamp;
 };
 
-struct buffer_info *device_to_uvaddr(struct msm_vidc_inst *inst,
-			struct list_head *list, u32 device_addr);
+struct buffer_info *device_to_uvaddr(struct msm_vidc_list *buf_list,
+				u32 device_addr);
 int buf_ref_get(struct msm_vidc_inst *inst, struct buffer_info *binfo);
 int buf_ref_put(struct msm_vidc_inst *inst, struct buffer_info *binfo);
 int output_buffer_cache_invalidate(struct msm_vidc_inst *inst,
