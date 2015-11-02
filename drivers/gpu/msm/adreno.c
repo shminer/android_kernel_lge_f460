@@ -17,7 +17,6 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
-#include <linux/of_coresight.h>
 #include <linux/input.h>
 
 #include <linux/msm-bus-board.h>
@@ -1559,9 +1558,6 @@ static int adreno_of_get_pdata(struct platform_device *pdev)
 	if (ret)
 		goto err;
 
-	pdata->coresight_pdata = of_get_coresight_platform_data(&pdev->dev,
-			pdev->dev.of_node);
-
 	pdev->dev.platform_data = pdata;
 	return 0;
 
@@ -1694,7 +1690,6 @@ static int adreno_remove(struct platform_device *pdev)
 #endif
 	adreno_ft_uninit_sysfs(device);
 
-	adreno_coresight_remove(device);
 	adreno_profile_close(device);
 
 	kgsl_pwrscale_close(device);
@@ -1731,9 +1726,6 @@ static int adreno_init(struct kgsl_device *device)
 	adreno_identify_gpu(adreno_dev);
 
 	gpudev = ADRENO_GPU_DEVICE(adreno_dev);
-
-	/* Initialize coresight for the target */
-	adreno_coresight_init(device);
 
 	adreno_ringbuffer_read_pm4_ucode(device);
 	adreno_ringbuffer_read_pfp_ucode(device);
@@ -1862,9 +1854,6 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	/* Start the GPU */
 	gpudev->start(adreno_dev);
 
-	/* Re-initialize the coresight registers if applicable */
-	adreno_coresight_start(adreno_dev);
-
 	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
 	adreno_irqctrl(adreno_dev, 1);
 
@@ -1950,9 +1939,6 @@ static int adreno_stop(struct kgsl_device *device)
 	del_timer_sync(&device->idle_timer);
 
 	adreno_ocmem_free(adreno_dev);
-
-	/* Save active coresight registers if applicable */
-	adreno_coresight_stop(adreno_dev);
 
 	/* Save physical performance counter values before GPU power down*/
 	adreno_perfcounter_save(adreno_dev);
@@ -2760,9 +2746,6 @@ static int adreno_soft_reset(struct kgsl_device *device)
 
 	/* Reinitialize the GPU */
 	gpudev->start(adreno_dev);
-
-	/* Re-initialize the coresight registers if applicable */
-	adreno_coresight_start(adreno_dev);
 
 	/* Enable IRQ */
 	kgsl_pwrctrl_irq(device, KGSL_PWRFLAGS_ON);
