@@ -751,9 +751,17 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 		.rampingcurve = SOFT_VOLUME_CURVE_LINEAR,
 	};
 	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 24;
+#else
 		bits_per_sample = 24;
-	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
+#endif
+	else if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
+#ifdef CONFIG_HIFI_SOUND
+		prtd->bits_per_sample = 32;
+#else
 		bits_per_sample = 32;
+#endif
 
 	if (prtd->compr_passthr != LEGACY_PCM) {
 		ret = q6asm_open_write_compressed(ac, prtd->codec,
@@ -1348,6 +1356,9 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 	unsigned long flags;
 	int stream_id;
 	uint32_t stream_index;
+#ifndef CONFIG_HIFI_SOUND
+	uint16_t bits_per_sample = 16;
+#endif
 
 	if (cstream->direction != SND_COMPRESS_PLAYBACK) {
 		pr_err("%s: Unsupported stream type\n", __func__);
@@ -1712,9 +1723,33 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			}
 			break;
 		}
-		pr_debug("%s: open_write stream_id %d", __func__, stream_id);
+		if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+#ifdef CONFIG_HIFI_SOUND
+			prtd->bits_per_sample = 24;
+#else
+			bits_per_sample = 24;
+#endif
+		else if (prtd->codec_param.codec.format ==
+			 SNDRV_PCM_FORMAT_S32_LE)
+#ifdef CONFIG_HIFI_SOUND
+			prtd->bits_per_sample = 32;
+#else
+			bits_per_sample = 32;
+#endif
+
+#ifdef CONFIG_HIFI_SOUND
+		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
+				__func__, stream_id, prtd->bits_per_sample);
+#else
+		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
+				__func__, stream_id, bits_per_sample);
+#endif
 		rc = q6asm_stream_open_write_v2(prtd->audio_client,
-				prtd->codec, 16,
+#ifdef CONFIG_HIFI_SOUND
+				prtd->codec, prtd->bits_per_sample,
+#else
+				prtd->codec, bits_per_sample,
+#endif
 				stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
 		if (rc < 0) {
