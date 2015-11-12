@@ -3694,7 +3694,7 @@ int q6afe_set_rtip(int enable)
 	switch (enable) {
 	case 0:
 	case 1:
-		pr_info("%s: enable/disable the module", __func__);
+		pr_info("%s: enable/disable the module\n", __func__);
 		set_param.pdata.param_id = AFE_PARAM_RTIP_ENABLE;
 		set_param.pdata.param_size = sizeof(struct afe_param_rtip_enable);
 		set_param.rtip_t.enable = enable;
@@ -3702,7 +3702,7 @@ int q6afe_set_rtip(int enable)
 	break;
 	case 2:
 	case 3:
-		pr_info("%s: set/reset debugging of the module", __func__);
+		pr_info("%s: set/reset debugging of the module\n", __func__);
 		set_param.pdata.param_id = AFE_PARAM_RTIP_DEBUG;
 		set_param.pdata.param_size = sizeof(struct afe_param_rtip_enable);
 		set_param.rtip_t.enable = enable - 2;
@@ -3710,7 +3710,7 @@ int q6afe_set_rtip(int enable)
 	break;
 	case 4:
 	case 5:
-		pr_info("%s: set/reset performance monitoring of the module", __func__);
+		pr_info("%s: set/reset performance monitoring of the module\n", __func__);
 		set_param.pdata.param_id = AFE_PARAM_RTIP_PERF;
 		set_param.pdata.param_size      = sizeof(struct afe_param_rtip_enable);
 		set_param.rtip_t.enable           = enable - 4;
