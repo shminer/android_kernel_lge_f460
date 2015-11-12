@@ -737,10 +737,10 @@ static int __init alucard_hotplug_init(void)
 		{30, 0}
 	};
 	unsigned int hotplug_rq[NR_CPUS][2] = {
-		{0, 100},
-		{100, 200},
-		{200, 300},
-		{300, 0}
+		{0, 150},
+		{150, 300},
+		{300, 450},
+		{450, 0}
 	};
 	unsigned int hotplug_rate[NR_CPUS][2] = {
 		{1, 1},
