@@ -4177,6 +4177,10 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 		break;
 	}
 	return 0;
+err:
+		if (!hwdep_cal)
+			release_firmware(fw);
+		return ret;
 }
 
 static int tomtom_hphl_dac_event(struct snd_soc_dapm_widget *w,
@@ -4292,10 +4296,6 @@ static int tomtom_hphr_dac_event(struct snd_soc_dapm_widget *w,
 		break;
 	}
 	return 0;
-err:
-	if (!hwdep_cal)
-		release_firmware(fw);
-	return ret;
 }
 
 static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
