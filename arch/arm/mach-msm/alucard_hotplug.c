@@ -738,9 +738,9 @@ static int __init alucard_hotplug_init(void)
 	};
 	unsigned int hotplug_rq[NR_CPUS][2] = {
 		{0, 150},
-		{150, 750},
-		{750, 850},
-		{850, 0}
+		{150, 250},
+		{250, 350},
+		{350, 0}
 	};
 	unsigned int hotplug_rate[NR_CPUS][2] = {
 		{1, 1},
