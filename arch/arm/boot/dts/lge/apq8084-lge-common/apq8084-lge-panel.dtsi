@@ -97,7 +97,7 @@
 			// Contrast
 			39 01 00 00 00 00 05 F1 00 00 02 02
 			// Sharpness
-			39 01 00 00 00 00 04 F2 01 00 00
+			39 01 00 00 00 00 04 F2 01 00 40
 			// Color enhancement
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			// Selective Color. F4 ~ F7 : Color0 ~ Color4
@@ -142,6 +142,9 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-sharpening-on = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
+		qcom,mdss-dsi-sharpening-off = [ 39 01 00 00 00 00 04 F2 01 00 08 ];
+		qcom,mdss-dsi-sharpening-mode = "dsi_hs_mode";
 
 		// ief
 		qcom,panel-ief-on-cmds = [
@@ -164,7 +167,7 @@
 			15 01 00 00 00 00 02 55 81
 			15 01 00 00 00 00 02 F0 26
 			39 01 00 00 00 00 05 F1 00 00 00 00
-			39 01 00 00 00 00 04 F2 01 00 00
+			39 01 00 00 00 00 04 F2 01 00 40
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			39 01 00 00 00 00 02 F4 05
 			39 01 00 00 00 00 04 F5 02 00 83
@@ -252,7 +255,7 @@
 			// Contrast
 			39 01 00 00 00 00 05 F1 00 00 02 02
 			// Sharpness
-			39 01 00 00 00 00 04 F2 01 00 00
+			39 01 00 00 00 00 04 F2 01 00 40
 			// Color enhancement
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			// Selective Color. F4 ~ F7 : Color0 ~ Color4
@@ -298,6 +301,9 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-sharpening-on = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
+		qcom,mdss-dsi-sharpening-off = [ 39 01 00 00 00 00 04 F2 01 00 08 ];
+		qcom,mdss-dsi-sharpening-mode = "dsi_hs_mode";
 
 		// ief
 		qcom,panel-ief-on-cmds = [
@@ -318,9 +324,9 @@
 		qcom,panel-ief-off-cmds = [
 			15 01 00 00 00 00 02 B0 AC
 			15 01 00 00 00 00 02 55 81
-			15 01 00 00 00 00 02 F0 33
+			15 01 00 00 00 00 02 F0 26
 			39 01 00 00 00 00 05 F1 00 00 00 00
-			39 01 00 00 00 00 04 F2 01 00 00
+			39 01 00 00 00 00 04 F2 01 00 40
 			39 01 00 00 00 00 06 F3 00 00 00 00 00
 			39 01 00 00 00 00 02 F4 05
 			39 01 00 00 00 00 04 F5 02 00 83

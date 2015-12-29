@@ -713,6 +713,13 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_cmds);
 #endif
 
+/* sharpening control */
+	/* Change to '1' if LG ever decides to disable by default */
+	if (ctrl->shared_pdata.sharpening_state == 0)
+		ctrl->set_sharpening(ctrl, ctrl->shared_pdata.sharpening_state,
+			(void *) 1);
+/* sharpening control */
+
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
 	pr_info("%s-:\n", __func__);
@@ -1174,6 +1181,45 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 	return 0;
 }
 
+/* sharpening control */
+
+static int mdss_dsi_panel_set_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
+	int state, void *resuming)
+{
+	if (ctrl->shared_pdata.sharpening_state == state && !resuming) {
+		pr_info("sharpening already in requested state");
+		return 0;
+	}
+
+	mdss_dsi_panel_cmds_send(ctrl, state ? &ctrl->sharpening_on :
+		&ctrl->sharpening_off);
+
+	ctrl->shared_pdata.sharpening_state = state;
+
+	pr_info("%s: sharpening %s for ndx %d\n", __func__,
+		state ?	"enabled" : "disabled", ctrl->ndx);
+
+	return 0;
+}
+
+static int mdss_dsi_panel_queue_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
+	int state)
+{
+	ctrl->shared_pdata.sharpening_state = state;
+
+	pr_info("%s: sharpening %s queued for ndx %d\n", __func__,
+		state ?	"enable" : "disable", ctrl->ndx);
+
+	return 0;
+}
+
+static int mdss_dsi_panel_get_sharpening(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	return ctrl->shared_pdata.sharpening_state;
+}
+
+/* sharpening control */
+
 static void mdss_dsi_parse_roi_alignment(struct device_node *np,
 		struct mdss_panel_info *pinfo)
 {
@@ -1590,6 +1636,17 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &lge_ief_off_cmds,
 			"qcom,panel-ief-off-cmds", "qcom,ief-off-dsi-state");
 #endif
+
+/* sharpening control */
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_on,
+		"qcom,mdss-dsi-sharpening-on", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_off,
+		"qcom,mdss-dsi-sharpening-off", "qcom,mdss-dsi-sharpening-mode");
+		
+	/* Change to 'false' if LG ever decides to disable by default */
+	ctrl_pdata->shared_pdata.sharpening_state = true;
+/* sharpening control */
+
 	rc = mdss_dsi_parse_panel_features(np, ctrl_pdata);
 	if (rc) {
 		pr_err("%s: failed to parse panel features\n", __func__);
@@ -1646,6 +1703,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->off = mdss_dsi_panel_off;
 	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
+	
+/* sharpening control */
+	ctrl_pdata->set_sharpening = mdss_dsi_panel_set_sharpening;
+	ctrl_pdata->get_sharpening = mdss_dsi_panel_get_sharpening;
+	ctrl_pdata->queue_sharpening = mdss_dsi_panel_queue_sharpening;
+/* sharpening control */
 
 #ifdef CONFIG_MACH_LGE
 	/* Panel device is not created in KK release

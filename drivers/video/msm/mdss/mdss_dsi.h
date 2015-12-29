@@ -232,6 +232,7 @@ struct dsi_drv_cm_data {
 	struct regulator *vdd_vreg;
 	struct regulator *vdd_io_vreg;
 	struct regulator *vdda_vreg;
+	int sharpening_state;
 };
 
 struct panel_horizontal_idle {
@@ -270,6 +271,12 @@ struct mdss_dsi_ctrl_pdata {
 	int (*set_col_page_addr) (struct mdss_panel_data *pdata);
 	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
 	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+	/* sharpening control */
+	int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state,
+		void *resuming);
+	int (*get_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl);
+	int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state);
+	/* sharpening control */
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
 	struct dss_io_data ctrl_io;
@@ -319,6 +326,9 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds off_cmds;
+	
+	struct dsi_panel_cmds sharpening_on;
+	struct dsi_panel_cmds sharpening_off;
 
 	struct dcs_cmd_list cmdlist;
 	struct completion dma_comp;

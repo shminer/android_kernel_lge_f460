@@ -207,6 +207,9 @@ struct mdss_mdp_ctl {
 	struct mdss_mdp_mixer *mixer_right;
 	struct mutex lock;
 	struct mutex *shared_lock;
+	/* sharpening control */
+	struct mutex offlock;
+	/* sharpening control */
 	spinlock_t spin_lock;
 
 	struct mdss_panel_data *panel_data;
