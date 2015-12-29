@@ -2361,7 +2361,7 @@ static struct attribute_group dynamic_fps_fs_attrs_group = {
 };
 
 /* sharpening control */
-static ssize_t mdss_mdp_sharpening_show(struct device *dev,
+static ssize_t mdss_mdp_sharpening_level_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	int ret;
@@ -2389,10 +2389,11 @@ end:
 		snprintf(buf, PAGE_SIZE, "%d\n", ret);
 }
 
-static ssize_t mdss_mdp_sharpening_store(struct device *dev,
+static ssize_t mdss_mdp_sharpening_level_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int enable, ret;
+	int ret;
+	unsigned int enable;
 	struct fb_info *fbi = dev_get_drvdata(dev);
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd);
@@ -2403,12 +2404,18 @@ static ssize_t mdss_mdp_sharpening_store(struct device *dev,
 	}
 
 	ret = kstrtoint(buf, 0, &enable);
-	if (ret || (enable != 0 && enable != 1)) {
-		pr_err("invalid sharpening value\n");
+	if (ret || (enable < 1 && enable > 9)) {
+		pr_err("invalid sharpening value, range [ 1- 9 ]\n");
 		ret = -EFAULT;
 		goto end;
 	}
 
+	if (enable > 9)
+		enable = 9;
+	
+	if (enable < 1)
+		enable = 1;
+		
 	mutex_lock(&ctl->offlock);
 
 	mdss_mdp_ctl_intf_event(ctl, mdss_mdp_ctl_is_power_on(ctl)  ?
@@ -2421,11 +2428,11 @@ end:
 	return ret ? ret : count;
 }
 
-static DEVICE_ATTR(lge_sharpening_control, S_IRUGO | S_IWUSR | S_IWGRP,
-	mdss_mdp_sharpening_show, mdss_mdp_sharpening_store);
+static DEVICE_ATTR(lge_sharpening_level, S_IRUGO | S_IWUSR | S_IWGRP,
+	mdss_mdp_sharpening_level_show, mdss_mdp_sharpening_level_store);
 
 static struct attribute *sharpening_attrs[] = {
-	&dev_attr_lge_sharpening_control.attr,
+	&dev_attr_lge_sharpening_level.attr,
 	NULL,
 };
 

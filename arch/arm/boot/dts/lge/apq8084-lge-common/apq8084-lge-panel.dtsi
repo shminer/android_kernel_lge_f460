@@ -142,8 +142,15 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,mdss-dsi-sharpening-on = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
-		qcom,mdss-dsi-sharpening-off = [ 39 01 00 00 00 00 04 F2 01 00 08 ];
+		qcom,mdss-dsi-sharpening-lv0 = [ 39 01 00 00 00 00 04 F2 01 00 00 ];
+		qcom,mdss-dsi-sharpening-lv1 = [ 39 01 00 00 00 00 04 F2 01 00 05 ];
+		qcom,mdss-dsi-sharpening-lv2 = [ 39 01 00 00 00 00 04 F2 01 00 10 ];
+		qcom,mdss-dsi-sharpening-lv3 = [ 39 01 00 00 00 00 04 F2 01 00 15 ];
+		qcom,mdss-dsi-sharpening-lv4 = [ 39 01 00 00 00 00 04 F2 01 00 20 ];
+		qcom,mdss-dsi-sharpening-lv5 = [ 39 01 00 00 00 00 04 F2 01 00 25 ];
+		qcom,mdss-dsi-sharpening-lv6 = [ 39 01 00 00 00 00 04 F2 01 00 30 ];
+		qcom,mdss-dsi-sharpening-lv7 = [ 39 01 00 00 00 00 04 F2 01 00 35 ];
+		qcom,mdss-dsi-sharpening-lv8 = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
 		qcom,mdss-dsi-sharpening-mode = "dsi_hs_mode";
 
 		// ief
@@ -301,8 +308,15 @@
 		qcom,cont-splash-enabled;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,mdss-dsi-sharpening-on = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
-		qcom,mdss-dsi-sharpening-off = [ 39 01 00 00 00 00 04 F2 01 00 08 ];
+		qcom,mdss-dsi-sharpening-lv0 = [ 39 01 00 00 00 00 04 F2 01 00 00 ];
+		qcom,mdss-dsi-sharpening-lv1 = [ 39 01 00 00 00 00 04 F2 01 00 05 ];
+		qcom,mdss-dsi-sharpening-lv2 = [ 39 01 00 00 00 00 04 F2 01 00 10 ];
+		qcom,mdss-dsi-sharpening-lv3 = [ 39 01 00 00 00 00 04 F2 01 00 15 ];
+		qcom,mdss-dsi-sharpening-lv4 = [ 39 01 00 00 00 00 04 F2 01 00 20 ];
+		qcom,mdss-dsi-sharpening-lv5 = [ 39 01 00 00 00 00 04 F2 01 00 25 ];
+		qcom,mdss-dsi-sharpening-lv6 = [ 39 01 00 00 00 00 04 F2 01 00 30 ];
+		qcom,mdss-dsi-sharpening-lv7 = [ 39 01 00 00 00 00 04 F2 01 00 35 ];
+		qcom,mdss-dsi-sharpening-lv8 = [ 39 01 00 00 00 00 04 F2 01 00 40 ];
 		qcom,mdss-dsi-sharpening-mode = "dsi_hs_mode";
 
 		// ief

@@ -694,7 +694,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_info("%s+: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+	pr_err("%s+: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
 
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
@@ -714,9 +714,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 #endif
 
 /* sharpening control */
-	/* Change to '1' if LG ever decides to disable by default */
-	if (ctrl->shared_pdata.sharpening_state == 0)
-		ctrl->set_sharpening(ctrl, ctrl->shared_pdata.sharpening_state,
+		ctrl->set_sharpening(ctrl, ctrl->shared_pdata.sharpening_level,
 			(void *) 1);
 /* sharpening control */
 
@@ -1184,38 +1182,68 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 /* sharpening control */
 
 static int mdss_dsi_panel_set_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
-	int state, void *resuming)
+	int level, void *resuming)
 {
-	if (ctrl->shared_pdata.sharpening_state == state && !resuming) {
-		pr_info("sharpening already in requested state");
+	if (ctrl->shared_pdata.sharpening_level == level && !resuming) {
+		pr_info("sharpening already in requested state \n");
 		return 0;
 	}
+	
+	switch (level) {
+		case 1:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv0);
+			break;
+		case 2:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv1);
+			break;
+		case 3:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv2);
+			break;
+		case 4:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv3);
+			break;
+		case 5:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv4);
+			break;
+		case 6:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv5);
+			break;
+		case 7:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv6);
+			break;
+		case 8:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv7);
+			break;
+		case 9:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv8);
+			break;
+		default:
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->sharpening_lv0);
+			break;
+	}
+	
+	ctrl->shared_pdata.sharpening_level = level;
 
-	mdss_dsi_panel_cmds_send(ctrl, state ? &ctrl->sharpening_on :
-		&ctrl->sharpening_off);
-
-	ctrl->shared_pdata.sharpening_state = state;
-
-	pr_info("%s: sharpening %s for ndx %d\n", __func__,
-		state ?	"enabled" : "disabled", ctrl->ndx);
+	pr_info("%s: sharpening set level %d for ndx %d\n", __func__,
+		level, ctrl->ndx);
 
 	return 0;
 }
 
 static int mdss_dsi_panel_queue_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
-	int state)
+	int level)
 {
-	ctrl->shared_pdata.sharpening_state = state;
+	ctrl->shared_pdata.sharpening_level = level;
 
-	pr_info("%s: sharpening %s queued for ndx %d\n", __func__,
-		state ?	"enable" : "disable", ctrl->ndx);
+	pr_info("%s: sharpening set level %d queued for ndx %d\n", __func__,
+		 level, ctrl->ndx);
 
 	return 0;
 }
 
 static int mdss_dsi_panel_get_sharpening(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	return ctrl->shared_pdata.sharpening_state;
+	return ctrl->shared_pdata.sharpening_level;
 }
 
 /* sharpening control */
@@ -1638,13 +1666,25 @@ static int mdss_panel_parse_dt(struct device_node *np,
 #endif
 
 /* sharpening control */
-	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_on,
-		"qcom,mdss-dsi-sharpening-on", "qcom,mdss-dsi-sharpening-mode");
-	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_off,
-		"qcom,mdss-dsi-sharpening-off", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv0,
+		"qcom,mdss-dsi-sharpening-lv0", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv1,
+		"qcom,mdss-dsi-sharpening-lv1", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv2,
+		"qcom,mdss-dsi-sharpening-lv2", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv3,
+		"qcom,mdss-dsi-sharpening-lv3", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv4,
+		"qcom,mdss-dsi-sharpening-lv4", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv5,
+		"qcom,mdss-dsi-sharpening-lv5", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv6,
+		"qcom,mdss-dsi-sharpening-lv6", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv7,
+		"qcom,mdss-dsi-sharpening-lv7", "qcom,mdss-dsi-sharpening-mode");
+	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv8,
+		"qcom,mdss-dsi-sharpening-lv8", "qcom,mdss-dsi-sharpening-mode");
 		
-	/* Change to 'false' if LG ever decides to disable by default */
-	ctrl_pdata->shared_pdata.sharpening_state = true;
 /* sharpening control */
 
 	rc = mdss_dsi_parse_panel_features(np, ctrl_pdata);

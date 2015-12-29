@@ -232,7 +232,7 @@ struct dsi_drv_cm_data {
 	struct regulator *vdd_vreg;
 	struct regulator *vdd_io_vreg;
 	struct regulator *vdda_vreg;
-	int sharpening_state;
+	int sharpening_level;
 };
 
 struct panel_horizontal_idle {
@@ -272,10 +272,10 @@ struct mdss_dsi_ctrl_pdata {
 	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
 	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 	/* sharpening control */
-	int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state,
+	int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int level,
 		void *resuming);
 	int (*get_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl);
-	int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int state);
+	int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 	/* sharpening control */
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
@@ -327,8 +327,15 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds off_cmds;
 	
-	struct dsi_panel_cmds sharpening_on;
-	struct dsi_panel_cmds sharpening_off;
+	struct dsi_panel_cmds sharpening_lv0;
+	struct dsi_panel_cmds sharpening_lv1;
+	struct dsi_panel_cmds sharpening_lv2;
+	struct dsi_panel_cmds sharpening_lv3;
+	struct dsi_panel_cmds sharpening_lv4;
+	struct dsi_panel_cmds sharpening_lv5;
+	struct dsi_panel_cmds sharpening_lv6;
+	struct dsi_panel_cmds sharpening_lv7;
+	struct dsi_panel_cmds sharpening_lv8;
 
 	struct dcs_cmd_list cmdlist;
 	struct completion dma_comp;
