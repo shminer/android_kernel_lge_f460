@@ -1684,7 +1684,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-sharpening-lv7", "qcom,mdss-dsi-sharpening-mode");
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->sharpening_lv8,
 		"qcom,mdss-dsi-sharpening-lv8", "qcom,mdss-dsi-sharpening-mode");
-		
+	/* set default value of 9 */
+	ctrl_pdata->shared_pdata.sharpening_level = 9;
 /* sharpening control */
 
 	rc = mdss_dsi_parse_panel_features(np, ctrl_pdata);
