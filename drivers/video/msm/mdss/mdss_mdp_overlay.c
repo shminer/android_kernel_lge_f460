@@ -2364,29 +2364,16 @@ static struct attribute_group dynamic_fps_fs_attrs_group = {
 static ssize_t mdss_mdp_sharpening_level_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	int ret;
 	struct fb_info *fbi = dev_get_drvdata(dev);
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 	struct mdss_mdp_ctl *ctl = mfd_to_ctl(mfd);
 
 	if (!ctl) {
-		ret = -ENODEV;
-		goto end;
+		pr_warning("there is no ctl attached to fb\n");
+		return -ENODEV;
 	}
 
-	mutex_lock(&ctl->offlock);
-	if (!mdss_mdp_ctl_is_power_on(ctl)) {
-		ret = -EPERM;
-		goto unlock;
-	}
-
-	ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_GET_SHARPENING, NULL);
-
-unlock:
-	mutex_unlock(&ctl->offlock);
-end:
-	return (ret == -EPERM) ? snprintf(buf, PAGE_SIZE, "display off\n") :
-		snprintf(buf, PAGE_SIZE, "%d\n", ret);
+	return snprintf(buf, PAGE_SIZE, "%d\n", ctl->panel_data->panel_info.sharpening_level);
 }
 
 static ssize_t mdss_mdp_sharpening_level_store(struct device *dev,
@@ -2404,26 +2391,32 @@ static ssize_t mdss_mdp_sharpening_level_store(struct device *dev,
 	}
 
 	ret = kstrtoint(buf, 0, &enable);
-	if (ret || (enable < 1 && enable > 9)) {
-		pr_err("invalid sharpening value, range [ 1- 9 ]\n");
+	if (ret || (enable < 0 && enable > 40)) {
+		pr_err("invalid sharpening value, range [ 0- 40 ]\n");
 		ret = -EFAULT;
 		goto end;
 	}
 
-	if (enable > 9)
-		enable = 9;
+	if (enable > 40)
+		enable = 40;
 	
-	if (enable < 1)
-		enable = 1;
+	if (enable < 0)
+		enable = 0;
 		
 	mutex_lock(&ctl->offlock);
-
-	mdss_mdp_ctl_intf_event(ctl, mdss_mdp_ctl_is_power_on(ctl)  ?
-		MDSS_EVENT_SET_SHARPENING : MDSS_EVENT_QUEUE_SHARPENING,
-			(void *) enable);
-
+	if (!mdss_mdp_ctl_is_power_on(ctl)) {
+		pr_err("panel is not powered\n");
+		ret = -EPERM;
+		goto unlock;
+	}
+	
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_SET_SHARPENING,
+										(void *) enable);
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+	
+unlock:
 	mutex_unlock(&ctl->offlock);
-
 end:
 	return ret ? ret : count;
 }

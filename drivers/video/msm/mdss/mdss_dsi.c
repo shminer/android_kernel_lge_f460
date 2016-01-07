@@ -992,19 +992,11 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_DSI_STREAM_SIZE:
 		rc = mdss_dsi_set_stream_size(pdata);
 		break;
-		
 /* sharpening control */
 	case MDSS_EVENT_SET_SHARPENING:
 		rc = ctrl_pdata->set_sharpening(ctrl_pdata, (int) (unsigned long) arg, NULL);
 		break;
-	case MDSS_EVENT_GET_SHARPENING:
-		rc = ctrl_pdata->get_sharpening(ctrl_pdata);
-		break;
-	case MDSS_EVENT_QUEUE_SHARPENING:
-		rc = ctrl_pdata->queue_sharpening(ctrl_pdata, (int) (unsigned long) arg);
-		break;
 /* sharpening control */
-
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;

@@ -169,8 +169,6 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_STREAM_SIZE,
 	/* sharpening control */
 	MDSS_EVENT_SET_SHARPENING,
-	MDSS_EVENT_GET_SHARPENING,
-	MDSS_EVENT_QUEUE_SHARPENING,
 	/* sharpening control */
 };
 
@@ -355,6 +353,7 @@ struct mdss_panel_info {
 	struct ion_handle *splash_ihdl;
 	int panel_power_state;
 	int blank_state;
+	int sharpening_level;
 
 	uint32_t panel_dead;
 
