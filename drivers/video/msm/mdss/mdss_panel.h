@@ -169,6 +169,7 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_STREAM_SIZE,
 	/* sharpening control */
 	MDSS_EVENT_SET_SHARPENING,
+	MDSS_EVENT_QUEUE_SHARPENING,
 	/* sharpening control */
 };
 

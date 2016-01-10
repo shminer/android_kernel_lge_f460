@@ -996,6 +996,9 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_SET_SHARPENING:
 		rc = ctrl_pdata->set_sharpening(ctrl_pdata, (int) (unsigned long) arg, NULL);
 		break;
+	case MDSS_EVENT_QUEUE_SHARPENING:
+		rc = ctrl_pdata->queue_sharpening(ctrl_pdata, (int) (unsigned long) arg);
+		break;
 /* sharpening control */
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);

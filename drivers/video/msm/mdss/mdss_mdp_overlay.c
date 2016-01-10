@@ -2404,18 +2404,13 @@ static ssize_t mdss_mdp_sharpening_level_store(struct device *dev,
 		enable = 0;
 		
 	mutex_lock(&ctl->offlock);
-	if (!mdss_mdp_ctl_is_power_on(ctl)) {
-		pr_err("panel is not powered\n");
-		ret = -EPERM;
-		goto unlock;
-	}
 	
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
-	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_SET_SHARPENING,
+	mdss_mdp_ctl_intf_event(ctl, mdss_mdp_ctl_is_power_on(ctl)  ?
+					MDSS_EVENT_SET_SHARPENING : MDSS_EVENT_QUEUE_SHARPENING,
 										(void *) enable);
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
-	
-unlock:
+
 	mutex_unlock(&ctl->offlock);
 end:
 	return ret ? ret : count;

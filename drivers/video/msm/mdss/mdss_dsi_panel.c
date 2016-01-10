@@ -1212,6 +1212,17 @@ static int mdss_dsi_panel_set_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	return 0;
 }
+
+static int mdss_dsi_panel_queue_sharpening(struct mdss_dsi_ctrl_pdata *ctrl,
+	int level)
+{
+	ctrl->panel_data.panel_info.sharpening_level = level;
+
+	pr_info("%s: sharpening set level %d queued for ndx %d\n", __func__,
+		 level, ctrl->ndx);
+
+	return 0;
+}
 /* sharpening control */
 
 static void mdss_dsi_parse_roi_alignment(struct device_node *np,
@@ -1695,6 +1706,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	
 /* sharpening control */
 	ctrl_pdata->set_sharpening = mdss_dsi_panel_set_sharpening;
+	ctrl_pdata->queue_sharpening = mdss_dsi_panel_queue_sharpening;
 /* sharpening control */
 
 #ifdef CONFIG_MACH_LGE

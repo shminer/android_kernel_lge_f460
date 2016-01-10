@@ -273,6 +273,7 @@ struct mdss_dsi_ctrl_pdata {
 	/* sharpening control */
 	int (*set_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int level,
 		void *resuming);
+	int (*queue_sharpening)(struct mdss_dsi_ctrl_pdata *ctrl, int level);
 	/* sharpening control */
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
