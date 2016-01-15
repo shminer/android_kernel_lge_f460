@@ -3211,7 +3211,6 @@ static int __q6asm_media_format_block_multi_ch_pcm(struct audio_client *ac,
 				__func__, atomic_read(&ac->cmd_state));
 		goto fail_cmd;
 	}
-	}
 	return 0;
 fail_cmd:
 	return -EINVAL;
@@ -4274,6 +4273,10 @@ int q6asm_set_softvolume(struct audio_client *ac,
 		rc = -EINVAL;
 		goto fail_cmd;
 	}
+	rc = 0;
+fail_cmd:
+	return rc;
+}
 
 int q6asm_equalizer(struct audio_client *ac, void *eq_p)
 {

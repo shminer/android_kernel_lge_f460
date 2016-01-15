@@ -234,7 +234,7 @@ static void msm_restart_prepare(const char *cmd)
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
 #ifdef CONFIG_MACH_LGE
-	/*                                                                          */
+	/* LGE_CHANGE : there's no reason to forcing a hard reset on reboot request */
 	if (true || get_dload_mode() || (cmd != NULL && cmd[0] != '\0'))
 #else
 	if (get_dload_mode() || (cmd != NULL && cmd[0] != '\0'))
@@ -250,7 +250,7 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665502, restart_reason);
 		} else if (!strncmp(cmd, "fota", 4)) {
 			__raw_writel(0x77665566, restart_reason);
-		/*                                     */
+		/* LGE_CHANGE : Bnr Function disabled. */
 		//} else if (!strncmp(cmd, "--bnr_recovery", 14)) {
 		//	__raw_writel(0x77665555, restart_reason);
 		} else if (!strcmp(cmd, "rtc")) {
@@ -270,8 +270,7 @@ static void msm_restart_prepare(const char *cmd)
         } else if (!strncmp(cmd, "wallpaper_fail", 14)) {
 			__raw_writel(0x77665507, restart_reason);
 		} else if (!strcmp(cmd, "dm-verity device corrupted")) {
-			__raw_writel(0x77665508, restart_reason);_reason);
-#endif
+			__raw_writel(0x77665508, restart_reason);
 #ifndef CONFIG_LGE_HANDLE_PANIC
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
@@ -295,6 +294,7 @@ static void msm_restart_prepare(const char *cmd)
 	flush_cache_all();
 	outer_flush_all();
 }
+
 
 void msm_restart(char mode, const char *cmd)
 {

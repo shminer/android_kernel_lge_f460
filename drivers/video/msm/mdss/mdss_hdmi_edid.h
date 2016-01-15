@@ -13,7 +13,7 @@
 #ifndef __HDMI_EDID_H__
 #define __HDMI_EDID_H__
 
-#include <mach/msm_hdmi_audio_codec.h>
+#include <linux/msm_hdmi.h>
 #include "mdss_hdmi_util.h"
 
 struct hdmi_edid_init_data {
