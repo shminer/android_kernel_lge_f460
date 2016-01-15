@@ -66,7 +66,7 @@ static struct gpiomux_setting gpio_epm_config = {
 	.dir = GPIOMUX_OUT_HIGH,
 };
 
-/*                                                       */
+/*  LGE_CHANGE_S, [NFC][taesik.kim@lge.com], NFC Bring up*/
 #ifdef CONFIG_LGE_NFC_PN547_C2
 static struct gpiomux_setting nfc_pn547_sda_cfg = {
 	.func = GPIOMUX_FUNC_3,
@@ -143,7 +143,7 @@ static struct msm_gpiomux_config msm_nfc_configs[] __initdata = {
 	},
 };
 #endif
-/*                                                       */
+/*  LGE_CHANGE_E, [NFC][taesik.kim@lge.com], NFC Bring up*/
 
 static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	/* AP2MDM_STATUS */
@@ -1615,7 +1615,7 @@ static void bluetooth_msm_gpiomux_install(void)
 	/* PCM I/F */
 	msm_gpiomux_install(bt_pcm_configs, ARRAY_SIZE(bt_pcm_configs));
 }
-#endif /*                      */
+#endif /* CONFIG_LGE_BLUETOOTH */
 
 void __init lgpc9_rev_a_init_gpiomux(void)
 {
@@ -1747,11 +1747,11 @@ void __init apq8084_init_gpiomux(void)
 			ARRAY_SIZE(slimport_configs));
 #endif
 
-	/*                                                       */
+	/*	LGE_CHANGE_S, [NFC][taesik.kim@lge.com], NFC Bring up */
 #ifdef CONFIG_LGE_NFC_PN547_C2
 	msm_gpiomux_install(msm_nfc_configs, ARRAY_SIZE(msm_nfc_configs));
 #endif
-	/*                                                       */
+	/*	LGE_CHANGE_E, [NFC][taesik.kim@lge.com], NFC Bring up */
 
 #ifdef CONFIG_LGE_BLUETOOTH
 	bluetooth_msm_gpiomux_install();

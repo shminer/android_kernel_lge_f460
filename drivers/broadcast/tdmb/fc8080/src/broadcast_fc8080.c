@@ -86,7 +86,8 @@ static Device_drv device_fc8080 = {
 	&broadcast_fc8080_drv_if_get_msc,
 	&broadcast_fc8080_drv_if_reset_ch,
 	&broadcast_fc8080_drv_if_user_stop,
-	&broadcast_fc8080_drv_if_select_antenna
+	&broadcast_fc8080_drv_if_select_antenna,
+    &broadcast_fc8080_drv_if_set_nation
 };
 
 #if 0

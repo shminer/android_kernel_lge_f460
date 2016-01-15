@@ -521,4 +521,4 @@ module_init(lge_mmc1_strength_init);
 MODULE_DESCRIPTION("LGE KERNEL DRIVER");
 MODULE_AUTHOR("p1 <p1-fs@lge.com>");
 MODULE_LICENSE("GPL");
-#endif //                                       
+#endif // CONFIG_LGE_ENABLE_MMC_STRENGTH_CONTROL

@@ -57,7 +57,7 @@ static inline int sysmon_send_shutdown(enum subsys_id dest_ss)
 }
 #endif
 
-/*                                                            */
+/* FEATURE_LGE_MODEM_DEBUG_INFO, 2014-11-04, jin.park@lge.com */
 #define FEATURE_LGE_MODEM_DEBUG_INFO
 #ifdef FEATURE_LGE_MODEM_DEBUG_INFO
 int sysmon_get_debug_info(enum subsys_id dest_ss, char *buf, size_t len);

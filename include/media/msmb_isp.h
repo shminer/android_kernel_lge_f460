@@ -491,10 +491,10 @@ struct msm_isp_event_data {
 #define VIDIOC_MSM_ISP_UPDATE_STATS_STREAM \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+16, struct msm_vfe_axi_stream_update_cmd)
 
-/*                                                                         */
+/*LGE_CHANGE S, Dynamic Stats Info(8084), 2014-06-19, kyungjin.min@lge.com */
 #define VIDIOC_MSM_ISP_UPDATE_STATS_STREAM \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+16, struct msm_vfe_axi_stream_update_cmd)
-/*                                                                         */
+/*LGE_CHANGE E, Dynamic Stats Info(8084), 2014-06-19, kyungjin.min@lge.com */
 #define VIDIOC_MSM_ISP_AXI_HALT \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+17, struct msm_vfe_axi_halt_cmd)
 

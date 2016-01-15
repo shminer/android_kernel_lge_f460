@@ -546,11 +546,11 @@ int __init lge_boot_mode_init(char *s)
 		lge_boot_mode = LGE_BOOT_MODE_PIF_130K;
 	else if (!strcmp(s, "pif_910k"))
 		lge_boot_mode = LGE_BOOT_MODE_PIF_910K;
-	/*                            */
+	/* LGE_UPDATE_S for MINIOS2.0 */
 	else if (!strcmp(s, "miniOS"))
 		lge_boot_mode = LGE_BOOT_MODE_MINIOS;
 	pr_info("ANDROID BOOT MODE : %d %s\n", lge_boot_mode, s);
-	/*                            */
+	/* LGE_UPDATE_E for MINIOS2.0 */
 
 	return 1;
 }
@@ -616,9 +616,9 @@ hw_rev_type lge_get_board_revno(void)
 	return lge_bd_rev;
 }
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/* LGE_CHANGE_S
+* change code for LCD KCAL
+* 2013-05-08, seojin.lee@lge.com
 */
 int g_kcal_r = 255;
 int g_kcal_g = 255;

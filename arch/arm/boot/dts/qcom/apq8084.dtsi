@@ -4308,6 +4308,7 @@
 			interrupts = <0 131 0>, <0 179 0>;
 			interrupt-names = "irq", "otg_irq";
 			tx-fifo-resize;
+			snps,usb3-u1u2-disable;
 			usb-phy = <&hsphy0>, <&ssphy0>;
 		};
 	};
@@ -5362,6 +5363,7 @@
 		reg = <0xFE0C900C  0x4>,
 		      <0xFE0C9010  0x4>;
 		reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
+		qcom,clk_div = <27>;
 	};
 };
 

@@ -24,9 +24,9 @@
 #undef NR_OPEN
 
 #ifdef CONFIG_MACH_LGE
-/*           
-                                    
-                                         
+/* LGE_UPDATE
+ * Increase maximun-open-file-number
+ * 2014-05-20, T6-BSP-FILESYSTEM@lge.com 
  */
 #define INR_OPEN_CUR 2048	/* Initial setting for nfile rlimits */
 #else

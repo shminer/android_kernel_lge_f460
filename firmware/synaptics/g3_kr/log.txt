@@ -1,0 +1,1 @@
+make: *** No rule to make target `t6_lgu-perf_defconfig'.  Stop.

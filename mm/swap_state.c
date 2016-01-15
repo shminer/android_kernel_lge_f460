@@ -98,6 +98,7 @@ int __add_to_swap_cache(struct page *page, swp_entry_t entry)
 	if (likely(!error)) {
 		address_space->nrpages++;
 		__inc_zone_page_state(page, NR_FILE_PAGES);
+		__inc_zone_page_state(page, NR_SWAPCACHE);
 		INC_CACHE_INFO(add_total);
 	}
 	spin_unlock_irq(&address_space->tree_lock);
@@ -150,6 +151,7 @@ void __delete_from_swap_cache(struct page *page)
 	ClearPageSwapCache(page);
 	address_space->nrpages--;
 	__dec_zone_page_state(page, NR_FILE_PAGES);
+	__dec_zone_page_state(page, NR_SWAPCACHE);
 	INC_CACHE_INFO(del_total);
 }
 
@@ -168,6 +170,11 @@ int add_to_swap(struct page *page, struct list_head *list)
 	VM_BUG_ON(!PageLocked(page));
 	VM_BUG_ON(!PageUptodate(page));
 
+#ifdef CONFIG_HSWAP
+	if (!current_is_kswapd())
+		entry = get_lowest_prio_swap_page();
+	else
+#endif
 	entry = get_swap_page();
 	if (!entry.val)
 		return 0;
@@ -414,7 +421,8 @@ struct page *swapin_readahead(swp_entry_t entry, gfp_t gfp_mask,
 	struct page *page;
 	unsigned long offset = swp_offset(entry);
 	unsigned long start_offset, end_offset;
-	unsigned long mask = (1UL << page_cluster) - 1;
+	unsigned long mask = is_swap_fast(entry) ? 0 :
+				(1UL << page_cluster) - 1;
 	struct blk_plug plug;
 
 	/* Read a page_cluster sized and aligned cluster around offset. */

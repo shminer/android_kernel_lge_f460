@@ -2,7 +2,7 @@
  * Core MDSS framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -84,7 +84,7 @@ static u32 mdss_fb_pseudo_palette[16] = {
 #if defined(CONFIG_LGE_BROADCAST_TDMB)
 extern struct mdp_csc_cfg dmb_csc_convert;
 extern int pp_set_dmb_status(int flag);
-#endif /*               */
+#endif /* LGE_BROADCAST */
 
 static struct msm_mdp_interface *mdp_instance;
 
@@ -349,7 +349,7 @@ static void mdss_fb_parse_dt_split(struct msm_fb_data_type *mfd)
 static ssize_t mdss_fb_store_split(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
-	u32 data[2] = {0};
+	int data[2] = {0};
 	struct fb_info *fbi = dev_get_drvdata(dev);
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 
@@ -634,6 +634,8 @@ static int mdss_fb_probe(struct platform_device *pdev)
 	rc = mdss_fb_register(mfd);
 	if (rc)
 		return rc;
+
+	mdss_fb_get_split(mfd);
 
 	if (mfd->mdp.init_fnc) {
 		rc = mfd->mdp.init_fnc(mfd);
@@ -1343,7 +1345,8 @@ static int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd,
 			goto fb_mmap_failed;
 		}
 	} else {
-		pr_err("No IOMMU Domain");
+		pr_err("No IOMMU Domain\n");
+		rc = -EINVAL;
 		goto fb_mmap_failed;
 
 	}
@@ -1812,7 +1815,7 @@ static int mdss_fb_open(struct fb_info *info, int user)
 	if (mfd->shutdown_pending) {
 		pr_err("Shutdown pending. Aborting operation. Request from pid:%d name=%s\n",
 				pid, task->comm);
-		return -EPERM;
+		return -ESHUTDOWN;
 	}
 
 	file_info = kmalloc(sizeof(*file_info), GFP_KERNEL);
@@ -2235,7 +2238,7 @@ static int mdss_fb_pan_idle(struct msm_fb_data_type *mfd)
 		mdss_fb_signal_timeline(&mfd->mdp_sync_pt_data);
 	} else if (mfd->shutdown_pending) {
 		pr_debug("Shutdown signalled\n");
-		return -EPERM;
+		return -ESHUTDOWN;
 	}
 
 	return 0;
@@ -2255,7 +2258,7 @@ static int mdss_fb_wait_for_kickoff(struct msm_fb_data_type *mfd)
 
 	} else if (mfd->shutdown_pending) {
 		pr_debug("Shutdown signalled\n");
-		return -EPERM;
+		return -ESHUTDOWN;
 	}
 
 	return 0;
@@ -2370,6 +2373,17 @@ static void mdss_fb_var_to_panelinfo(struct fb_var_screeninfo *var,
 	pinfo->lcdc.h_front_porch = var->right_margin;
 	pinfo->lcdc.h_back_porch = var->left_margin;
 	pinfo->lcdc.h_pulse_width = var->hsync_len;
+
+	if (var->sync & FB_SYNC_HOR_HIGH_ACT)
+		pinfo->lcdc.h_polarity = 0;
+	else
+		pinfo->lcdc.h_polarity = 1;
+
+	if (var->sync & FB_SYNC_VERT_HIGH_ACT)
+		pinfo->lcdc.v_polarity = 0;
+	else
+		pinfo->lcdc.v_polarity = 1;
+
 	pinfo->clk_rate = var->pixclock;
 }
 
@@ -2978,7 +2992,7 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 #if defined(CONFIG_LGE_BROADCAST_TDMB)
 	int dmb_flag = 0;
 	struct mdp_csc_cfg dmb_csc_cfg;
-#endif /*               */
+#endif /* LGE_BROADCAST */
 
 	if (!info || !info->par)
 		return -EINVAL;
@@ -2988,7 +3002,7 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		return -EINVAL;
 
 	if (mfd->shutdown_pending)
-		return -EPERM;
+		return -ESHUTDOWN;
 
 	atomic_inc(&mfd->ioctl_ref_cnt);
 
@@ -3067,7 +3081,7 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		memcpy(dmb_csc_convert.csc_mv, dmb_csc_cfg.csc_mv,
 				sizeof(dmb_csc_cfg.csc_mv));
 		break;
-#endif /*               */
+#endif /* LGE_BROADCAST */
 
 	default:
 		if (mfd->mdp.ioctl_handler)
@@ -3237,7 +3251,7 @@ module_init(mdss_fb_init);
 int mdss_fb_suspres_panel(struct device *dev, void *data)
 {
 	struct msm_fb_data_type *mfd;
-	int rc;
+	int rc = 0;
 	u32 event;
 
 	if (!data) {
@@ -3250,10 +3264,14 @@ int mdss_fb_suspres_panel(struct device *dev, void *data)
 
 	event = *((bool *) data) ? MDSS_EVENT_RESUME : MDSS_EVENT_SUSPEND;
 
-	rc = mdss_fb_send_panel_event(mfd, event, NULL);
-	if (rc)
-		pr_warn("unable to %s fb%d (%d)\n",
-			event == MDSS_EVENT_RESUME ? "resume" : "suspend",
-			mfd->index, rc);
+	/* Do not send runtime suspend/resume for HDMI primary */
+	if (!mdss_fb_is_hdmi_primary(mfd)) {
+		rc = mdss_fb_send_panel_event(mfd, event, NULL);
+		if (rc)
+			pr_warn("unable to %s fb%d (%d)\n",
+				event == MDSS_EVENT_RESUME ?
+				"resume" : "suspend",
+				mfd->index, rc);
+	}
 	return rc;
 }

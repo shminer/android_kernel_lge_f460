@@ -513,7 +513,7 @@ static void diag_hsic_resume(void *ctxt)
 				(diag_bridge[index].usb_connected)))
 		queue_work(diag_bridge[index].wq,
 			 &diag_hsic[index].diag_read_hsic_work);
-#endif /*                 */
+#endif /*CONFIG_LGE_DM_APP*/
 
 
 
@@ -848,7 +848,7 @@ static int diag_hsic_probe_data(int pdev_id)
 		queue_work(diag_bridge[index].wq,
 			  &diag_hsic[index].diag_read_hsic_work);
 	}
-#endif /*                   */
+#endif /* CONFIG_LGE_DM_APP */
 	diag_hsic[index].hsic_device_enabled = 1;
 	mutex_unlock(&diag_bridge[index].bridge_mutex);
 	return err;

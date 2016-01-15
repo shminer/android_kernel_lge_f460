@@ -46,7 +46,7 @@ static struct gpiomux_setting mdm2ap_pblrdy = {
 	.dir = GPIOMUX_IN,
 };
 
-#ifdef VDD_MIN_INTERRUPT /*                             */
+#ifdef VDD_MIN_INTERRUPT /* LGE added vdd_min_interrupt */
 static struct gpiomux_setting mdm2ap_vdd_min = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -74,7 +74,7 @@ static struct gpiomux_setting gpio_epm_config = {
 	.dir = GPIOMUX_OUT_HIGH,
 };
 
-/*                                                       */
+/*  LGE_CHANGE_S, [NFC][taesik.kim@lge.com], NFC Bring up*/
 #ifdef CONFIG_LGE_NFC_PN547_C2
 static struct gpiomux_setting nfc_pn547_sda_cfg = {
 	.func = GPIOMUX_FUNC_3,
@@ -151,7 +151,7 @@ static struct msm_gpiomux_config msm_nfc_configs[] __initdata = {
 	},
 };
 #endif
-/*                                                       */
+/*  LGE_CHANGE_E, [NFC][taesik.kim@lge.com], NFC Bring up*/
 
 static struct msm_gpiomux_config mdm_configs[] __initdata = {
 	/* AP2MDM_STATUS */
@@ -203,7 +203,7 @@ static struct msm_gpiomux_config mdm_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &mdm2ap_pblrdy,
 		}
 	},
-#ifdef VDD_MIN_INTERRUPT /*                             */
+#ifdef VDD_MIN_INTERRUPT /* LGE added vdd_min_interrupt */
 	/* MDM2AP_VDD_MIN*/
 	{
 		.gpio = 115,
@@ -871,7 +871,7 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 };
 
 
-/*                                                                 */
+/*  LGE_CHANGE_S, [WiFi][moon_wifi@lge.com], Setting for WiFi by jw*/
 static struct gpiomux_setting wlan_wake_msm_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -921,7 +921,7 @@ static struct msm_gpiomux_config pcie0_reset_n_configs[] __initdata = {
 		},
 	},
 };
-/*                                                                 */
+/*  LGE_CHANGE_E, [WiFi][moon_wifi@lge.com], Setting for WiFi by jw*/
 
 
 static struct gpiomux_setting sd_card_det_active_config = {
@@ -1600,7 +1600,7 @@ static void bluetooth_msm_gpiomux_install(void)
 	/* PCM I/F */
 	msm_gpiomux_install(bt_pcm_configs, ARRAY_SIZE(bt_pcm_configs));
 }
-#endif /*                      */
+#endif /* CONFIG_LGE_BLUETOOTH */
 
 #if defined(CONFIG_LGE_BROADCAST_TDMB)
 static struct gpiomux_setting gpio_blsp1_spi_active_config = {
@@ -1803,11 +1803,11 @@ void __init apq8084_init_gpiomux(void)
 		msm_gpiomux_install(msm_hdmi_configs,
 			ARRAY_SIZE(msm_hdmi_configs));
 	}
-/*                                                                */
+/*	LGE_CHANGE_S, [WiFi][moon_wifi@lge.com], Setting for WiFi by jw*/
 	msm_gpiomux_install(wlan_wake_msm_configs, ARRAY_SIZE(wlan_wake_msm_configs));
 	msm_gpiomux_install(pcie0_wake_n_configs, ARRAY_SIZE(pcie0_wake_n_configs));
 	msm_gpiomux_install(pcie0_reset_n_configs, ARRAY_SIZE(pcie0_reset_n_configs));
-/*                                                                */
+/*	LGE_CHANGE_E, [WiFi][moon_wifi@lge.com], Setting for WiFi by jw*/
 
 	msm_gpiomux_install(sd_card_det, ARRAY_SIZE(sd_card_det));
 	if (of_board_is_cdp() || of_board_is_sbc())
@@ -1843,11 +1843,11 @@ void __init apq8084_init_gpiomux(void)
 			ARRAY_SIZE(slimport_configs));
 #endif
 
-/*                                                       */
+/* LGE_CHANGE_S, [NFC][taesik.kim@lge.com], NFC Bring up */
 #ifdef CONFIG_LGE_NFC_PN547_C2
 	msm_gpiomux_install(msm_nfc_configs, ARRAY_SIZE(msm_nfc_configs));
 #endif
-/*                                                       */
+/* LGE_CHANGE_E, [NFC][taesik.kim@lge.com], NFC Bring up */
 
 #ifdef CONFIG_LGE_BLUETOOTH
 	bluetooth_msm_gpiomux_install();

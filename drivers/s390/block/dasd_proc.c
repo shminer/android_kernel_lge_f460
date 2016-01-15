@@ -1,13 +1,13 @@
 /*
-                                                                  
-                                              
-                                       
-                                                   
-                                         
-                                 
-  
-                                       
-  
+ * Author(s)......: Holger Smolinski <Holger.Smolinski@de.ibm.com>
+ *		    Horst Hummel <Horst.Hummel@de.ibm.com>
+ *		    Carsten Otte <Cotte@de.ibm.com>
+ *		    Martin Schwidefsky <schwidefsky@de.ibm.com>
+ * Bugreports.to..: <Linux390@de.ibm.com>
+ * Coypright IBM Corp. 1999, 2002
+ *
+ * /proc interface for the dasd driver.
+ *
  */
 
 #define KMSG_COMPONENT "dasd"

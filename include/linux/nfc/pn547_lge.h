@@ -87,4 +87,4 @@ struct pn547_gpio {
 #define dprintk(fmt, args...) do { } while (0)
 #endif
 
-#endif /*               */
+#endif /* _PN547_LGE_H_ */

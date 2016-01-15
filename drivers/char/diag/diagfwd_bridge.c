@@ -59,7 +59,7 @@ void connect_bridge(int process_cable, uint8_t index)
 		printk(KERN_DEBUG "diag: USB connected in DM_APP_MODE\n");
 		diag_bridge[index].usb_connected = 1;
 	}
-#endif /*                 */
+#endif /*CONFIG_LGE_DM_APP*/
 
 	mutex_lock(&diag_bridge[index].bridge_mutex);
 	/* If the usb cable is being connected */
@@ -152,7 +152,7 @@ int diagfwd_disconnect_bridge(int process_cable)
 				}
 				return 0;
 			}
-#endif /*                 */
+#endif /*CONFIG_LGE_DM_APP*/
 
 
 	for (i = 0; i < MAX_BRIDGES_DATA; i++) {

@@ -309,7 +309,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(charging_complete),
 #endif
 #if defined(CONFIG_LGE_PM_CHARGING_UNIFIED_WLC)
-	POWER_SUPPLY_ATTR(wireless_charger_switch),
 #ifdef CONFIG_LGE_PM_CHARGING_UNIFIED_WLC_ALIGNMENT_IDT9025A
 	POWER_SUPPLY_ATTR(alignment),
 	POWER_SUPPLY_ATTR(frequency),

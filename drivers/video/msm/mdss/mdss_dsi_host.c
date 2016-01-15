@@ -1420,7 +1420,7 @@ static int dsi_event_thread(void *data)
 	struct dsi_event_q *evq;
 	struct mdss_dsi_ctrl_pdata *ctrl;
 #ifdef CONFIG_MACH_LGE
-	struct mdss_dsi_ctrl_pdata *mctrl = NULL;
+	struct mdss_dsi_ctrl_pdata *other_ctrl = NULL;
 #endif
 	unsigned long flag;
 	struct sched_param param;
@@ -1462,11 +1462,16 @@ static int dsi_event_thread(void *data)
 		}
 #ifdef CONFIG_LGE_DEVFREQ_DFPS
 		if (todo & DSI_EV_DSI_FIFO_EMPTY) {
+			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
 			mdss_dsi_sw_reset(ctrl, true);
+			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
 #ifdef CONFIG_MACH_LGE
-			mctrl = mdss_dsi_get_ctrl_by_index(DSI_CTRL_0);
-			if (mctrl)
-				mdss_dsi_sw_reset(mctrl, true);
+			other_ctrl = mdss_dsi_get_other_ctrl(ctrl);
+			if (other_ctrl) {
+				mdss_dsi_clk_ctrl(other_ctrl, DSI_ALL_CLKS, 1);
+				mdss_dsi_sw_reset(other_ctrl, true);
+				mdss_dsi_clk_ctrl(other_ctrl, DSI_ALL_CLKS, 0);
+			}
 #endif
 		}
 #endif

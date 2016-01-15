@@ -40,10 +40,10 @@
 
 #if defined(CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE)
 #include <linux/power/max17048_battery.h>
-#endif /*                                          */
+#endif /* CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE */
 #if defined(CONFIG_LGE_PM)
 #include <mach/board_lge.h>
-#endif /*               */
+#endif /* CONFIG_LGE_PM */
 
 /* Vendor specific */
 #define DRIVER_DESC    "MAX77819 Charger Driver"
@@ -1621,7 +1621,7 @@ static int max77819_charger_update(struct max77819_charger *me)
 	me->batt_soc = max17048_get_capacity();
 	/* TODO: get battery temperature by PMIC ADC */
 	me->batt_tmp = 24 * 10;
-	/*                                                   */
+	/* TODO: get battery health by LGE charging scenario */
 	me->batt_hth = POWER_SUPPLY_HEALTH_GOOD;
 	/* TODO: get battery current now by PMIC VBAT RSENSE */
 	me->curr_now = 200 * 100;
@@ -1636,7 +1636,7 @@ static int max77819_charger_update(struct max77819_charger *me)
 	me->batt_hth = POWER_SUPPLY_HEALTH_GOOD;
 	/* TODO: get battery current now by PMIC VBAT RSENSE */
 	me->curr_now = 200 * 100;
-#endif /*                                          */
+#endif /* CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE */
 
 	rc = max77819_read(me->io, DC_BATT_DTLS, &dc_batt_dtls);
 	if (unlikely(IS_ERR_VALUE(rc))) {

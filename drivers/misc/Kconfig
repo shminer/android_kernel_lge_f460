@@ -556,6 +556,7 @@ config HAPTIC_ISA1200
 	default n
 	help
 	  The ISA1200 is a high performance enhanced haptic driver.
+
 config LGE_SM100
     bool "lge sm100 vibrator support"
         depends on ANDROID_TIMED_OUTPUT
@@ -639,6 +640,12 @@ config BU52031NVX
 config TSPDRV
 	bool "tspdrv"
 	default n
+
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

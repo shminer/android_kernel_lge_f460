@@ -85,7 +85,7 @@ struct row_queue_params {
  *       be dispatched.
  */
 
-//                                                                                                                                                
+//LGE_CHANGE_S, T6-BSP-FileSystem@lge.com : Change Quantum value of write operation. And Change is_urgent value of high swrite to true from false.
 static const struct row_queue_params row_queues_def[] = {
 /* idling_enabled, quantum, is_urgent */
 	{true, 10, true},	/* ROWQ_PRIO_HIGH_READ */
@@ -100,7 +100,7 @@ static const struct row_queue_params row_queues_def[] = {
 	//{false, 1, false}	/* ROWQ_PRIO_LOW_SWRITE */
 	{false, 10, false}	/* ROWQ_PRIO_LOW_SWRITE */
 };
-//            
+//LGE_CHANGE_E
 
 /* Default values for idling on read queues (in msec) */
 #define ROW_IDLE_TIME_MSEC 5

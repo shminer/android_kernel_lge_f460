@@ -25,7 +25,7 @@
 
 #define KGSL_PWR_ON	0xFFFF
 
-#define KGSL_MAX_CLKS 6
+#define KGSL_MAX_CLKS 7
 
 /* Only two supported levels, min & max */
 #define KGSL_CONSTRAINT_PWR_MAXLEVELS 2
@@ -38,6 +38,8 @@
 #define KGSL_CONSTRAINT_PWRLEVEL_SUBTYPES \
 	{ KGSL_CONSTRAINT_PWR_MIN, "Min" }, \
 	{ KGSL_CONSTRAINT_PWR_MAX, "Max" }
+
+#define KGSL_RBBMTIMER_CLK_FREQ	19200000
 
 struct platform_device;
 
@@ -119,7 +121,6 @@ struct kgsl_pwrctrl {
 	struct pm_qos_request pm_qos_req_dma;
 	unsigned int pm_qos_active_latency;
 	unsigned int pm_qos_wakeup_latency;
-	unsigned int irq_last;
 	bool bus_control;
 	int bus_mod;
 	unsigned int bus_index[KGSL_MAX_PWRLEVELS];

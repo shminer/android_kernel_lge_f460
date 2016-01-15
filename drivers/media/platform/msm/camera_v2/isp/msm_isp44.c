@@ -236,6 +236,7 @@ static void msm_vfe44_release_hardware(struct vfe_device *vfe_dev)
 	tasklet_kill(&vfe_dev->vfe_tasklet);
 	iounmap(vfe_dev->vfe_vbif_base);
 	iounmap(vfe_dev->vfe_base);
+	iounmap(vfe_dev->vfe_avtimer_base);
 	msm_cam_clk_enable(&vfe_dev->pdev->dev, msm_vfe44_clk_info,
 		vfe_dev->vfe_clk, ARRAY_SIZE(msm_vfe44_clk_info), 0);
 	regulator_disable(vfe_dev->fs_vfe);
@@ -788,23 +789,10 @@ static void msm_vfe44_update_camif_state(struct vfe_device *vfe_dev,
 		msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x2F4);
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
 	} else if (update_state == DISABLE_CAMIF_IMMEDIATELY) {
-	/*Qualcomm WAR for camif error & VFE 44 violation*/
-	#ifdef CONFIG_MACH_LGE
-		vfe_dev->ignore_error = 1;
-//		vfe_dev->hw_info->vfe_ops.axi_ops.halt(vfe_dev);
-		msm_camera_io_w_mb(0x6, vfe_dev->vfe_base + 0x2F4);
-//		vfe_dev->hw_info->vfe_ops.core_ops.reset_hw(vfe_dev);
-		vfe_dev->hw_info->vfe_ops.axi_ops.halt(vfe_dev,1);
-		vfe_dev->hw_info->vfe_ops.core_ops.reset_hw(vfe_dev,1,1);
-		vfe_dev->hw_info->vfe_ops.core_ops.init_hw_reg(vfe_dev);
-		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
-		vfe_dev->ignore_error = 0;
-	#else
 		vfe_dev->ignore_error = 1;
 		msm_camera_io_w_mb(0x6, vfe_dev->vfe_base + 0x2F4);
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
 		vfe_dev->ignore_error = 0;
-	#endif
 	}
 }
 

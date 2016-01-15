@@ -1168,7 +1168,7 @@ static const char *const slim0_tx_ch_text[] = {"One", "Two", "Three", "Four",
 static char const *hdmi_rx_ch_text[] = {"Two", "Three", "Four", "Five",
 	"Six", "Seven", "Eight"};
 static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE"};
-#ifdef CONFIG_MACH_LGE /*                      */
+#ifdef CONFIG_MACH_LGE /* LGE added samplerate */
 static char const *slim0_rx_sample_rate_text[] = {"KHZ_8", "KHZ_16",
 	"KHZ_48", "KHZ_96", "KHZ_192"};
 #else
@@ -1200,7 +1200,7 @@ static int slim0_rx_sample_rate_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	int sample_rate_val = 0;
-#ifdef CONFIG_MACH_LGE /*                      */
+#ifdef CONFIG_MACH_LGE /* LGE added samplerate */
 	switch (slim0_rx_sample_rate) {
 	case SAMPLING_RATE_192KHZ:
 		sample_rate_val = 4;
@@ -1250,7 +1250,7 @@ static int slim0_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 {
 	pr_debug("%s: ucontrol value = %ld\n", __func__,
 			ucontrol->value.integer.value[0]);
-#ifdef CONFIG_MACH_LGE /*                      */
+#ifdef CONFIG_MACH_LGE /* LGE added samplerate */
 	switch (ucontrol->value.integer.value[0]) {
 	case 4:
 		slim0_rx_sample_rate = SAMPLING_RATE_192KHZ;
@@ -2387,7 +2387,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(8, slim0_tx_ch_text),
 	SOC_ENUM_SINGLE_EXT(7, hdmi_rx_ch_text),
 	SOC_ENUM_SINGLE_EXT(2, rx_bit_format_text),
-#ifdef CONFIG_MACH_LGE /*                      */
+#ifdef CONFIG_MACH_LGE /* LGE added samplerate */
 	SOC_ENUM_SINGLE_EXT(5, slim0_rx_sample_rate_text),
 #else
 	SOC_ENUM_SINGLE_EXT(3, slim0_rx_sample_rate_text),

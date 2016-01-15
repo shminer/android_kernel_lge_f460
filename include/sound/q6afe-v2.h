@@ -218,6 +218,7 @@ void afe_clear_config(enum afe_config_type config);
 bool afe_has_config(enum afe_config_type config);
 
 void afe_set_aanc_info(struct aanc_data *aanc_info);
+int afe_short_silence(u32 duration);
 #ifdef CONFIG_SND_SOC_CS35L32
 int q6afe_set_rtip(int enable);
 #endif /* CONFIG_SND_SOC_CS35L32 */

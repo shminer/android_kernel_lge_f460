@@ -37,10 +37,10 @@
 #include <mach/msm_bus.h>
 #include "msm_iommu_pagetable.h"
 
-/*                                                                                          */
+/* LGE_CHANGE_S, add log for confirm Camera thermal issus, 2014-06-09, yousung.kang@lge.com */
 #include <linux/thermal.h>
 #include "../thermal/thermal_core.h"
-/*                                                                                          */
+/* LGE_CHANGE_E, add log for confirm Camera thermal issus, 2014-06-09, yousung.kang@lge.com */
 
 
 #ifdef CONFIG_IOMMU_LPAE
@@ -1207,7 +1207,7 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 			__print_ctx_regs(drvdata->cb_base,
 					ctx_drvdata->num, fsr);
 
-/*                                                                                          */
+/* LGE_CHANGE_S, add log for confirm Camera thermal issus, 2014-06-09, yousung.kang@lge.com */
 			if(!strcmp(drvdata->name,"vfe_iommu"))
 			{
 				struct thermal_zone_device *temp1_sensor5;
@@ -1229,7 +1229,7 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 					pr_err("%s:for confiming thermal issus %s temp=%lu\n",__func__,themp_sensor_name[i],temperature);
 				}
 			}
-/*                                                                                          */
+/* LGE_CHANGE_E, add log for confirm Camera thermal issus, 2014-06-09, yousung.kang@lge.com */
 			
 		}
 

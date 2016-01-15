@@ -58,6 +58,9 @@
 #include "f_rmnet_smd_sdio.c"
 #include "f_rmnet.c"
 #include "f_gps.c"
+#ifdef CONFIG_USB_G_LGE_ANDROID
+#include "f_midi.c"
+#endif
 #include "u_sdio.c"
 #include "u_smd.c"
 #include "u_bam.c"
@@ -106,6 +109,13 @@ static const char longname[] = "Gadget Android";
 #define PRODUCT_ID		0x0001
 
 #define ANDROID_DEVICE_NODE_NAME_LENGTH 11
+#ifdef CONFIG_USB_G_LGE_ANDROID
+/* f_midi configuration */
+#define MIDI_INPUT_PORTS    1
+#define MIDI_OUTPUT_PORTS   1
+#define MIDI_BUFFER_SIZE    256
+#define MIDI_QUEUE_LENGTH   32
+#endif
 
 struct android_usb_function {
 	char *name;
@@ -501,6 +511,11 @@ static void ffs_function_enable(struct android_usb_function *f)
 	struct android_dev *dev = f->android_dev;
 	struct functionfs_config *config = f->config;
 
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+       if (config->enabled)
+               return;
+#endif
+
 	config->enabled = true;
 
 	/* Disable the gadget until the function is ready */
@@ -512,6 +527,11 @@ static void ffs_function_disable(struct android_usb_function *f)
 {
 	struct android_dev *dev = f->android_dev;
 	struct functionfs_config *config = f->config;
+
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+       if (!config->enabled)
+               return;
+#endif
 
 	config->enabled = false;
 
@@ -2422,7 +2442,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		pr_err("Memory allocation failed.\n");
 		return -ENOMEM;
 	}
-#if 0//                            
+#if 0//def CONFIG_USB_G_LGE_ANDROID
 	config->fsg.vendor_name = lge_vendor_name;
 	config->fsg.product_name = lge_product_name;
 #endif
@@ -2751,7 +2771,7 @@ static struct android_usb_function charge_only_function = {
 	.cleanup	= charge_only_function_cleanup,
 	.bind_config	= charge_only_function_bind_config,
 };
-#endif /*                                  */
+#endif /* CONFIG_USB_G_LGE_ANDROID_AUTORUN */
 
 static int accessory_function_init(struct android_usb_function *f,
 					struct usb_composite_dev *cdev)
@@ -2895,6 +2915,61 @@ static struct android_usb_function uasp_function = {
 	.bind_config	= uasp_function_bind_config,
 };
 
+#ifdef CONFIG_USB_G_LGE_ANDROID
+static int midi_function_init(struct android_usb_function *f,
+					struct usb_composite_dev *cdev)
+{
+	struct midi_alsa_config *config;
+
+	config = kzalloc(sizeof(struct midi_alsa_config), GFP_KERNEL);
+	f->config = config;
+	if (!config)
+		return -ENOMEM;
+	config->card = -1;
+	config->device = -1;
+	return 0;
+}
+
+static void midi_function_cleanup(struct android_usb_function *f)
+{
+	kfree(f->config);
+}
+
+static int midi_function_bind_config(struct android_usb_function *f,
+						struct usb_configuration *c)
+{
+	struct midi_alsa_config *config = f->config;
+
+	return f_midi_bind_config(c, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
+			MIDI_INPUT_PORTS, MIDI_OUTPUT_PORTS, MIDI_BUFFER_SIZE,
+			MIDI_QUEUE_LENGTH, config);
+}
+
+static ssize_t midi_alsa_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct android_usb_function *f = dev_get_drvdata(dev);
+	struct midi_alsa_config *config = f->config;
+
+	/* print ALSA card and device numbers */
+	return sprintf(buf, "%d %d\n", config->card, config->device);
+}
+
+static DEVICE_ATTR(alsa, S_IRUGO, midi_alsa_show, NULL);
+
+static struct device_attribute *midi_function_attributes[] = {
+	&dev_attr_alsa,
+	NULL
+};
+
+static struct android_usb_function midi_function = {
+	.name		= "midi",
+	.init		= midi_function_init,
+	.cleanup	= midi_function_cleanup,
+	.bind_config	= midi_function_bind_config,
+	.attributes	= midi_function_attributes,
+};
+#endif
 static struct android_usb_function *supported_functions[] = {
 	&ffs_function,
 	&mbim_function,
@@ -2929,6 +3004,9 @@ static struct android_usb_function *supported_functions[] = {
 	&accessory_function,
 #ifdef CONFIG_SND_PCM
 	&audio_source_function,
+#endif
+#ifdef CONFIG_USB_G_LGE_ANDROID
+	&midi_function,
 #endif
 	&uasp_function,
 	NULL
@@ -3252,6 +3330,9 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 #endif
 
 	while (b) {
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+                ffs_enabled = 0;
+#endif
 		conf_str = strsep(&b, ":");
 		if (!conf_str)
 			continue;
@@ -3594,7 +3675,7 @@ field ## _store(struct device *dev, struct device_attribute *attr,	\
 }									\
 static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 
-#endif /*                          */
+#endif /* CONFIG_USB_G_LGE_ANDROID */
 
 DESCRIPTOR_ATTR(idVendor, "%04x\n")
 DESCRIPTOR_ATTR(idProduct, "%04x\n")
@@ -3763,7 +3844,7 @@ static void android_lge_factory_bind(struct usb_composite_dev *cdev)
 		}
 	}
 }
-#endif /*                                           */
+#endif /* CONFIG_USB_G_LGE_ANDROID && CONFIG_LGE_PM */
 
 static int android_bind_config(struct usb_configuration *c)
 {
@@ -3835,7 +3916,7 @@ static int android_bind(struct usb_composite_dev *cdev)
 	device_desc.iProduct = id;
 
 #ifdef CONFIG_USB_G_LGE_ANDROID
-	/*                                */
+	/* Default string as LGE products */
 	ret = lgeusb_get_manufacturer_name(lge_manufacturer);
 	if (!ret)
 		strlcpy(manufacturer_string, lge_manufacturer,

@@ -16,4 +16,5 @@ obj-$(CONFIG_MSM_SMEM) += smem.o smem_debug.o
 obj-$(CONFIG_MSM_SMEM_LOGGING) += smem_log.o
 obj-$(CONFIG_MSM_WATCHDOG_V2) += watchdog_v2.o
 obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
+obj-$(CONFIG_MACH_LGE) += lge/
 obj-y		+= socinfo.o

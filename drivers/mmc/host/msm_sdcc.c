@@ -1701,13 +1701,13 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 			break;
 
 #ifdef CONFIG_MACH_LGE
-		/*          
-                                                            
-                                                              
-                                            
-                                              
-                                              
-   */
+		/*LGE_CHANGE
+		 * Exception handling : Kernel Panic issue by Null Pointer
+		 * for some reasons, host->pio.sg_miter gets wrong data when
+		 * it gets into the msmsdcc_pio_irq func()
+		 * and it gets kernel crash when wifi is on.
+		 * to prevent this, we inserted LG W/A code.
+		 */
 		if (!host->curr.data)
 			break;
 #endif
@@ -2299,10 +2299,10 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		host->curr.req_tout_ms = 20000;
 	else
 #ifdef CONFIG_MACH_LGE
-		/*           
-                                                 
-                                          
-   */
+		/* LGE_CHANGE
+		 * Increase Request-Timeout from 10sec to 15sec
+		 * (because of 'CMD25: Request timeout')
+		 */
 		host->curr.req_tout_ms = 15000;
 #else
 		host->curr.req_tout_ms = MSM_MMC_REQ_TIMEOUT;
@@ -3799,9 +3799,9 @@ static int msmsdcc_switch_io_voltage(struct mmc_host *mmc,
 	default:
 		/* invalid selection. don't do anything */
 #ifdef CONFIG_MACH_LGE
-		/*                                      
-                                                 
-   */
+		/* LGE_CHANGE, 2013-04-19, G2-FS@lge.com
+		 * Adding Print, Requested by QMC-CASE-01158823
+		 */
 		pr_err("%s: %s: ios->signal_voltage = 0x%x\n",
 				mmc_hostname(mmc), __func__,
 				ios->signal_voltage);
@@ -6114,11 +6114,11 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 
 #if defined(CONFIG_LGE_MMC_BKOPS_ENABLE) && !defined(CONFIG_MMC_SDHCI_MSM)
-	/*           
-                                                               
-                                                  
-                                                
-  */
+	/* LGE_CHANGE
+	 * Enable BKOPS feature since it has been disabled by default.
+	 * If you want to use bkops, you have to set Y in
+	 * kernel/arch/arm/configs/XXXX_defconfig file.
+	 */
 	mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 #endif
 

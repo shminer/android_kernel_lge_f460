@@ -1078,8 +1078,8 @@ static int max17048_parse_dt(struct device *dev,
 		mdata->empty = 0;
 	}
 #endif
-#else /*                                                    
-                                                        */
+#else /* If CONFIG_LGE_PM_BATTERY_ID_CHECKER is not defined,
+		cutoff voltage = 3.2V and LGChem battery value is set */
 	rc = of_property_read_u32(dev_node, "max17048,rcomp",
 			&mdata->rcomp);
 	rc = of_property_read_u32(dev_node, "max17048,temp_co_hot",

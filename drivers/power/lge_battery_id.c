@@ -155,14 +155,14 @@ static int lge_battery_id_remove(struct platform_device *pdev)
 #if defined(CONFIG_PM)
 static int lge_battery_id_suspend(struct device *dev)
 {
-	/*                                                        */
+	/*struct lge_battery_id_info *info = dev_get_drvdata(dev);*/
 
 	return 0;
 }
 
 static int lge_battery_id_resume(struct device *dev)
 {
-	/*                                                        */
+	/*struct lge_battery_id_info *info = dev_get_drvdata(dev);*/
 
 	return 0;
 }

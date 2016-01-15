@@ -385,12 +385,28 @@ static int bcm_wifi_carddetect(int val)
 	int count = 0;
 	struct pci_dev *pcidev = NULL;
 
+#ifdef CONFIG_ARCH_MSM
+        struct msm_pcie_dev_t *pcie_dev;
+#endif
 	if (val == 1) {
 		do {
 			pcidev = pci_get_device(PCIE_VENDOR_ID_RCP, PCIE_DEVICE_ID_RCP, pcidev);
 			if (pcidev && (!strcmp(pci_name(pcidev), (const char *)PCIE_RCP_NAME))) {
+#ifdef CONFIG_ARCH_MSM
+                            pcie_dev = PCIE_BUS_PRIV_DATA(pcidev);
+                            if(pcie_dev->enumerated){
+                                printk("P:%s:PCI device found[%X:%X]!!! PCIE enumerate is done =%d\n", __func__, pcidev->vendor, pcidev->device,(pcie_dev->enumerated)?1:0);
+                                found = 1;
+                            }
+                            else{
+                                count++;
+                                printk("P:%s:PCI device found but PCIE is still in enumerate progress. retry count[%d] \n", __func__, count);
+                                msleep(100);
+                            }
+#else
 				printk("P:%s:PCI device found[%X:%X]!!!\n", __func__, pcidev->vendor, pcidev->device);
 				found = 1;
+#endif
 			} else {
 				count++;
 				printk("P:%s:retry count[%d]\n", __func__, count);

@@ -638,17 +638,17 @@ const u16 awcFrameTime[MAX_RATE] =
 {10, 20, 55, 110, 24, 36, 48, 72, 96, 144, 192, 216};
 
 /*
-      
-             
-                                
+static
+unsigned long
+s_ulGetLowSQ3(PSDevice pDevice);
 
-      
-             
-                               
+static
+unsigned long
+s_ulGetRatio(PSDevice pDevice);
 
-      
-    
-                                   
+static
+void
+s_vClearSQ3Value(PSDevice pDevice);
 */
 
 /*

@@ -98,8 +98,8 @@ extern void tcp_time_wait(struct sock *sk, int state, int timeo);
 				 * 15 is ~13-30min depending on RTO.
 				 */
 
-/*                                                                            */
-//                                                                                                                                              
+/* 2012-01-17 jk.soh@lge.com LGP_DATA_TCPIP_TCP_SYN_RETRY_CONFIG_UPLUS [START]*/
+//2014.01.15 bongsook.jeong@lge.com Feature is changed with 'android\kernel\arch\arm\configs\xxx_deconfig' and ' android\kernel\net\ipv4\Kconfig
 #ifdef CONFIG_LGP_DATA_TCPIP_TCP_SYN_RETRY_CONFIG_UPLUS
 #define TCP_SYN_RETRIES	 4
 #else
@@ -112,7 +112,7 @@ extern void tcp_time_wait(struct sock *sk, int state, int timeo);
 				 * current initial RTO.
 				 */
 #endif
-/*                                                                          */
+/* 2012-01-17 jk.soh@lge.com LGP_DATA_TCPIP_TCP_SYN_RETRY_CONFIG_UPLUS [END]*/
 
 #define TCP_SYNACK_RETRIES 5	/* This is how may retries are done
 				 * when passive opening a connection.

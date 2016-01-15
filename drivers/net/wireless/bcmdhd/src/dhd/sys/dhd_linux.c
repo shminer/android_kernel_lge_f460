@@ -7408,10 +7408,10 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 		 */
 		memcpy(temp_addr, ifp->mac_addr, ETHER_ADDR_LEN);
 		/*
-                                                                         
-                                                                       
-                                                                            
-   */
+		 * Android sets the locally administered bit to indicate that this is a
+		 * portable hotspot.  This will not work in simultaneous AP/STA mode,
+		 * nor with P2P.  Need to set the Donlge's MAC address, and then use that.
+		 */
 		if (!memcmp(temp_addr, dhd->iflist[0]->mac_addr,
 			ETHER_ADDR_LEN)) {
 			DHD_ERROR(("%s interface [%s]: set locally administered bit in MAC\n",

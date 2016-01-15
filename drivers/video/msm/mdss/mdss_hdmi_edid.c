@@ -40,6 +40,7 @@
  * descriptors with each SAD being 3 bytes long.
  * Thus, the maximum length of the audio data block would be 30 bytes
  */
+#define MAX_NUMBER_ADB                  5
 #define MAX_AUDIO_DATA_BLOCK_SIZE	30
 #define MAX_SPKR_ALLOC_DATA_BLOCK_SIZE	3
 
@@ -84,7 +85,7 @@ struct hdmi_edid_ctrl {
 	u16 audio_latency;
 	u16 video_latency;
 	u32 present_3d;
-	u8 audio_data_block[MAX_AUDIO_DATA_BLOCK_SIZE];
+	u8 audio_data_block[MAX_NUMBER_ADB * MAX_AUDIO_DATA_BLOCK_SIZE];
 	int adb_size;
 	u8 spkr_alloc_data_block[MAX_SPKR_ALLOC_DATA_BLOCK_SIZE];
 	int sadb_size;
@@ -569,33 +570,48 @@ static void hdmi_edid_extract_3d_present(struct hdmi_edid_ctrl *edid_ctrl,
 static void hdmi_edid_extract_audio_data_blocks(
 	struct hdmi_edid_ctrl *edid_ctrl, const u8 *in_buf)
 {
-	u8 len, cnt = 0;
+	u8 len = 0;
+	u8 adb_max = 0;
 	const u8 *adb = NULL;
+	u32 offset = DBC_START_OFFSET;
 
 	if (!edid_ctrl) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		return;
 	}
 
-	adb = hdmi_edid_find_block(in_buf, DBC_START_OFFSET, AUDIO_DATA_BLOCK,
-		&len);
-	if ((adb == NULL) || (len > MAX_AUDIO_DATA_BLOCK_SIZE)) {
-		DEV_DBG("%s: No/Invalid Audio Data Block\n",
-			__func__);
-		return;
-	}
+	edid_ctrl->adb_size = 0;
 
-	memcpy(edid_ctrl->audio_data_block, adb + 1, len);
-	edid_ctrl->adb_size = len;
+	memset(edid_ctrl->audio_data_block, 0,
+		sizeof(edid_ctrl->audio_data_block));
 
-	while (len >= 3 && cnt < 16) {
-		DEV_DBG("%s: ch=%d fmt=%d sampling=0x%02x bitdepth=0x%02x\n",
-			__func__, (adb[1]&0x7)+1, adb[1]>>3, adb[2], adb[3]);
+	do {
+		len = 0;
+		adb = hdmi_edid_find_block(in_buf, offset, AUDIO_DATA_BLOCK,
+			&len);
 
-		cnt++;
-		len -= 3;
-		adb += 3;
-	}
+		if ((adb == NULL) || (len > MAX_AUDIO_DATA_BLOCK_SIZE ||
+			adb_max >= MAX_NUMBER_ADB)) {
+			if (!edid_ctrl->adb_size) {
+				DEV_DBG("%s: No/Invalid Audio Data Block\n",
+					__func__);
+				return;
+			} else {
+				DEV_DBG("%s: No more valid ADB found\n",
+					__func__);
+			}
+
+			continue;
+		}
+
+		memcpy(edid_ctrl->audio_data_block + edid_ctrl->adb_size,
+			adb + 1, len);
+		offset = (adb - in_buf) + 1 + len;
+
+		edid_ctrl->adb_size += len;
+		adb_max++;
+	} while (adb);
+
 } /* hdmi_edid_extract_audio_data_blocks */
 
 static void hdmi_edid_extract_speaker_allocation_data(

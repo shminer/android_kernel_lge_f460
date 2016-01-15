@@ -698,7 +698,7 @@ pnfs_layout_stateid_blocked(const struct pnfs_layout_hdr *lo,
 	return !pnfs_seqid_is_newer(seqid, lo->plh_barrier);
 }
 
-/*                                                                  */
+/* lget is set to 1 if called from inside send_layoutget call chain */
 static bool
 pnfs_layoutgets_blocked(const struct pnfs_layout_hdr *lo, int lget)
 {

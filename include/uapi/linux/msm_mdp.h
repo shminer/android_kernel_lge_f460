@@ -68,18 +68,18 @@
 #define MSMFB_OVERLAY_PREPARE		_IOWR(MSMFB_IOCTL_MAGIC, 169, \
 						struct mdp_overlay_list)
 
-/*                                             */
+/* LGE_CHANGE_S [display] support invert color */
 #define MSMFB_INVERT_PANEL	_IOW(MSMFB_IOCTL_MAGIC, 170, unsigned int)
-/*                                             */
+/* LGE_CHANGE_E [display] support invert color */
 
-/*                                              */
+/* LGE_CHANGE_S [TDMB] support DMB color tuning */
 #if defined(CONFIG_LGE_BROADCAST_TDMB)
 #define MSMFB_DMB_SET_FLAG        _IOW(MSMFB_IOCTL_MAGIC, 171, \
 					int)
 #define MSMFB_DMB_SET_CSC_MATRIX  _IOW(MSMFB_IOCTL_MAGIC, 172, \
 					struct mdp_csc_cfg)
 #endif
-/*                                              */
+/* LGE_CHANGE_S [TDMB] support DMB color tuning */
 
 #define FB_TYPE_3D_PANEL 0x10101010
 #define MDP_IMGTYPE2_START 0x10000

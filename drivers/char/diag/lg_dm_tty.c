@@ -787,10 +787,10 @@ static int lge_dm_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 
 
 	struct dm_tty *lge_dm_tty_drv = NULL;
-	int status = 0; /*                                                 */
+	int status = 0; /* LGE_MODEM_RESET, 2014-02-10, donggee.im@lge.com */
 	int i = 0;
 	int index=0;
-    //                      
+    //boyoung507.kim@lge.com
 //  char rw_buf[300];
 #ifdef CONFIG_DIAGFWD_BRIDGE_CODE
 	unsigned long spin_lock_flags;
@@ -1094,16 +1094,16 @@ static int lge_dm_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 	break;
   case DM_TTY_MODEM_DEBUGGER:
 /*    
-                                      
-                            
-                                                            
-                                                                
-                                           
-                                               
-                           
-       
+    memset(rw_buf, 0, sizeof(rw_buf));
+    strcpy(rw_buf,ssr_noti);
+    if (copy_to_user((void *)arg, &rw_buf, sizeof(rw_buf))){
+            pr_info(DM_TTY_MODULE_NAME ": %s: lge_dm_tty_ioctl "
+            "DM_TTY_MODEM_DEBUGGER error! "
+            "rw_buf = %s\n", __func__, rw_buf);
+            return -EFAULT;
+      }
 
-                                      
+      printk("rw_buf = %s\n", rw_buf);
 */
   break;
 

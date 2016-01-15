@@ -191,10 +191,10 @@ struct msm_gpio_set_tbl {
 };
 
 struct msm_camera_gpio_num_info {
-/*                                                 */
+/* LGE_CHANGE_S, Add gpio to control LDO for Camera*/
 	uint16_t gpio_num[13];
 	uint8_t valid[13];
-/*                                                 */
+/* LGE_CHANGE_E, Add gpio to control LDO for Camera*/
 };
 
 struct msm_camera_gpio_conf {

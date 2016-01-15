@@ -1388,6 +1388,13 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 	return 0;
 }
 
+static inline enum dwc3_link_state dwc3_get_link_state(struct dwc3 *dwc)
+{
+	u32 reg;
+	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
+	return DWC3_DSTS_USBLNKST(reg);
+}
+
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	gfp_t gfp_flags)
 {
@@ -1763,15 +1770,10 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	is_on = !!is_on;
 
-	spin_lock_irqsave(&dwc->lock, flags);
-
 	dwc->softconnect = is_on;
 
 	if ((dwc->dotg && !dwc->vbus_active) ||
 		!dwc->gadget_driver) {
-
-		spin_unlock_irqrestore(&dwc->lock, flags);
-
 		/*
 		 * Need to wait for vbus_session(on) from otg driver or to
 		 * the udc_start.
@@ -1779,9 +1781,15 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 		return 0;
 	}
 
+	pm_runtime_get_sync(dwc->dev);
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
 	ret = dwc3_gadget_run_stop(dwc, is_on);
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	pm_runtime_put_noidle(dwc->dev);
 
 	return ret;
 }
@@ -2155,7 +2163,7 @@ static void dwc3_gadget_free_endpoints(struct dwc3 *dwc)
 /* -------------------------------------------------------------------------- */
 
 static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
-		struct dwc3_request *req, struct dwc3_trb *trb,
+		struct dwc3_request *req, struct dwc3_trb *trb, unsigned length,
 		const struct dwc3_event_depevt *event, int status)
 {
 	unsigned int		count;
@@ -2218,7 +2226,7 @@ static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
 	 * should receive and we simply bounce the request back to the
 	 * gadget driver for further processing.
 	 */
-	req->request.actual += req->request.length - count;
+	req->request.actual += length - count;
 	if (s_pkt)
 		return 1;
 	if ((event->status & DEPEVT_STATUS_LST) &&
@@ -2238,6 +2246,7 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 	struct dwc3_trb		*trb;
 	unsigned int		slot;
 	unsigned int		i;
+	unsigned int		trb_len;
 	int			ret;
 
 	do {
@@ -2255,8 +2264,13 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 			slot %= DWC3_TRB_NUM;
 			trb = &dep->trb_pool[slot];
 
+			if (req->request.num_mapped_sgs)
+				trb_len = sg_dma_len(&req->request.sg[i]);
+			else
+				trb_len = req->request.length;
+
 			ret = __dwc3_cleanup_done_trbs(dwc, dep, req, trb,
-					event, status);
+					trb_len, event, status);
 			if (ret)
 				break;
 		}while (++i < req->request.num_mapped_sgs);
@@ -2553,6 +2567,7 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 
 	dwc->gadget.speed = USB_SPEED_UNKNOWN;
 	dwc->setup_packet_pending = false;
+	dwc->link_state = DWC3_LINK_STATE_SS_DIS;
 }
 
 static void dwc3_gadget_usb3_phy_suspend(struct dwc3 *dwc, int suspend)
@@ -2586,7 +2601,7 @@ static void dwc3_gadget_usb2_phy_suspend(struct dwc3 *dwc, int suspend)
 static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
-#ifdef CONFIG_LGE_PM
+#ifndef CONFIG_LGE_PM
 	struct dwc3_otg		*dotg = dwc->dotg;
 #endif
 	dev_vdbg(dwc->dev, "%s\n", __func__);
@@ -2633,7 +2648,7 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 		dwc3_gadget_usb3_phy_suspend(dwc, false);
 	}
 
-#ifdef CONFIG_LGE_PM
+#ifndef CONFIG_LGE_PM
 	if (dotg && dotg->otg.phy)
 		usb_phy_set_power(dotg->otg.phy, 0);
 #endif
@@ -2654,6 +2669,7 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	reg = dwc3_readl(dwc->regs, DWC3_DCFG);
 	reg &= ~(DWC3_DCFG_DEVADDR_MASK);
 	dwc3_writel(dwc->regs, DWC3_DCFG, reg);
+	dwc->link_state = DWC3_LINK_STATE_U0;
 }
 
 static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
@@ -2819,13 +2835,21 @@ static void dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
 {
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
-	/*
-	 * TODO take core out of low power mode when that's
-	 * implemented.
-	 */
+	/* Only perform resume from L2 or Early Suspend states */
+	if (dwc->link_state == DWC3_LINK_STATE_U3) {
+		dbg_event(0xFF, "WAKEUP", 0);
 
-	dbg_event(0xFF, "WAKEUP", 0);
-	dwc->gadget_driver->resume(&dwc->gadget);
+		/*
+		 * gadget_driver resume function might require some dwc3-gadget
+		 * operations, such as ep_enable. Hence, dwc->lock must be
+		 * released.
+		 */
+		spin_unlock(&dwc->lock);
+		dwc->gadget_driver->resume(&dwc->gadget);
+		spin_lock(&dwc->lock);
+	}
+
+	dwc->link_state = DWC3_LINK_STATE_U0;
 }
 
 static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,

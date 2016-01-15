@@ -210,6 +210,10 @@ enum PMIC_SW_MODE {
 	PMIC_PWM_MODE   = RPM_REGULATOR_MODE_HPM,
 };
 
+#ifndef __ATTR_RW
+#define __ATTR_RW(attr) __ATTR(attr, 0644, attr##_show, attr##_store)
+#endif
+
 #define VDD_RES_RO_ATTRIB(_rail, ko_attr, j, _name) \
 	ko_attr.attr.name = __stringify(_name); \
 	ko_attr.attr.mode = 0444; \

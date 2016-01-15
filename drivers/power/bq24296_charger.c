@@ -31,7 +31,7 @@
 #include <mach/board_lge.h>
 #if defined(CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE)
 #include <linux/power/max17048_battery.h>
-#endif /*                                          */
+#endif /* CONFIG_LGE_PM_BATTERY_MAX17048_FUELGAUGE */
 #include <linux/qpnp/qpnp-adc.h>
 #include "../../arch/arm/mach-msm/smd_private.h"
 #include <linux/usb/otg.h>
@@ -1754,7 +1754,7 @@ static int bq24296_get_prop_batt_temp(struct bq24296_chip *chip)
 	} else if (is_factory_cable()) {
 		pr_debug("factory cable : %d \n", DEFAULT_TEMP / 10);
 		return DEFAULT_TEMP;
-	/*                                                                                                    */
+	/* For MST, If safety timer is disabled, charging current is not controlled by LGE Charging scenario. */
 	} else if (safety_timer_enabled == 0) {
 		return DEFAULT_TEMP;
 	}
@@ -1936,11 +1936,11 @@ static int bq24296_batt_power_get_property(struct power_supply *psy,
 				!= POWER_SUPPLY_CHARGE_TYPE_NONE;
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/*                                                    
-                                                       
-                                                            
-                                                     
-   */
+		/* it makes ibat max set following themral mitigation.
+		 * But, SMB349 cannot control ibat current like PMIC.
+		 * if LGE charging scenario make charging thermal control,
+		 * it is good interface to use LG mitigation level.
+		 */
 		val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_PSEUDO_BATT:
@@ -2005,11 +2005,11 @@ static int bq24296_batt_power_set_property(struct power_supply *psy,
 			val->intval ? "inserted" : "removed");
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/*                                                    
-                                                       
-                                                            
-                                                     
-   */
+		/* it makes ibat max set following themral mitigation.
+		 * But, SMB349 cannot control ibat current like PMIC.
+		 * if LGE charging scenario make charging thermal control,
+		 * it is good interface to use LG mitigation level.
+		 */
 		break;
 #if defined CONFIG_LGE_PM_VZW_POWER_REQ
 	case POWER_SUPPLY_PROP_VZW_CHG:
@@ -2984,7 +2984,7 @@ static void bq24296_monitor_batt_temp(struct work_struct *work)
 			  POWER_SUPPLY_PROP_TEMP, &ret);
 	req.batt_temp = ret.intval / 10;
 
-	/*                                                           */
+	/* caution!! Scale from mV to uV for lge_monitor_batt_temp() */
 	chip->batt_psy.get_property(&(chip->batt_psy),
 			  POWER_SUPPLY_PROP_VOLTAGE_NOW, &ret);
 	req.batt_volt = ret.intval;

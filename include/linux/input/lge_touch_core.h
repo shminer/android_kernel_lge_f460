@@ -19,7 +19,7 @@
 #define LGE_TOUCH_CORE_H
 #include <linux/wakelock.h>
 
-//                            
+//#define LGE_TOUCH_TIME_DEBUG
 
 #define MAX_FINGER	10
 #define MAX_BUTTON	4
@@ -155,6 +155,7 @@ struct touch_platform_data {
 	u32	int_pin;
 	u32	reset_pin;
 	u32 fw_version[FW_VER_INFO_NUM];
+	struct mutex			thread_lock;
 	struct touch_device_caps	*caps;
 	struct touch_operation_role	*role;
 	struct touch_power_module	*pwr;
@@ -343,7 +344,7 @@ enum window_status {
 
 struct touch_device_driver {
 	enum error_type (*probe) (struct i2c_client *client,
-		const struct touch_platform_data *lge_ts_data,
+		struct touch_platform_data *lge_ts_data,
 		const struct state_info *state,
 		struct attribute ***attribute_list);
 	enum error_type (*remove) (struct i2c_client *client);
@@ -609,6 +610,8 @@ enum{
 	PALM_REJECT_DRIVER,
 	PALM_REPORT,
 };
+
+extern int factory_boot;
 
 #define LGE_TOUCH_NAME		"lge_touch"
 

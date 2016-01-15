@@ -25,6 +25,7 @@ int msm_vidc_vpe_csc_601_to_709 = 0x0;
 int msm_vidc_dcvs_mode = 0x1;
 int msm_vidc_sys_idle_indicator = 0x0;
 
+
 struct debug_buffer {
 	char ptr[MAX_DBG_BUF_SIZE];
 	char *curr;

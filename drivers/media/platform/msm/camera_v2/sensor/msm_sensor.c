@@ -23,11 +23,11 @@
 #if defined(CONFIG_LG_OIS)
 #include "msm_ois.h"
 #endif
-/*                                                                 */
+/* LGE_CHANGE_S, For laser sensor, 2014-02-24, sungmin.woo@lge.com */
 #if defined(CONFIG_LG_PROXY)
 #include "msm_proxy.h"
 #endif
-/*                                                                 */
+/* LGE_CHANGE_E, For laser sensor, 2014-02-24, sungmin.woo@lge.com */
 
 /*#define CONFIG_MSMB_CAMERA_DEBUG*/
 #undef CDBG
@@ -186,14 +186,14 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 	CDBG("%s qcom,sensor-mode %d\n", __func__,
 		sensordata->sensor_info->modes_supported);
 
-	/*                                                           */
+	/* LGE_CHANGE_S, OIS capability, 2013-06-26, kh.kang@lge.com */
 	if (of_property_read_bool(of_node, "qcom,gpio-ois-ldo") == true) {
 		sensordata->sensor_info->ois_supported = true;
 	}
 	else {
 		sensordata->sensor_info->ois_supported = false;
 	}
-	/*                                                           */
+	/* LGE_CHANGE_E, OIS capability, 2013-06-26, kh.kang@lge.com */
 
 	rc = msm_sensor_get_dt_csi_data(of_node, &sensordata->csi_lane_params);
 	if (rc < 0) {
@@ -613,10 +613,10 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		CDBG("%s:%d mount angle valid %d value %d\n", __func__,
 			__LINE__, cdata->cfg.sensor_info.is_mount_angle_valid,
 			cdata->cfg.sensor_info.sensor_mount_angle);
-/*                                                           */
+/* LGE_CHANGE_S, OIS capability, 2013-06-26, kh.kang@lge.com */
 		cdata->cfg.sensor_info.ois_supported=
 			s_ctrl->sensordata->sensor_info->ois_supported;
-/*                                                           */
+/* LGE_CHANGE_E, OIS capability, 2013-06-26, kh.kang@lge.com */
 		break;
 	case CFG_GET_SENSOR_INIT_PARAMS:
 		cdata->cfg.sensor_init_params.modes_supported =
@@ -625,10 +625,10 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			s_ctrl->sensordata->sensor_info->position;
 		cdata->cfg.sensor_init_params.sensor_mount_angle =
 			s_ctrl->sensordata->sensor_info->sensor_mount_angle;
-/*                                                           */
+/* LGE_CHANGE_S, OIS capability, 2013-06-26, kh.kang@lge.com */
 		cdata->cfg.sensor_init_params.ois_supported =
 			s_ctrl->sensordata->sensor_info->ois_supported;
-/*                                                           */
+/* LGE_CHANGE_E, OIS capability, 2013-06-26, kh.kang@lge.com */
 		CDBG("%s:%d init params mode %d pos %d mount %d\n", __func__,
 			__LINE__,
 			cdata->cfg.sensor_init_params.modes_supported,
@@ -1064,7 +1064,7 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		}
 		break;
 	}
-/*                                                       */
+/* LGE_CHANGE_S, OIS update, 2013-06-26, kh.kang@lge.com */
 #if defined(CONFIG_LG_OIS)
 	case CFG_OIS_ON:{
 		enum ois_ver_t ver;
@@ -1112,8 +1112,8 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		break;
 	}
 #endif
-/*                                                        */
-/*                                                                 */
+/* LGE_CHANGE_E, OIS upgrade, 2013-06-26, kh.kang@lge.com */
+/* LGE_CHANGE_S, For laser sensor, 2014-02-24, sungmin.woo@lge.com */
 #if defined(CONFIG_LG_PROXY)
 	case CFG_PROXY_ON:{
 		rc = msm_init_proxy();
@@ -1168,7 +1168,7 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		break;
 
 #endif
-/*                                                                 */
+/* LGE_CHANGE_E, For laser sensor, 2014-02-24, sungmin.woo@lge.com */
 
 	default:
 		rc = -EFAULT;

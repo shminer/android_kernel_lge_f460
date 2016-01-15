@@ -502,20 +502,27 @@ ssize_t device_show_bool(struct device *dev, struct device_attribute *attr,
 ssize_t device_store_bool(struct device *dev, struct device_attribute *attr,
 			 const char *buf, size_t count);
 
+
 #define DEVICE_ATTR(_name, _mode, _show, _store) \
-	struct device_attribute dev_attr_##_name = __ATTR(_name, _mode, _show, _store)
+        struct device_attribute dev_attr_##_name = __ATTR(_name, _mode, _show, _store)
+#define DEVICE_ATTR_RW(_name) \
+        struct device_attribute dev_attr_##_name = __ATTR_RW(_name)
+#define DEVICE_ATTR_RO(_name) \
+        struct device_attribute dev_attr_##_name = __ATTR_RO(_name)
+#define DEVICE_ATTR_WO(_name) \
+        struct device_attribute dev_attr_##_name = __ATTR_WO(_name)
 #define DEVICE_ULONG_ATTR(_name, _mode, _var) \
-	struct dev_ext_attribute dev_attr_##_name = \
-		{ __ATTR(_name, _mode, device_show_ulong, device_store_ulong), &(_var) }
+        struct dev_ext_attribute dev_attr_##_name = \
+                { __ATTR(_name, _mode, device_show_ulong, device_store_ulong), &(_var) }
 #define DEVICE_INT_ATTR(_name, _mode, _var) \
-	struct dev_ext_attribute dev_attr_##_name = \
-		{ __ATTR(_name, _mode, device_show_int, device_store_int), &(_var) }
+        struct dev_ext_attribute dev_attr_##_name = \
+                { __ATTR(_name, _mode, device_show_int, device_store_int), &(_var) }
 #define DEVICE_BOOL_ATTR(_name, _mode, _var) \
-	struct dev_ext_attribute dev_attr_##_name = \
-		{ __ATTR(_name, _mode, device_show_bool, device_store_bool), &(_var) }
+        struct dev_ext_attribute dev_attr_##_name = \
+                { __ATTR(_name, _mode, device_show_bool, device_store_bool), &(_var) }
 #define DEVICE_ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store) \
-	struct device_attribute dev_attr_##_name =		\
-		__ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store)
+        struct device_attribute dev_attr_##_name =              \
+                __ATTR_IGNORE_LOCKDEP(_name, _mode, _show, _store)
 
 extern int device_create_file(struct device *device,
 			      const struct device_attribute *entry);

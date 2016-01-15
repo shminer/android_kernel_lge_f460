@@ -41,9 +41,9 @@
 #include <mach/board_lge.h>
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/* LGE_CHANGE_S
+* change code for LCD KCAL
+* 2013-05-08, seojin.lee@lge.com
 */
 #include <linux/module.h>
 #include "../../../../drivers/video/msm/mdss/mdss_fb.h"
@@ -76,9 +76,9 @@ static void __init apq8084_early_memory(void)
 }
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/* LGE_CHANGE_S
+* change code for LCD KCAL
+* 2013-05-08, seojin.lee@lge.com
 */
 int kcal_set_values(int kcal_r, int kcal_g, int kcal_b)
 {
@@ -177,12 +177,12 @@ void __init apq8084_add_drivers(void)
 #endif
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-	/*             
-                           
-                                 
- */
+	/* LGE_CHANGE_S
+	* change code for LCD KCAL
+	* 2013-05-08, seojin.lee@lge.com
+	*/
 	lge_add_lcd_kcal_devices();
-#endif /*                     */
+#endif /* CONFIG_LGE_LCD_KCAL */
 
 #ifdef CONFIG_USB_G_LGE_ANDROID
 	lge_add_android_usb_devices();

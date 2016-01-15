@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,12 +24,12 @@
 #include <mach/msm_bus_board.h>
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-/*             
-                          
-                                
+/* LGE_CHANGE_S
+* change code for LCD KCAL
+* 2013-05-08, seojin.lee@lge.com
 */
 #include <mach/board_lge.h>
-#endif /*                     */
+#endif /* CONFIG_LGE_LCD_KCAL */
 
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
@@ -108,7 +108,7 @@ struct mdp_csc_cfg dmb_csc_convert = {
 	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 #endif
 };
-#endif /*               */
+#endif /* LGE_BROADCAST */
 
 #define CSC_MV_OFF	0x0
 #define CSC_BV_OFF	0x2C
@@ -424,7 +424,7 @@ int pp_set_dmb_status(int flag)
 	dmb_status = flag;
 	return 0;
 }
-#endif /*               */
+#endif /* LGE_BROADCAST */
 
 static u32 pp_hist_read(char __iomem *v_addr,
 				struct pp_hist_col_info *hist_info);
@@ -975,7 +975,7 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 					pipe->num, 1, MDSS_MDP_CSC_YUV2RGB);
 			}
 
-#endif /*               */
+#endif /* LGE_BROADCAST */
 		}
 	}
 
@@ -1186,7 +1186,8 @@ static int mdss_mdp_scale_setup(struct mdss_mdp_pipe *pipe)
 	}
 
 	if ((src_h != pipe->dst.h) ||
-	    (pipe->pp_res.pp_sts.sharp_sts & PP_STS_ENABLE) ||
+	    (pipe->src_fmt->is_yuv &&
+			(pipe->pp_res.pp_sts.sharp_sts & PP_STS_ENABLE)) ||
 	    (chroma_sample == MDSS_MDP_CHROMA_420) ||
 	    (chroma_sample == MDSS_MDP_CHROMA_H1V2) ||
 	    (pipe->scale.enable_pxl_ext && (src_h != pipe->dst.h))) {
@@ -1242,7 +1243,8 @@ static int mdss_mdp_scale_setup(struct mdss_mdp_pipe *pipe)
 	}
 
 	if ((src_w != pipe->dst.w) ||
-	    (pipe->pp_res.pp_sts.sharp_sts & PP_STS_ENABLE) ||
+	    (pipe->src_fmt->is_yuv &&
+			(pipe->pp_res.pp_sts.sharp_sts & PP_STS_ENABLE)) ||
 	    (chroma_sample == MDSS_MDP_CHROMA_420) ||
 	    (chroma_sample == MDSS_MDP_CHROMA_H2V1) ||
 	    (pipe->scale.enable_pxl_ext && (src_w != pipe->dst.w))) {
@@ -2198,7 +2200,7 @@ int update_preset_lcdc_lut(void)
 
 	return ret;
 }
-#endif /*                     */
+#endif /* CONFIG_LGE_LCD_KCAL */
 
 int mdss_mdp_pp_init(struct device *dev)
 {
@@ -2276,10 +2278,10 @@ int mdss_mdp_pp_init(struct device *dev)
 	}
 
 #if defined(CONFIG_LGE_LCD_KCAL)
-	/*             
-                           
-                                 
- */
+	/* LGE_CHANGE_S
+	* change code for LCD KCAL
+	* 2013-05-08, seojin.lee@lge.com
+	*/
 	if (!ret) {
 		mdss_mdp_pp_argc();
 		update_preset_lcdc_lut();

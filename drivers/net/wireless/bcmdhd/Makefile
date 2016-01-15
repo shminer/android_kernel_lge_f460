@@ -186,18 +186,14 @@ DHDCFLAGS += -DWL_SUPPORT_BACKPORTED_KPATCHES
 DHDCFLAGS += -DWL_IFACE_COMB_NUM_CHANNELS
 DHDCFLAGS += -DCONFIG_CONTROL_PM
 
-#Link statstics
+ifneq ($(filter y, $(CONFIG_BCM4356) $(CONFIG_BCM4339)),)
 #DHDCFLAGS += -DLINKSTAT_SUPPORT
-
-#Gscan
 #DHDCFLAGS += -DGSCAN_SUPPORT
-
-#RTT
-DHDCFLAGS += -DRTT_SUPPORT
-
+#DHDCFLAGS += -DRTT_SUPPORT
 DHDCFLAGS += -DWL_VENDOR_EXT_SUPPORT
-
-ANDROID_OFILES := src/wl/sys/wl_cfgvendor.o	src/dhd/sys/dhd_rtt.o
+ANDROID_OFILES := src/wl/sys/wl_cfgvendor.o
+#ANDROID_OFILES += src/dhd/sys/dhd_rtt.o
+endif
 
 
 ##########################

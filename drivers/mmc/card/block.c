@@ -706,6 +706,10 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
+
+    if (mmc_card_get_bkops_en_manual(card))
+        mmc_stop_bkops(card);
+
 #if defined(CONFIG_MMC_FFU)
 	if (cmd.opcode == MMC_FFU_DOWNLOAD_OP) {
 		err = mmc_ffu_download(card, &cmd, idata->buf,
@@ -880,6 +884,9 @@ static int mmc_blk_ioctl_rpmb_cmd(struct block_device *bdev,
 
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
+
+    if (mmc_card_get_bkops_en_manual(card))
+        mmc_stop_bkops(card);
 
 	err = mmc_blk_part_switch(card, md);
 	if (err)
@@ -1637,9 +1644,9 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	int ecc_err = 0, gen_err = 0;
 
 #ifdef CONFIG_MACH_LGE
-	/*           
-                                                        
-  */
+	/* LGE_CHANGE
+	 * When uSD is not inserted, return proper error-value.
+	 */
 	if (mmc_card_sd(card) && !mmc_gpio_get_status(card->host)) {
 		printk(KERN_INFO "[LGE][MMC][%-18s( )] sd-no-exist, "
 				"skip next\n", __func__);

@@ -23,6 +23,10 @@
 #include <linux/input.h>
 #include <linux/log2.h>
 #include <linux/qpnp/power-on.h>
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+#include <linux/wakelock.h>
+#include <mach/board_lge.h>
+#endif
 
 /* Common PNP defines */
 #define QPNP_PON_REVISION2(base)		(base + 0x01)
@@ -129,6 +133,9 @@ struct qpnp_pon {
 	u16 base;
 	struct delayed_work bark_work;
 	u32 dbc;
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+	struct wake_lock chg_logo_wake_lock;
+#endif
 };
 
 static struct qpnp_pon *sys_reset_dev;
@@ -488,6 +495,16 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 		input_sync(pon->pon_input);
 	}
 
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+
+	if (lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO) {
+		if (wake_lock_active(&pon->chg_logo_wake_lock))
+			wake_unlock(&pon->chg_logo_wake_lock);
+		pr_info("[CHARGERLOGO MODE] active chg_logo wakelock during 500ms\n");
+		wake_lock_timeout(&pon->chg_logo_wake_lock, 500);
+	}
+
+#endif
 	input_report_key(pon->pon_input, cfg->key_code, key_status);
 	input_sync(pon->pon_input);
 
@@ -1373,11 +1390,17 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
 
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+	wake_lock_init(&pon->chg_logo_wake_lock, WAKE_LOCK_SUSPEND, "chg_logo");
+#endif
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
 		dev_err(&spmi->dev,
 			"Unable to intialize PON configurations\n");
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+		wake_lock_destroy(&pon->chg_logo_wake_lock);
+#endif
 		return rc;
 	}
 
@@ -1410,6 +1433,9 @@ static int qpnp_pon_remove(struct spmi_device *spmi)
 	device_remove_file(&spmi->dev, &dev_attr_debounce_us);
 
 	cancel_delayed_work_sync(&pon->bark_work);
+#ifdef CONFIG_LGE_PM_PWR_KEY_FOR_CHG_LOGO
+	wake_lock_destroy(&pon->chg_logo_wake_lock);
+#endif
 
 	if (pon->pon_input)
 		input_unregister_device(pon->pon_input);

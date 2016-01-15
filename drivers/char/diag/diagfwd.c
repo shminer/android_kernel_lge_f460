@@ -1373,7 +1373,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	temp += 2;
 	data_type = APPS_DATA;
 
-	//                                                                      
+	//LGE_CHANGE_S, T6-BSP-Factory@lge.com : Send DIAG_CONTROL_F Cmd to ATD.
 #ifdef DIAG_NATIVE_CMD_SEND_TO_MODEM
 	/* Dont send any command other than mode reset */
 	if (chk_apps_master() && cmd_code == MODE_CMD) {
@@ -1381,7 +1381,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			data_type = MODEM_DATA;
 	}
 #endif
-	//            
+	//LGE_CHANGE_E
 
 	pr_debug("diag: %d %d %d", cmd_code, subsys_id, subsys_cmd_code);
 	for (i = 0; i < diag_max_reg; i++) {
@@ -1808,7 +1808,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	}
 	 /* Check for ID for NO MODEM present */
 	else if (chk_polling_response()) {
-		//                                                              
+		//LGE_CHANGE_S, T6-BSP-Factory@lge.com : VERNO Cmd is Redefined.
 #ifdef DIAG_NATIVE_CMD_SEND_TO_MODEM
 		/* respond to 0x0 command */
 		if (*buf == 0x00) {
@@ -1823,7 +1823,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 #endif
 		/* respond to 0x7c command */
 		if (*buf == 0x7c) {
-		//            
+		//LGE_CHANGE_E
 			driver->apps_rsp_buf[0] = 0x7c;
 			for (i = 1; i < 8; i++)
 				driver->apps_rsp_buf[i] = 0;

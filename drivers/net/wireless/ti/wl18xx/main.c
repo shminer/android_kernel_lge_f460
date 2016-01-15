@@ -1313,7 +1313,7 @@ static int wl18xx_get_spare_blocks(struct wl1271 *wl, bool is_gem)
 {
 	struct wl18xx_priv *priv = wl->priv;
 
-	/*                                                     */
+	/* If we have keys requiring extra spare, indulge them */
 	if (priv->extra_spare_key_count)
 		return WL18XX_TX_HW_EXTRA_BLOCK_SPARE;
 

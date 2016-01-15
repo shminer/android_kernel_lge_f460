@@ -3035,8 +3035,8 @@ deregister_bam:
 	return rc;
 }
 
-/*                                                                    */
-/*                                                                 */
+/* LGE_CHANGE_S, [BT][younghyun.kwon@lge.com], 2013-04-10, For G2 LPM */
+/* LG_BTUI : chanha.park@lge.com : Added bluesleep interface - [S] */
 #ifdef CONFIG_LGE_BLUESLEEP
 struct uart_port* msm_hs_get_bt_uport(unsigned int line)     //cockoo131107
 {
@@ -3074,9 +3074,9 @@ int msm_hs_get_bt_uport_clock_state(struct uart_port *uport)
 	return ret;
 }
 EXPORT_SYMBOL(msm_hs_get_bt_uport_clock_state);
-#endif /*                      */
-/*                                                                 */
-/*                                                        */
+#endif /* CONFIG_LGE_BLUESLEEP */
+/* LG_BTUI : chanha.park@lge.com : Added bluesleep interface - [E] */
+/* LGE_CHANGE_E, [BT][younghyun.kwon@lge.com], 2013-04-10 */
 
 static bool deviceid[UARTDM_NR] = {0};
 /*

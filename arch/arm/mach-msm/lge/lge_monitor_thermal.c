@@ -54,8 +54,8 @@ struct lge_monitor_thermal_data {
 };
 
 /*
-                                     
-                                                                  
+ * On the kernel command line specify
+ * lge_monitor_thermal.enable=1 to enable monitoring thermal node.
  */
 static int enable = 1;
 module_param(enable, int, 0);

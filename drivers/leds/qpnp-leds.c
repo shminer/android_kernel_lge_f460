@@ -20,19 +20,19 @@ extern struct qpnp_pin_spec *red_led;
 extern struct qpnp_pin_spec *blue_led;
 extern struct qpnp_pin_spec *green_led;
 
-/*                                    */
+/* LGE RGB brightness tunning factors */
 #define RGB_BRIGHTNESS_TUNNING_R	1
 #define RGB_BRIGHTNESS_TUNNING_G	1
 #define RGB_BRIGHTNESS_TUNNING_B	1
-/*                                    */
+/* LGE mix brightness tunning factors */
 
 #if defined(CONFIG_LEDS_WINDOW_COLOR)
-/*                                             */
+/* LGE window color brightness tunning factors */
 #define WINDOW_COLOR_BRIGHTNESS_TUNNING_BK	49/255
 #define WINDOW_COLOR_BRIGHTNESS_TUNNING_WH	1
 extern enum WINDOW_COLORS window_color;
 static int init_patterns_for_window_color;
-/*                                    */
+/* LGE mix brightness tunning factors */
 int mix_brightness_tunning = 1;
 #endif
 #define BRIGHTNESS_TUNNING	49/255
@@ -169,7 +169,7 @@ void make_blink_led_pattern(int rgb, int delay_on, int delay_off)
 	rgb_lut_params.lut_pause_hi = delay_off/2;
 	rgb_lut_params.lut_pause_lo = delay_on/2;
 	rgb_lut_params.ramp_step_ms = 1;
-	rgb_lut_params.flags = 89;
+	rgb_lut_params.flags = 91;
 
 	if (mix_brightness_tunning) {
 #if defined(CONFIG_LEDS_WINDOW_COLOR)

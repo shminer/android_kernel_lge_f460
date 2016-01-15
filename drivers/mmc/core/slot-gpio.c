@@ -26,8 +26,8 @@ struct mmc_gpio {
 };
 
 #ifdef CONFIG_MACH_LGE
-/*           
-                                                   
+/* LGE_CHANGE
+ * Change it global-function for usage from others.
  */
 int mmc_gpio_get_status(struct mmc_host *host)
 #else

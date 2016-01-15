@@ -401,6 +401,23 @@ struct mmc_card {
 };
 
 /*
+ * mmc_csd registers get/set/clr helpers
+ */
+#define mmc_card_get_bkops_en_manual(card) ((card->ext_csd.bkops_en) &\
+                            EXT_CSD_BKOPS_EN_MANUAL_EN)
+#define mmc_card_set_bkops_en_manual(card) ((card->ext_csd.bkops_en) |= \
+                            EXT_CSD_BKOPS_EN_MANUAL_EN)
+#define mmc_card_clr_bkops_en_manual(card) ((card->ext_csd.bkops_en) &= \
+                            ~EXT_CSD_BKOPS_EN_MANUAL_EN)
+
+#define mmc_card_get_bkops_en_auto(card) ((card->ext_csd.bkops_en) & \
+                            EXT_CSD_BKOPS_EN_AUTO_EN)
+#define mmc_card_set_bkops_en_auto(card) ((card->ext_csd.bkops_en) |= \
+                            EXT_CSD_BKOPS_EN_AUTO_EN)
+#define mmc_card_clr_bkops_en_auto(card) ((card->ext_csd.bkops_en) &= \
+                            ~EXT_CSD_BKOPS_EN_AUTO_EN)
+
+/*
  * This function fill contents in mmc_part.
  */
 static inline void mmc_part_add(struct mmc_card *card, unsigned int size,

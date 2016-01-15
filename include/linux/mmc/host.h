@@ -228,8 +228,8 @@ enum dev_state {
 };
 
 #ifdef CONFIG_MACH_LGE
-/*           
-                                    
+/* LGE_CHANGE
+ * extern int mmc_gpio_get_status( )
  */
 extern int mmc_gpio_get_status(struct mmc_host *host);
 #endif

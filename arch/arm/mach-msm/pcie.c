@@ -1755,7 +1755,7 @@ static struct platform_driver msm_pcie_driver = {
 #ifdef CONFIG_LGE_MSM_PCIE
 static void __init pcie_init_async(void *data, async_cookie_t cookie)
 {
-	/*                                                         */
+	/* wait until wifi_bcm_lge.c:init_bcm_wifi_async() is done */
 	async_synchronize_cookie(cookie);
 	platform_driver_register(&msm_pcie_driver);
 }

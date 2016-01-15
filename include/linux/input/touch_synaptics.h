@@ -142,7 +142,6 @@ struct synaptics_ts_data {
 	struct regulator	*regulator_vdd;
 	struct regulator	*regulator_vio;
 	struct i2c_client	*client;
-	struct mutex			thread_lock;
 	struct ts_ic_function	common_fc;
 	struct ts_ic_function	finger_fc;
 	struct ts_ic_function	button_fc;
@@ -155,7 +154,7 @@ struct synaptics_ts_data {
 	struct delayed_work	diff_node_timer;  //test code
 	struct delayed_work     work_palm;
 	struct wake_lock	timer_wake_lock;
-	const struct touch_platform_data	*pdata;
+	struct touch_platform_data	*pdata;
 	const struct state_info	*state;
 	u8	fw_flag;
 	struct state_flag		ts_state_flag;

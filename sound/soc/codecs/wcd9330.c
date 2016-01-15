@@ -72,7 +72,7 @@ module_param(high_perf_mode, int,
 			S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
 #ifdef CONFIG_INPUT_MAX14688
-/*                                                         */
+/* 2014-06-23, jongyeol.yang@lge, WA for headset mic noise */
 static struct snd_soc_codec *tomtom_codec_priv = NULL;
 static bool aux_pull_down = false;
 #endif
@@ -6999,7 +6999,7 @@ static const struct wcd9xxx_reg_mask_val tomtom_codec_reg_init_val[] = {
 	{TOMTOM_A_CDC_MAD_INP_SEL, 0x0F, 0x08},
 
 #if defined(CONFIG_SWITCH_MAX1462X) || defined(CONFIG_INPUT_MAX14688)
-	/*                         */
+	/* LGE use NO type earjack */
 	{TOMTOM_A_MBHC_INSERT_DETECT, 0x04, 0x04},
 #endif
 };
@@ -7827,17 +7827,22 @@ int tomtom_enable_qfuse_sensing(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL(tomtom_enable_qfuse_sensing);
 #ifdef CONFIG_INPUT_MAX14688
-/*                                                         */
+/* 2014-06-23, jongyeol.yang@lge, WA for headset mic noise */
 void tomtom_dec5_vol_mute(void)
 {
 	u16 tx_vol_ctl_reg;
 	s8 decimator = 5; /* DEC5 */
 
+	if(tomtom_codec_priv == NULL){
+		pr_debug("%s: codec not initialized, return.\n", __func__);
+		return;
+	}
+
 	tx_vol_ctl_reg = TOMTOM_A_CDC_TX1_VOL_CTL_CFG + 8 * (decimator - 1);
 	pr_info("%s: tx_vol_ctl_reg(%#x):0x01\n", __func__, tx_vol_ctl_reg);
 	snd_soc_update_bits(tomtom_codec_priv, tx_vol_ctl_reg, 0x01, 0x01);
 }
-/*                                                                    */
+/* 2014-10-06, mint.choi@lge, HP L/R auto pull down set for aux noise */
 void tomtom_set_auto_pull_down(bool enable)
 {
 	u16 auto_pd_l_ctl_reg, auto_pd_r_ctl_reg;
@@ -7876,7 +7881,7 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	struct wcd9xxx_core_resource *core_res;
 
 #ifdef CONFIG_INPUT_MAX14688
-	/*                                                         */
+	/* 2014-06-23, jongyeol.yang@lge, WA for headset mic noise */
 	tomtom_codec_priv = codec;
 #endif
 

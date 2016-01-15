@@ -47,10 +47,10 @@ static int dummy_arg;
 
 static int subsys_crash_magic = 0x0;
 
-/*                                                                           */
+/* LGE_CHANGED_START 2014.05.15, kyeongsu.jang@lge.com Advanced Crash Handler*/
 static int ach_enable = 0;
 module_param(ach_enable, int, S_IRUGO | S_IWUSR);
-/*                                                                         */
+/* LGE_CHANGED_END 2014.05.15, kyeongsu.jang@lge.com Advanced Crash Handler*/
 
 void lge_set_subsys_crash_reason(const char *name, int type)
 {

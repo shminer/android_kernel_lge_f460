@@ -14,7 +14,7 @@
 #include <linux/export.h>
 #include "msm_led_flash.h"
 #include <linux/debugfs.h>
-#include <linux/qpnp/qpnp-adc.h>  /*                                                                 */
+#include <linux/qpnp/qpnp-adc.h>  /* LGE_CHANGE, Added IVFM control, 2014-06-04, junghee.eim@lge.com */
 
 #define FLASH_NAME "qcom,led-flash"
 
@@ -135,7 +135,7 @@ static struct i2c_driver lm3646_i2c_driver;
 
 static struct msm_camera_i2c_reg_array lm3646_init_array[] = {
 	{REG_ENABLE, MODE_SHDN},
-	{REG_FLASH_TOUT, 0x47}, //                                                                
+	{REG_FLASH_TOUT, 0x47}, //LGE_CHANGE : "2014-05-15" "dongyu.gwak@lge.com" "400ms time out"
 	{REG_IVFM, 0xA4},
 };
 
@@ -184,7 +184,7 @@ static const struct i2c_device_id lm3646_i2c_id[] = {
 	{ }
 };
 
-/*                                                                             */
+/* LGE_CHANGE_S, Added Inductor current limit, 2014-06-19, junghee.eim@lge.com */
 static int lm3646_get_batt_temp(struct msm_led_flash_ctrl_t *fctrl)
 {
 	struct qpnp_vadc_chip *vadc_dev;
@@ -228,7 +228,7 @@ static int msm_flash_lm3646_led_init(struct msm_led_flash_ctrl_t *fctrl)
 
 	return rc;
 }
-/*                                                                              */
+/* LGE_CHANGE_E, Added  Inductor current limit, 2014-06-19, junghee.eim@lge.com */
 
 static int msm_flash_lm3646_low_config(struct msm_led_flash_ctrl_t *fctrl, void *data)
 {
@@ -493,7 +493,7 @@ static struct msm_led_flash_reg_t lm3646_regs = {
 static struct msm_flash_fn_t lm3646_func_tbl = {
 	.flash_get_subdev_id = msm_led_i2c_trigger_get_subdev_id,
 	.flash_led_config = msm_led_i2c_trigger_config,
-	.flash_led_init = msm_flash_lm3646_led_init, /*                                                                              */
+	.flash_led_init = msm_flash_lm3646_led_init, /* LGE_CHANGE_E, Added  Inductor current limit, 2014-06-19, junghee.eim@lge.com */
 	.flash_led_release = msm_flash_led_release,
 	.flash_led_off = msm_flash_led_off,
 	.flash_led_low = msm_flash_led_low,

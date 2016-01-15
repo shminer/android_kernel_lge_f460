@@ -119,7 +119,6 @@ struct unified_wlc_chip {
 	struct delayed_work   check_suspended_work;
 	int                   suspended;
 #endif /*I2C_SUSPEND_WORKAROUND */
-	int                   enabled;
 #ifdef CONFIG_LGE_PM_CHARGING_UNIFIED_WLC_ALIGNMENT
 	struct mutex align_lock;
 	unsigned int align_values;
@@ -142,7 +141,6 @@ static bool wireless_charging;
 static enum power_supply_property pm_power_props_wireless[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
-	POWER_SUPPLY_PROP_WIRELESS_CHARGER_SWITCH,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 #ifdef CONFIG_LGE_PM_CHARGING_UNIFIED_WLC_ALIGNMENT
 	POWER_SUPPLY_PROP_ALIGNMENT,
@@ -301,28 +299,14 @@ check_status:
 }
 #endif
 
-static int pm_power_set_property_wireless(struct power_supply *psy,
-		enum power_supply_property psp,
-		const union power_supply_propval *val)
-{
-	struct unified_wlc_chip *chip =
-			container_of(psy, struct unified_wlc_chip, wireless_psy);
-	switch (psp) {
-	case POWER_SUPPLY_PROP_WIRELESS_CHARGER_SWITCH:
-		pr_info("%s : %d\n", __func__, chip->enabled);
-		chip->enabled = val->intval;
-		break;
-	default:
-		return -EINVAL;
-	}
-	return 0;
-}
 static int pm_power_get_property_wireless(struct power_supply *psy,
 					 enum power_supply_property psp,
 					 union power_supply_propval *val)
 {
+#ifdef CONFIG_LGE_PM_CHARGING_UNIFIED_WLC_ALIGNMENT
 	struct unified_wlc_chip *chip =
 			container_of(psy, struct unified_wlc_chip, wireless_psy);
+#endif
 
 	/* Check if called before init */
 	/* todo workaround for below kmsg
@@ -334,10 +318,6 @@ static int pm_power_get_property_wireless(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_PRESENT:
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = wireless_charging;
-		break;
-	case POWER_SUPPLY_PROP_WIRELESS_CHARGER_SWITCH:
-		pr_info("%s : %d\n", __func__, chip->enabled);
-		val->intval = chip->enabled;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		val->strval = "IDTP9025A";
@@ -361,12 +341,14 @@ static int pm_power_get_property_wireless(struct power_supply *psy,
 
 	return 0;
 }
+
 static int pm_power_set_event_property_wireless(struct power_supply *psy,
 		enum power_supply_event_type psp,
 		const union power_supply_propval *val)
 {
 	struct unified_wlc_chip *chip =
 			container_of(psy, struct unified_wlc_chip, wireless_psy);
+
 	switch (psp) {
 	case POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED:
 		pr_info("%s  ask POWER_SUPPLY_PROP_WIRELESS_CHARGE_COMPLETED",
@@ -776,20 +758,6 @@ static void unified_parse_dt(struct device *dev,
 	pdata->wlc_full_chg = of_get_named_gpio(np, "wlc_full_chg", 0);
 
 }
-static int wlc_charger_property_is_writeable(struct power_supply *psy,
-	enum power_supply_property psp)
-{
-	switch (psp) {
-	case POWER_SUPPLY_PROP_WIRELESS_CHARGER_SWITCH:
-		return 1;
-
-	default:
-		break;
-	}
-
-	return -EINVAL;
-}
-
 
 static int unified_wlc_probe(struct platform_device *pdev)
 {
@@ -855,11 +823,8 @@ static int unified_wlc_probe(struct platform_device *pdev)
 	chip->wireless_psy.properties = pm_power_props_wireless;
 	chip->wireless_psy.num_properties = ARRAY_SIZE(pm_power_props_wireless);
 	chip->wireless_psy.get_property = pm_power_get_property_wireless;
-	chip->wireless_psy.set_property = pm_power_set_property_wireless;
 	chip->wireless_psy.get_event_property = pm_power_get_event_property_wireless;
 	chip->wireless_psy.set_event_property = pm_power_set_event_property_wireless;
-	chip->wireless_psy.property_is_writeable	=
-		wlc_charger_property_is_writeable;
 	rc = power_supply_register(chip->dev, &chip->wireless_psy);
 	if (rc < 0) {
 		pr_err("[WLC] %s : power_supply_register wireless failed rx = %d\n",
@@ -918,7 +883,6 @@ static int unified_wlc_probe(struct platform_device *pdev)
 	}
 	/*else
 		wireless_removed(chip);*/
-	chip->enabled = 0;
 	pr_info("[WLC] %s : probe done\n", __func__);
 	return 0;
 /*

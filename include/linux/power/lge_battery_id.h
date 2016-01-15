@@ -27,5 +27,5 @@ enum {
 
 #define BATT_ID_DEFAULT BATT_ID_DS2704_L
 
-#endif  /*                      */
+#endif  /* __LGE_BATTERY_ID_H__ */
 

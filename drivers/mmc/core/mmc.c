@@ -121,13 +121,13 @@ static int mmc_decode_cid(struct mmc_card *card)
 		card->cid.serial	= UNSTUFF_BITS(resp, 16, 32);
 		card->cid.month		= UNSTUFF_BITS(resp, 12, 4);
 #ifdef CONFIG_MACH_LGE
-		/*           
-                                    
-                                         
-                                                      
-                                                   
-                                  
-   */
+		/* LGE_CHANGE
+		 * modify date cid register values
+		 * see CID register part in JEDEC Spec.
+		 * ex) 0000 : 1997, or 2013 if EXT_CSD_REV [192] > 4
+		 * don't care MDT y Field[11:8] value over 1101b.
+		 * 2014-03-07, B2-BSP-FS@lge.com
+		 */
 		if(card->ext_csd.rev > 4)
 			card->cid.year		= UNSTUFF_BITS(resp, 8, 4) + 2013;
 		else
@@ -331,13 +331,12 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		}
 	}
 
+	/*
+	 * The EXT_CSD format is meant to be forward compatible. As long
+	 * as CSD_STRUCTURE does not change, all values for EXT_CSD_REV
+	 * are authorized, see JEDEC JESD84-B50 section B.8.
+	 */
 	card->ext_csd.rev = ext_csd[EXT_CSD_REV];
-	if (card->ext_csd.rev > 7) {
-		pr_err("%s: unrecognised EXT_CSD revision %d\n",
-			mmc_hostname(card->host), card->ext_csd.rev);
-		err = -EINVAL;
-		goto out;
-	}
 
 	/* fixup device after ext_csd revision field is updated */
 	mmc_fixup_device(card, mmc_fixups);
@@ -627,9 +626,9 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 
 	if (err || bw_ext_csd == NULL) {
 #ifdef CONFIG_MACH_LGE
-		/*                                      
-                                                 
-   */
+		/* LGE_CHANGE, 2013-04-19, G2-FS@lge.com
+		 * Adding Print, Requested by QMC-CASE-01158823
+		 */
 		pr_err("%s: %s: 0x%x, 0x%x\n", mmc_hostname(card->host),
 				__func__, err, bw_ext_csd ?
 				*bw_ext_csd : 0x0);
@@ -674,9 +673,9 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 		(card->ext_csd.raw_sectors[3] ==
 			bw_ext_csd[EXT_CSD_SEC_CNT + 3]));
 #ifdef CONFIG_MACH_LGE
-	/*                                      
-                                                
-  */
+	/* LGE_CHANGE, 2013-04-19, G2-FS@lge.com
+	 * Adding Print, Requested by QMC-CASE-01158823
+	 */
 	if (err) {
 		pr_err("%s: %s: fail during compare, err = 0x%x\n",
 				mmc_hostname(card->host), __func__, err);
@@ -810,9 +809,9 @@ static int mmc_select_powerclass(struct mmc_card *card,
 		break;
 	default:
 #ifdef CONFIG_MACH_LGE
-		/*                                      
-                                                 
-   */
+		/* LGE_CHANGE, 2013-04-19, G2-FS@lge.com
+		 * Adding Print, Requested by QMC-CASE-01158823
+		 */
 		pr_err("%s: %s: Voltage range not supported for power class, "
 				"host->ios.vdd = 0x%x\n", mmc_hostname(host),
 				__func__, host->ios.vdd);
@@ -1190,11 +1189,11 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 
 	/* Switch to HS400 mode if bus width set successfully */
 #ifdef CONFIG_MACH_LGE
-	/*           
-                                                                
-                            
-                                         
-  */
+	/* LGE_CHANGE
+	 * As recommendation of Toshiba, we use 0x4 for Driver Strength
+	 * in case of Toshiba eMMC.
+	 * 2014.03.27, T6-BSP-FileSystem@lge.com
+	 */
 	if (card->cid.manfid == 17) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				EXT_CSD_HS_TIMING, 0x43, 0);
@@ -1474,10 +1473,10 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err)
 			goto free_card;
 #ifndef CONFIG_MACH_LGE
-		/*           
-                                                                           
-                                   
-   */
+		/* LGE_CHANGE
+		 *  ext_csd.rev value are required while decoding cid.year, so move down.
+		 *  2014-03-07, B2-BSP-FS@lge.com
+		 */
 		err = mmc_decode_cid(card);
 		if (err)
 			goto free_card;
@@ -1506,10 +1505,10 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		if (err)
 			goto free_card;
 #ifdef CONFIG_MACH_LGE
-		/*           
-                     
-                                  
-   */
+		/* LGE_CHANGE
+		 * decode cid here.
+		 * 2014-03-07, B2-BSP-FS@lge.com
+		 */
 		err = mmc_decode_cid(card);
 		if (err)
 			goto free_card;

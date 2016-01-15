@@ -260,7 +260,7 @@ enum wl_prof_list {
 	WL_PROF_DTIMPERIOD
 };
 
-/*                    */
+/* donlge escan state */
 enum wl_escan_state {
     WL_ESCAN_STATE_IDLE,
     WL_ESCAN_STATE_SCANING
@@ -607,6 +607,9 @@ struct bcm_cfg80211 {
 	u8 block_gon_req_tx_count;
 	u8 block_gon_req_rx_count;
 #endif /* WL_CFG80211_GON_COLLISION */
+#if defined(CUSTOMER_HW10)        // [CSP#868459] TV connection issue
+    bool p2p_prb_noti;
+#endif
 	s32(*state_notifier) (struct bcm_cfg80211 *cfg,
 		struct net_info *_net_info, enum wl_status state, bool set);
 	unsigned long interrested_state;
