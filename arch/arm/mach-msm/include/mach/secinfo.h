@@ -1,11 +1,9 @@
 #ifndef __MACH_SECINFO_H__
 #define __MACH_SECINFO_H__
 
-
 #define FUSEPROV_INFO_MAX_SIZE        16
+#define FUSEPROV_MAX_FUSE_COUNT       30
 #define FUSEPROV_SEC_STRUCTURE_MAX_NUM        10
-
-
 
 /* Known fuses regions */
 typedef enum
@@ -46,7 +44,6 @@ typedef struct
   unsigned short  type;
   unsigned short  attribute;
 } fuseprov_secdat_hdr_segment_type;
-
 
 typedef struct
 {

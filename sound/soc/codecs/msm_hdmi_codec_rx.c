@@ -17,7 +17,8 @@
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
-#include <mach/msm_hdmi_audio_codec.h>
+#include <sound/q6afe-v2.h>
+#include <linux/msm_hdmi.h>
 
 #define MSM_HDMI_PCM_RATES	SNDRV_PCM_RATE_48000
 

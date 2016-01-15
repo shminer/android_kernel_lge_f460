@@ -14,11 +14,11 @@
  */
 
 /*
-                                                                                              
-                                                                  
-  
-                                                 
-  
+ *  D4 Department Lab, 7 Team, Mobile Communication Company, LG ELECTRONICS INC., SEOUL, KOREA
+ *  This software is used for bluetooth HW enable/disable control,
+ *
+ *  2014.04.03 Modified by younghyun.kwon@lge.com
+ *
  */
 
 #include <linux/init.h>
@@ -103,6 +103,15 @@ static struct rfkill_ops bluetooth_rfkill_ops = {
 	.set_block = bluetooth_set_power,
 };
 
+//BT_S : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+static struct platform_device bcm_ldisc_device = {
+	.name = "bcm_ldisc",
+	.id = -1,
+	.dev = {
+	},
+};
+//BT_E : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+
 static int bluetooth_rfkill_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -183,6 +192,9 @@ static int bluetooth_rfkill_probe(struct platform_device *pdev)
 		pr_err("%s: failed to register rfkill\n", __func__);
 		goto err_rfkill_reg;
 	}
+//BT_S : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
+	platform_device_register(&bcm_ldisc_device);
+//BT_E : [CONBT-2025] LGC_BT_COMMON_IMP_MOS_V4L2
 
 	return 0;
 

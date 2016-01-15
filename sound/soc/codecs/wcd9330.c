@@ -8756,6 +8756,11 @@ void tomtom_dec5_vol_mute(void)
 	u16 tx_vol_ctl_reg;
 	s8 decimator = 5; /* DEC5 */
 
+	if(tomtom_codec_priv == NULL){
+		pr_debug("%s: codec not initialized, return.\n", __func__);
+		return;
+	}
+	
 	tx_vol_ctl_reg = TOMTOM_A_CDC_TX1_VOL_CTL_CFG + 8 * (decimator - 1);
 	pr_info("%s: tx_vol_ctl_reg(%#x):0x01\n", __func__, tx_vol_ctl_reg);
 	snd_soc_update_bits(tomtom_codec_priv, tx_vol_ctl_reg, 0x01, 0x01);

@@ -108,7 +108,7 @@
 			subtraction_finger_chk = <0>;
 			subtraction_time = <11>;
 			subtraction_finger_cnt = <5>;
-			long_press_chk = <1>;
+			long_press_chk = <0>;
 			long_press_chk_time = <10>;
 			long_press_cnt = <700>;
 			button_chk = <0>;

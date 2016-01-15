@@ -509,7 +509,7 @@ int adm_get_params(int port_id, uint32_t module_id, uint32_t param_id,
 	}
 	if ((params_data) && (ARRAY_SIZE(adm_get_parameters) >=
 		(1+adm_get_parameters[0])) &&
-		(params_length/sizeof(int) >=
+		(params_length/sizeof(uint32_t) >=
 		adm_get_parameters[0])) {
 		for (i = 0; i < adm_get_parameters[0]; i++)
 			params_data[i] = adm_get_parameters[1+i];

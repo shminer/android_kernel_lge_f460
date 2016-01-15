@@ -29,6 +29,7 @@
 #include <linux/buffer_head.h>
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
+#include <linux/mutex.h>
 
 //chipset dependency : header location
 #include <mach/board_lge.h>
@@ -43,19 +44,21 @@ static u32 qfprom_verification_blow_data(void);
 static u32 qfprom_read(u32 fuse_addr);
 static u32 qfprom_secdat_read(void);
 static u32 qfprom_verify_data(int ret_type);
+static u32 qfprom_version_check(u32 check_type);
+static u32 qfprom_is_version_enable(void);
 
 static u32 qfprom_address;
 static u32 qfprom_lsb_value;
 static u32 qfprom_msb_value;
 
 static fuseprov_secdat_type secdat;
+static struct mutex secdat_lock;
 
 #define RET_OK 0
 #define RET_ERR 1
 
 #define TYPE_QFUSE_CHECK 0
 #define TYPE_QFUSE_VERIFICATION 1
-
 
 static ssize_t sec_read_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -69,8 +72,16 @@ static ssize_t sec_read_show(struct device *dev, struct device_attribute *attr, 
   ret = (ret)? RET_OK: RET_ERR;
   return sprintf(buf, "%x\n", ret);
 }
-static DEVICE_ATTR(sec_read, S_IWUSR | S_IRUGO, sec_read_show, NULL);
 
+static ssize_t sec_read_store(struct device *dev, struct device_attribute *attr,
+               const char *buf, size_t count)
+{
+  printk(KERN_INFO "[QFUSE]%s start\n", __func__);
+  qfprom_secdat_read();
+  printk(KERN_INFO "[QFUSE]%s end\n", __func__);
+  return count;
+}
+static DEVICE_ATTR(sec_read, S_IWUSR | S_IRUGO, sec_read_show, sec_read_store);
 
 static ssize_t qfusing_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -89,36 +100,36 @@ static DEVICE_ATTR(qfusing, S_IWUSR | S_IRUGO, qfusing_show, NULL);
 
 static ssize_t qfusing_verification_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-  int verification_blow_value = 0;
+  int verification_value = 0;
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
-  verification_blow_value = qfprom_verify_data(TYPE_QFUSE_VERIFICATION);
+  verification_value = qfprom_verify_data(TYPE_QFUSE_VERIFICATION);
 
   printk(KERN_ERR "[QFUSE]%s end\n", __func__);
-  return sprintf(buf, "%x\n", verification_blow_value);
+  return sprintf(buf, "%x\n", verification_value);
 }
 static DEVICE_ATTR(qfusing_verification, S_IWUSR | S_IRUGO, qfusing_verification_show, NULL);
 
 
 static ssize_t qfuse_result_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-  u32 verification_check_value = 0;
+  u32 result_value = 0;
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
   if(qfprom_secdat_read()){
-    verification_check_value = 0;
+    result_value = 0;
     printk(KERN_ERR "[QFUSE]%s: sec dat read fail \n", __func__);
     printk(KERN_INFO "[QFUSE]%s end\n", __func__);
-    return sprintf(buf, "%x\n", verification_check_value);
+    return sprintf(buf, "%x\n", result_value);
   }
 
-  verification_check_value = qfprom_result_check_data();
-  printk(KERN_INFO "[QFUSE]verification_check_value = %x\n", verification_check_value);
+  result_value = qfprom_result_check_data();
+  printk(KERN_INFO "[QFUSE]%s : result_value = %x\n",  __func__, result_value);
 
   printk(KERN_INFO "[QFUSE]%s end\n", __func__);
-  return sprintf(buf, "%x\n", verification_check_value);
+  return sprintf(buf, "%x\n", result_value);
 }
 static DEVICE_ATTR(qresult, S_IWUSR | S_IRUGO, qfuse_result_show, NULL);
 
@@ -200,6 +211,15 @@ static ssize_t qfprom_msb_store(struct device *dev, struct device_attribute *att
 }
 static DEVICE_ATTR(msb, S_IWUSR | S_IRUGO, qfprom_msb_show, qfprom_msb_store);
 
+static ssize_t qfprom_antirollback_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+  u32 ret = 0;
+  ret = qfprom_is_version_enable();
+  return sprintf(buf, "%d\n", ret);
+}
+
+static DEVICE_ATTR(antirollback, S_IWUSR | S_IRUGO, qfprom_antirollback_show, NULL);
+
 static struct attribute *qfprom_attributes[] = {
   &dev_attr_sec_read.attr,
   &dev_attr_qfusing.attr,
@@ -210,6 +230,7 @@ static struct attribute *qfprom_attributes[] = {
   &dev_attr_lsb.attr,
   &dev_attr_msb.attr,
   &dev_attr_read.attr,
+  &dev_attr_antirollback.attr,
   NULL
 };
 
@@ -217,9 +238,58 @@ static const struct attribute_group qfprom_attribute_group = {
   .attrs = qfprom_attributes,
 };
 
+static ssize_t qfprom_read_version_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+  int i = 0, ret = -1;
+  qfprom_version_typename cur_info;
+  cur_info.type = -1;
+  if (strlen(attr->attr.name) > RV_IMAGE_NAME_SIZE) {
+    printk(KERN_INFO "[QFUSE]%s : Exceed image name size\n", __func__);
+    return sprintf(buf, "%d\n", RV_ERR_EXCEED_NAME_SIZE);
+  }
+  strncpy(cur_info.name, attr->attr.name, RV_IMAGE_NAME_SIZE);
+  cur_info.name[RV_IMAGE_NAME_SIZE-1] = '\0';
+
+  printk(KERN_INFO "[QFUSE]%s : Check rollback version\n", __func__);
+  if (qfprom_is_version_enable() == 0) {
+    return sprintf(buf, "%d\n", RV_ERR_DISABLED);
+  }
+
+  for (i = 0; i < ARRAY_SIZE(version_type); i++) {
+    if (!strcmp(version_type[i].name, cur_info.name))
+      cur_info.type = version_type[i].type;
+  }
+
+  if (cur_info.type == -1) {
+    printk(KERN_INFO "[QFUSE]%s : Not supported type <%s>\n", __func__, cur_info.name);
+    return sprintf(buf, "%d\n", RV_ERR_NOT_SUPPORTED);
+  }
+
+  printk(KERN_INFO "[QFUSE]%s : Selected version name <%s>\n", __func__, cur_info.name);
+  ret = qfprom_version_check(cur_info.type);
+  return sprintf(buf, "%d\n", ret);
+}
+
+static DEVICE_ATTR(sbl1, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(tz, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(rpm, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+static DEVICE_ATTR(appsbl, S_IWUSR | S_IRUGO, qfprom_read_version_show, NULL);
+
+static struct attribute *qfprom_version_attributes[] = {
+  &dev_attr_sbl1.attr,
+  &dev_attr_tz.attr,
+  &dev_attr_rpm.attr,
+  &dev_attr_appsbl.attr,
+  NULL
+};
+
+static const struct attribute_group qfprom_version_attribute_group = {
+  .name = "versions",
+  .attrs = qfprom_version_attributes,
+};
+
 static u32 qfprom_verification_blow_data(void)
 {
-
   int i,j;
   u32 fusing_verification = 0;
   fuseprov_qfuse_entry *qfuse;
@@ -249,7 +319,7 @@ static u32 qfprom_verification_blow_data(void)
             (qfuse->lsb&result_bits[QFPROM_RESULT_OEM_CONFIG].lsb)){
           printk(KERN_INFO "[QFUSE]%s: 0x%x check complete\n", __func__, qfuse->addr);
           fusing_verification |= (0x1<<QFPROM_RESULT_OEM_CONFIG);
-          printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, fusing_verification);
+          printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, fusing_verification);
         }
 
         if(result_bits[QFPROM_RESULT_PRODUCT_ID].msb != 0)
@@ -258,14 +328,14 @@ static u32 qfprom_verification_blow_data(void)
              (qfuse->msb&result_bits[QFPROM_RESULT_PRODUCT_ID].msb)){
             printk(KERN_INFO "[QFUSE]%s: 0x%x check complete\n", __func__, qfuse->addr);
             fusing_verification |= (0x1<<QFPROM_RESULT_PRODUCT_ID);
-            printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, fusing_verification);
+            printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, fusing_verification);
           }
         }else{
           if(((qfprom_read(qfuse->addr+0)&qfuse->lsb) == qfuse->lsb)&&
              (qfuse->lsb&result_bits[QFPROM_RESULT_PRODUCT_ID].lsb)){
             printk(KERN_INFO "[QFUSE]%s: 0x%x check complete\n", __func__, qfuse->addr);
             fusing_verification |= (0x1<<QFPROM_RESULT_PRODUCT_ID);
-            printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, fusing_verification);
+            printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, fusing_verification);
           }
         }
         break;
@@ -284,7 +354,7 @@ static u32 qfprom_verification_blow_data(void)
                 if(((sec->lsb==0 || qfuse->lsb&sec->lsb)) &&
                     ((sec->msb==0 || qfuse->msb&sec->msb))) {
                   fusing_verification |= (0x1<<sec->type);
-                  printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, fusing_verification);
+                  printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, fusing_verification);
                 }
               }
               break;
@@ -303,7 +373,6 @@ static u32 qfprom_verification_blow_data(void)
 
 static u32 qfprom_result_check_data(void)
 {
-
   int i,j;
   u32 qfuse_result = 0;
   fuseprov_qfuse_entry *qfuse;
@@ -317,8 +386,8 @@ static u32 qfprom_result_check_data(void)
     {
       case QFPROM_SEC_HW_KEY:
         qfuse_result |= (0x1<<QFPROM_RESULT_SEC_HW_KEY);
-        printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, qfuse_result);
-        printk(KERN_INFO "[QFUSE]0x%08X: verification\n", qfuse->addr);
+        printk(KERN_INFO "[QFUSE]%s: 0x%x check complete\n", __func__, qfuse->addr);
+        printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, qfuse_result);
         break;
 
       case QFPROM_SPARE_REG19:
@@ -335,8 +404,8 @@ static u32 qfprom_result_check_data(void)
               if((sec->lsb==0 || qfuse->lsb&sec->lsb) &&
                  (sec->msb==0 || qfuse->msb&sec->msb)) {
                 qfuse_result |= (0x1<<sec->type);
-                printk(KERN_INFO "[QFUSE]%s: %d fusing_verification\n", __func__, qfuse_result);
-                printk(KERN_INFO "[QFUSE]0x%08X: verification\n", qfuse->addr);
+                printk(KERN_INFO "[QFUSE]%s: 0x%x check complete\n", __func__, qfuse->addr);
+                printk(KERN_INFO "[QFUSE]%s: %x fusing_verification\n", __func__, qfuse_result);
               }
             }
           }
@@ -344,23 +413,24 @@ static u32 qfprom_result_check_data(void)
       break;
     }
   }
-
   printk(KERN_INFO "[QFUSE]%s end\n", __func__);
   return qfuse_result;
-
 }
-
 
 static u32 qfprom_read(u32 fuse_addr)
 {
   void __iomem *value_addr;
-  u32	value;
+  u32 value;
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
   if(fuse_addr ==  QFPROM_SEC_HW_KEY){
     value_addr = ioremap(QFPROM_HW_KEY_STATUS, sizeof(u32));
   }else{
+    if(fuse_addr == 0){
+      printk(KERN_ERR "[QFUSE]%s address is 0\n", __func__);
+      return 0;
+    }
     value_addr = ioremap(fuse_addr, sizeof(u32));
   }
   value = (u32)readl(value_addr);
@@ -388,20 +458,20 @@ static u32 qfprom_secdat_read(void)
   int temp=0;
   int sg_idx=0;
   int segment_size=0;
+#else
+  printk(KERN_ERR "[QFUSE]%s : CONFIG_LGE_QFPROM_SECHASH is not exist\n", __func__);
+  return RET_ERR;
 #endif
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
+  mutex_lock(&secdat_lock);
   if(secdat.pentry != NULL){
     printk(KERN_INFO "[QFUSE]%s : secdata file already loaded \n", __func__);
+    mutex_unlock(&secdat_lock);
     return RET_OK;
   }
 
-#ifndef CONFIG_LGE_QFPROM_SECHASH
-  printk(KERN_ERR "[QFUSE]%s : CONFIG_LGE_QFPROM_SECHASH is not exist\n", __func__);
-  ret = RET_ERR;
-  goto err_mem;
-#endif
 
   set_fs(KERNEL_DS);
   fp=filp_open(SEC_PATH, O_RDONLY, S_IRUSR);
@@ -430,7 +500,6 @@ static u32 qfprom_secdat_read(void)
   }
 
   sg_init_table(sg, ARRAY_SIZE(sg));
-
 
   fp->f_pos = 0;
   cnt = vfs_read(fp,(char*)&secdat.hdr, sizeof(secdat.hdr),&fp->f_pos);
@@ -464,18 +533,15 @@ static u32 qfprom_secdat_read(void)
   }
   sg_set_buf(&sg[sg_idx++], (const char*)&secdat.list_hdr, sizeof(fuseprov_qfuse_list_hdr_type));
 
-  if(secdat.pentry != NULL){
-      kfree(secdat.pentry);
-      secdat.pentry = NULL;
-  }
-  if(secdat.list_hdr.size > 0 && secdat.list_hdr.fuse_count > 0 && secdat.list_hdr.fuse_count <= FUSEPROV_INFO_MAX_SIZE){
+  if(secdat.list_hdr.size > 0 && secdat.list_hdr.fuse_count > 0 && secdat.list_hdr.fuse_count <= FUSEPROV_MAX_FUSE_COUNT){
     secdat.pentry = kmalloc(secdat.list_hdr.size, GFP_KERNEL);
     if(secdat.pentry != NULL){
       memset(secdat.pentry, 0, secdat.list_hdr.size);
-      cnt = vfs_read(fp, (char *)secdat.pentry, secdat.list_hdr.size,&fp->f_pos); 
+      cnt = vfs_read(fp, (char *)secdat.pentry, secdat.list_hdr.size,&fp->f_pos);
       if(cnt != secdat.list_hdr.size){
         printk(KERN_ERR "[QFUSE]%s : fuseprov_pentry read error\n", __func__);
         kfree(secdat.pentry);
+        secdat.pentry = NULL;
         ret = RET_ERR;
         goto err_mem;
       }
@@ -542,14 +608,17 @@ static u32 qfprom_secdat_read(void)
 err_mem:
   if(tfm)
     crypto_free_hash(tfm);
+
   if(ret == RET_ERR && secdat.pentry){
     kfree(secdat.pentry);
     secdat.pentry=NULL;
   }
-  filp_close(fp, NULL);
-  set_fs(old_fs);
+  if(fp)
+    filp_close(fp, NULL);
 
 err:
+  set_fs(old_fs);
+  mutex_unlock(&secdat_lock);
   printk(KERN_INFO "[QFUSE]%s end\n", __func__);
   return ret;
 }
@@ -557,31 +626,36 @@ err:
 static u32 qfprom_verify_data(int type)
 {
   int i=0;
-  int verification_blow_value = 0;
-  int verification_result_value = 0;
+  int verification_value = 0;
+  int result_value = 0;
   int ret=RET_ERR;
 
   printk(KERN_INFO "[QFUSE]%s start\n", __func__);
 
   if(qfprom_secdat_read()){
-    verification_blow_value = 0;
+    verification_value = 0;
     printk(KERN_ERR "[QFUSE]%s: secdat read fail \n", __func__);
     printk(KERN_INFO "[QFUSE]%s end\n", __func__);
-    if(type)
-      return verification_blow_value;
-    else
+    if(type){
+      /*QFUSE_VERIFICATION*/
+      return verification_value;
+    }else{
+       /*QFUSE_CHECK*/
       return ret;
+    }
   }
 
   if(type){
-    verification_blow_value = qfprom_verification_blow_data();
-    printk(KERN_INFO "[QFUSE]verification_blow_value = %x\n", verification_blow_value);
+    /*QFUSE_VERIFICATION*/
+    verification_value = qfprom_verification_blow_data();
+    printk(KERN_INFO "[QFUSE]verification_blow_value = %x\n", verification_value);
   }else{
-    verification_result_value = qfprom_result_check_data();
+    /*QFUSE_CHECK*/
+    result_value = qfprom_result_check_data();
     while(i < DEFENSIVE_LOOP_NUM){
-      verification_blow_value = qfprom_verification_blow_data();
-      printk(KERN_INFO "[QFUSE]verification_blow_value = %x\n", verification_blow_value);
-      if(verification_result_value > 0 && verification_blow_value == verification_result_value){
+      verification_value = qfprom_verification_blow_data();
+      printk(KERN_INFO "[QFUSE]verification_blow_value = %x\n", verification_value);
+      if(result_value > 0 && verification_value == result_value){
         printk(KERN_INFO "[QFUSE]%s: verification success\n", __func__);
         ret = RET_OK;
         break;
@@ -593,10 +667,49 @@ static u32 qfprom_verify_data(int type)
   }
 
   printk(KERN_INFO "[QFUSE]%s end\n", __func__);
-  if(type)
-    return verification_blow_value;
-  else
+  if(type){
+    /*QFUSE_VERIFICATION*/
+    return verification_value;
+  }else{
+    /*QFUSE_CHECK*/
     return ret;
+  }
+}
+
+static u32 qfprom_is_version_enable(void)
+{
+  u32 ret = 0;
+  if (((qfprom_read(anti_rollback_enable.addr+0)&anti_rollback_enable.lsb) != anti_rollback_enable.lsb) ||
+      ((qfprom_read(anti_rollback_enable.addr+4)&anti_rollback_enable.msb) != anti_rollback_enable.msb)) {
+    printk(KERN_INFO "[QFUSE]%s : Anti-rollback fuse is not blowed\n", __func__);
+    ret = 0;
+  } else {
+    printk(KERN_INFO "[QFUSE]%s : Anti-rollback fuse is blowed\n", __func__);
+    ret = 1;
+  }
+  return ret;
+}
+
+static u32 qfprom_version_check(u32 check_type)
+{
+  int i = 0, j = 0;
+  u32 v_l = 0, v_m = 0, ret = 0;
+
+  for (i = 0; i < ARRAY_SIZE(version_bits); i++) {
+    if(version_bits[i].type == check_type) {
+      v_l = qfprom_read(version_bits[i].addr+0) & version_bits[i].lsb;
+      v_m = qfprom_read(version_bits[i].addr+4) & version_bits[i].msb;
+      for (j = 0; j < 32; j++) {
+        if ((v_l & (0x1 << j)) != 0)
+          ret++;
+        if ((v_m & (0x1 << j)) != 0)
+          ret++;
+      }
+    }
+  }
+
+  printk(KERN_INFO "[QFUSE]%s : Version - %d\n", __func__, ret);
+  return ret;
 }
 
 static int __exit lge_qfprom_interface_remove(struct platform_device *pdev)
@@ -613,9 +726,18 @@ static int __init lge_qfprom_probe(struct platform_device *pdev)
 {
   int err;
   printk(KERN_INFO "[QFUSE]%s : qfprom init\n", __func__);
+  mutex_init(&secdat_lock);
   err = sysfs_create_group(&pdev->dev.kobj, &qfprom_attribute_group);
-  if (err < 0)
-    printk(KERN_ERR "[QFUSE]%s: cant create attribute file\n", __func__);
+  if (err < 0) {
+    printk(KERN_ERR "[QFUSE]%s: cant create lge-qfprom attribute group\n", __func__);
+    return err;
+  }
+
+  err = sysfs_create_group(&pdev->dev.kobj, &qfprom_version_attribute_group);
+  if (err < 0) {
+    printk(KERN_ERR "[QFUSE]%s: cant create version attribute group\n", __func__);
+  }
+
   return err;
 }
 
