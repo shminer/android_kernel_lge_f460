@@ -159,13 +159,6 @@ struct diag_log_event_stats {
 	int is_set;
 } __packed;
 
-struct diag_dci_pkt_rsp_header_t {
-	int type;
-	int length;
-	uint8_t delete_flag;
-	int uid;
-} __packed;
-
 struct diag_dci_pkt_header_t {
 	uint8_t start;
 	uint8_t version;
@@ -179,6 +172,13 @@ struct diag_dci_header_t {
 	uint8_t version;
 	uint16_t length;
 	uint8_t cmd_code;
+} __packed;
+
+struct diag_dci_pkt_rsp_header_t {
+       int type;
+       int length;
+       uint8_t delete_flag;
+       int uid;
 } __packed;
 
 struct dci_ops_tbl_t {
@@ -259,7 +259,7 @@ int diag_dci_set_real_time(struct diag_dci_client_tbl *entry,
 			   uint8_t real_time);
 int diag_dci_copy_health_stats(struct diag_dci_health_stats_proc *stats_proc);
 int diag_dci_write_proc(int peripheral, int pkt_type, char *buf, int len);
-
+void dci_drain_data(unsigned long data);
 #ifdef CONFIG_DIAGFWD_BRIDGE_CODE
 int diag_send_dci_log_mask_remote(int token);
 int diag_send_dci_event_mask_remote(int token);

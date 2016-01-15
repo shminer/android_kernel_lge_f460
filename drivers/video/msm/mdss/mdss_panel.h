@@ -187,6 +187,8 @@ struct lcd_panel_info {
 	u32 xres_pad;
 	/* Pad height */
 	u32 yres_pad;
+	u32 h_polarity;
+	u32 v_polarity;
 };
 
 
@@ -355,6 +357,7 @@ struct mdss_panel_info {
 	int panel_power_state;
 	int blank_state;
 	int sharpening_level;
+	bool is_split_display;
 
 	uint32_t panel_dead;
 

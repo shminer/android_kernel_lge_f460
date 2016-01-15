@@ -349,7 +349,7 @@ static void mdss_fb_parse_dt_split(struct msm_fb_data_type *mfd)
 static ssize_t mdss_fb_store_split(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
-	u32 data[2] = {0};
+	int data[2] = {0};
 	struct fb_info *fbi = dev_get_drvdata(dev);
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
 
@@ -640,6 +640,8 @@ static int mdss_fb_probe(struct platform_device *pdev)
 	if (rc)
 		return rc;
 
+	mdss_fb_get_split(mfd);
+	
 	if (mfd->mdp.init_fnc) {
 		rc = mfd->mdp.init_fnc(mfd);
 		if (rc) {
@@ -2432,6 +2434,17 @@ static void mdss_fb_var_to_panelinfo(struct fb_var_screeninfo *var,
 	pinfo->lcdc.h_front_porch = var->right_margin;
 	pinfo->lcdc.h_back_porch = var->left_margin;
 	pinfo->lcdc.h_pulse_width = var->hsync_len;
+		
+	if (var->sync & FB_SYNC_HOR_HIGH_ACT)
+		pinfo->lcdc.h_polarity = 0;
+	else
+		pinfo->lcdc.h_polarity = 1;
+
+	if (var->sync & FB_SYNC_VERT_HIGH_ACT)
+		pinfo->lcdc.v_polarity = 0;
+	else
+		pinfo->lcdc.v_polarity = 1;
+
 	pinfo->clk_rate = var->pixclock;
 }
 
@@ -3302,7 +3315,7 @@ module_init(mdss_fb_init);
 int mdss_fb_suspres_panel(struct device *dev, void *data)
 {
 	struct msm_fb_data_type *mfd;
-	int rc;
+	int rc = 0;
 	u32 event;
 
 	if (!data) {
@@ -3315,10 +3328,14 @@ int mdss_fb_suspres_panel(struct device *dev, void *data)
 
 	event = *((bool *) data) ? MDSS_EVENT_RESUME : MDSS_EVENT_SUSPEND;
 
-	rc = mdss_fb_send_panel_event(mfd, event, NULL);
-	if (rc)
-		pr_warn("unable to %s fb%d (%d)\n",
-			event == MDSS_EVENT_RESUME ? "resume" : "suspend",
-			mfd->index, rc);
+	/* Do not send runtime suspend/resume for HDMI primary */
+	if (!mdss_fb_is_hdmi_primary(mfd)) {
+		rc = mdss_fb_send_panel_event(mfd, event, NULL);
+		if (rc)
+			pr_warn("unable to %s fb%d (%d)\n",
+				event == MDSS_EVENT_RESUME ?
+				"resume" : "suspend",
+				mfd->index, rc);
+	}
 	return rc;
 }

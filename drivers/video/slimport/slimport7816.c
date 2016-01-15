@@ -33,9 +33,9 @@
 #ifdef CONFIG_SLIMPORT_DYNAMIC_HPD
 #include "../msm/mdss/mdss_hdmi_slimport.h"
 #endif
-/*
-
-
+/* LGE NOTICE,
+ * Use device tree structure data when defined "CONFIG_OF"
+ * 2012-10-17, jihyun.seong@lge.com
  */
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
@@ -56,11 +56,11 @@ static bool irq_enable;
 /* to access global platform data */
 static struct anx7816_platform_data *g_pdata;
 
-/*
-
-
-
-
+/* LGE_CHANGE,
+ * to apply High voltage to HDMI_SWITCH_EN
+ * which can select MHL or SlimPort on LGPS11
+ * this feature should be enable only when board has hdmi switch chip.
+ * 2012-10-31, jihyun.seong@lge.com
  */
 /* #define USE_HDMI_SWITCH */
 #define TRUE 1
@@ -154,9 +154,9 @@ bool slimport_is_connected(void)
 }
 EXPORT_SYMBOL(slimport_is_connected);
 
-/*
-
-
+/* LGE_CHANGE,
+ * power control
+ * 2012-10-17, jihyun.seong@lge.com
  */
 static int slimport7816_avdd_power(unsigned int onoff)
 {
@@ -1061,9 +1061,9 @@ static void anx7816_work_func(struct work_struct *work)
 #endif
 }
 
-/*
-
-
+/* LGE_CHANGE,
+ * add device tree parsing functions
+ * 2012-10-17, jihyun.seong@lge.com
  */
 #ifdef CONFIG_OF
 int anx7816_regulator_configure(
@@ -1148,11 +1148,11 @@ static int anx7816_parse_dt(
 		pdata->gpio_int,
 		pdata->gpio_cbl_det);
 	/*
-
-
-
-
-  */
+	 * if "lge,external-ldo-control" property is not exist, we
+	 * assume that it is used in board.
+	 * lgps11 don't use external ldo control,
+	 * please use "lge,external-ldo-control=<0>" in dtsi
+	 */
 	rc = of_property_read_u32(np, "lge,external-ldo-control",
 			&pdata->external_ldo_control);
 	if (rc == -EINVAL)
@@ -1348,21 +1348,21 @@ static int anx7816_i2c_probe(struct i2c_client *client,
 				"anx7816", anx7816);
 		if (ret  < 0) {
 			pr_err("%s : failed to request irq\n", __func__);
-			goto err2;
+			goto err3;
 		}
 
 		ret = irq_set_irq_wake(client->irq, 1);
 		if (ret  < 0) {
 			pr_err("%s : Request irq for cable detect", __func__);
 			pr_err("interrupt wake set fail\n");
-			goto err3;
+			goto err4;
 		}
 
 		ret = enable_irq_wake(client->irq);
 		if (ret  < 0) {
 			pr_err("%s : Enable irq for cable detect", __func__);
 			pr_err("interrupt wake enable fail\n");
-			goto err3;
+			goto err4;
 		}
 	} else {
 		pr_err("%s %s : %s, Disable cbl det irq!!\n", LOG_TAG, __func__,
@@ -1373,7 +1373,7 @@ static int anx7816_i2c_probe(struct i2c_client *client,
 	ret = create_sysfs_interfaces(&client->dev);
 	if (ret < 0) {
 		pr_err("%s : sysfs register failed", __func__);
-		goto err3;
+		goto err4;
 	}
 #ifdef CONFIG_SLIMPORT_DYNAMIC_HPD
 	hdmi_slimport_ops = devm_kzalloc(&client->dev,
@@ -1382,7 +1382,7 @@ static int anx7816_i2c_probe(struct i2c_client *client,
 	if (!hdmi_slimport_ops) {
 		pr_err("%s: alloc hdmi slimport ops failed\n", __func__);
 		ret = -ENOMEM;
-		goto err3;
+		goto err4;
 	}
 
 	if (anx7816->pdata->hdmi_pdev) {
@@ -1391,15 +1391,17 @@ static int anx7816_i2c_probe(struct i2c_client *client,
 		if (ret) {
 			pr_err("%s: register with hdmi failed\n", __func__);
 			ret = -EPROBE_DEFER;
-			goto err3;
+			goto err4;
 		}
 	}
 #endif
 	pr_info("%s %s end\n", LOG_TAG, __func__);
 	goto exit;
 
-err3:
+err4:
 	free_irq(client->irq, anx7816);
+err3:
+	wake_lock_destroy(&anx7816->slimport_lock);
 err2:
 	destroy_workqueue(anx7816->workqueue);
 err1:
