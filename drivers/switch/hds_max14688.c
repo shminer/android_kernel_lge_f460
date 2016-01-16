@@ -39,7 +39,7 @@
 #include <linux/mfd/pm8xxx/pm8xxx-adc.h>
 #include <linux/qpnp/qpnp-adc.h>
 
-/*                                                         */
+/* 2014-06-23, jongyeol.yang@lge, WA for headset mic noise */
 #include "../sound/soc/codecs/wcd9330.h"
 
 #define DRIVER_DESC    "MAX14688 I2C Driver"
@@ -694,7 +694,7 @@ static void max14688_det_work (struct work_struct *work)
 	log_dbg("jack %s inserted\n", __current_jack_name(me));
 	me->report_jack(me->dev, __current_jack(me), JACK_IN_VALUE);
 
-	/*                                                                    */
+	/* 2014-10-06, mint.choi@lge, HP L/R auto pull down set for aux noise */
 	if((!strcmp(__current_jack_name(me),"ACC/AUX" ))&&(!auto_pd_enabled)){
 		tomtom_set_auto_pull_down(true);
 		auto_pd_enabled = true;
@@ -774,9 +774,9 @@ static void max14688_irq_jack_removed (struct max14688 *me)
 	log_dbg("jack %s removed\n", __current_jack_name(me));
 	me->report_jack(me->dev, __current_jack(me), JACK_OUT_VALUE);
 
-	/*                                                         */
+	/* 2014-06-23, jongyeol.yang@lge, WA for headset mic noise */
 	tomtom_dec5_vol_mute();
-	/*                                                                    */
+	/* 2014-10-06, mint.choi@lge, HP L/R auto pull down set for aux noise */
 	if(auto_pd_enabled){
 		tomtom_set_auto_pull_down(false);
 		auto_pd_enabled = false;
@@ -1328,12 +1328,6 @@ static __always_inline void max14688_destroy (struct max14688 *me)
 	me->sdev.name = SWITCH_NAME;
 	switch_dev_unregister(&me->sdev);
 
-	me->sdev.name = SWITCH_NAME_ADVANCED;
-	switch_dev_unregister(&me->sdev);
-
-	me->sdev.name = SWITCH_NAME_AUX;
-	switch_dev_unregister(&me->sdev);
-
 	cancel_delayed_work_sync(&me->irq_work);
 	cancel_delayed_work_sync(&me->det_work);
 
@@ -1493,8 +1487,6 @@ static void max14688_parse_dt(struct device *dev, struct max14688_platform_data 
 	pdata->gpio_int = of_get_named_gpio_flags(np, "max14688,gpio_int", 0, NULL);
 
 	pdata->switch_name           = SWITCH_NAME;
-	pdata->switch_name_advanced  = SWITCH_NAME_ADVANCED;
-	pdata->switch_name_aux       = SWITCH_NAME_AUX;
 	pdata->jack_matches          = max14688_jack_matches;
 	pdata->num_of_jack_matches   = ARRAY_SIZE(max14688_jack_matches);
 	pdata->button_matches        = max14688_button_matches;
@@ -1636,26 +1628,6 @@ static int max14688_probe(struct i2c_client *client, const struct i2c_device_id 
 	}
 	/* initialize switch device */
 	me->sdev.name             = pdata->switch_name;
-
-	rc = switch_dev_register(&me->sdev);
-
-	if (rc < 0) {
-		log_err("Failed to register switch device\n");
-		switch_dev_unregister(&me->sdev);
-		goto abort;
-	}
-
-	me->sdev.name             = pdata->switch_name_advanced;
-
-	rc = switch_dev_register(&me->sdev);
-
-	if (rc < 0) {
-		log_err("Failed to register switch device\n");
-		switch_dev_unregister(&me->sdev);
-		goto abort;
-	}
-
-	me->sdev.name             = pdata->switch_name_aux;
 
 	rc = switch_dev_register(&me->sdev);
 
@@ -1820,4 +1792,3 @@ struct input_dev *max14688_input_device (struct device *dev)
 	return me->input_dev;
 }
 EXPORT_SYMBOL(max14688_input_device);
-

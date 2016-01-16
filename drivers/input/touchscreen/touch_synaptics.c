@@ -29,6 +29,7 @@
 #include <linux/uaccess.h>  /*for file access*/
 #include <linux/workqueue.h>
 #include <linux/wakelock.h>
+#include <linux/mutex.h>
 
 #include <linux/input/lge_touch_core.h>
 #include <linux/input/touch_synaptics.h>
@@ -257,7 +258,7 @@ static int wq_rebase_lock = 1;
 static int raw_cap_file_exist;
 bool touch_wake_test;
 unsigned int  touch_wake_count;
-#define TOUCH_WAKE_COUNTER_LOG_PATH		"/mnt/sdcard/wake_cnt.txt"
+#define TOUCH_WAKE_COUNTER_LOG_PATH		"/sdcard/wake_cnt.txt"
 enum error_type synaptics_ts_ic_ctrl(struct i2c_client *client, u8 code, u32 value, u32 *ret);
 static int set_doze_param(struct synaptics_ts_data *ts, int value);
 static bool need_scan_pdt = true;
@@ -302,11 +303,16 @@ void write_time_log(char *filename, char *data, int data_include)
 
 	set_fs(KERNEL_DS);
 
-	if (filename == NULL)
-		fname = "/mnt/sdcard/touch_self_test.txt";
-	else
+	if (filename == NULL) {
+		if (factory_boot)
+			fname =  "/data/logger/touch_self_test.txt";
+		else
+			fname = "/sdcard/touch_self_test.txt";
+	} else {
 		fname = filename;
+	}
 	fd = sys_open(fname, O_WRONLY|O_CREAT|O_APPEND, 0666);
+	sys_chmod(fname, 0666);
 
 	TOUCH_INFO_MSG("write open %s, fd : %d\n",
 			(fd >= 0) ? "success" : "fail", fd);
@@ -1424,8 +1430,10 @@ static ssize_t show_firmware(struct i2c_client *client, char *buf)
 	int ret = 0;
 	int rc = 0;
 
+	mutex_lock(&ts->pdata->thread_lock);
 	read_page_description_table(ts->client);
 	rc = get_ic_info(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 	if (rc < 0) {
 		ret += snprintf(buf+ret,
 				PAGE_SIZE,
@@ -1519,8 +1527,10 @@ static ssize_t show_synaptics_fw_version(struct i2c_client *client, char *buf)
 	int ret = 0;
 	int rc = 0;
 
+	mutex_lock(&ts->pdata->thread_lock);
 	read_page_description_table(ts->client);
 	rc = get_ic_info(ts);
+	mutex_unlock(&ts->pdata->thread_lock);
 	if (rc < 0) {
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "-1\n");
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "Read Fail Touch IC Info.\n");
@@ -1534,7 +1544,7 @@ static ssize_t show_synaptics_fw_version(struct i2c_client *client, char *buf)
 				ts->fw_info.fw_version);
 	else
 		ret += snprintf(buf+ret,
-				PAGE_SIZE-ret, 
+				PAGE_SIZE-ret,
 				"version : v%d.%02d\n",
 				((ts->fw_info.fw_version[3] & 0x80) >> 7),
 				(ts->fw_info.fw_version[3] & 0x7F));
@@ -1592,6 +1602,7 @@ static ssize_t show_sd(struct i2c_client *client, char *buf)
 		msleep(30);
 		write_firmware_version_log(ts);
 
+		mutex_lock(&ts->pdata->thread_lock);
 		touch_disable_irq(ts->client->irq);
 
 		SCAN_PDT();
@@ -1758,7 +1769,7 @@ static ssize_t show_sd(struct i2c_client *client, char *buf)
 		msleep(30);
 		write_time_log(NULL, NULL, 0);
 		msleep(20);
-
+		mutex_unlock(&ts->pdata->thread_lock);
 
 		ret = snprintf(buf,
 				PAGE_SIZE,
@@ -2968,7 +2979,7 @@ error:
 }
 
 enum error_type synaptics_ts_probe(struct i2c_client *client,
-		const struct touch_platform_data *lge_ts_data,
+		struct touch_platform_data *lge_ts_data,
 		const struct state_info *state,
 		struct attribute ***attribute_list)
 {
@@ -3942,8 +3953,8 @@ enum error_type synaptics_ts_fw_upgrade(struct i2c_client *client,
 					info->fw_force_upgrade, path);
 			goto firmware;
 		}
-		/*                                 
-                                      */
+		/* it will be reset and initialized
+		 * automatically by lge_touch_core. */
 	}
 	return NO_UPGRADE;
 

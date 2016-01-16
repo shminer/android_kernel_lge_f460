@@ -64,7 +64,6 @@ struct lge_touch_data {
 	struct delayed_work		work_trigger_handle;
 	struct delayed_work             work_thermal;
 	struct delayed_work             work_crack;
-	struct mutex			thread_lock;
 	struct bouncing_filter_info	bouncing_filter;
 	struct grip_filter_info		grip_filter;
 	struct accuracy_filter_info	accuracy_filter;
@@ -103,22 +102,23 @@ extern struct pseudo_batt_info_type pseudo_batt_info;
 int touch_ta_status = 0;
 u8  is_probe = 0;
 static struct lge_touch_data *ts_data = NULL;
+int factory_boot = 0;
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4
 extern bool i2c_suspended;
 #endif
 extern int boot_mode;
 
-/*
-
+/* Debug mask value
+ * usage: echo [debug_mask] > /sys/module/lge_touch_core/parameters/debug_mask
  */
 u32 touch_debug_mask = DEBUG_BASE_INFO | DEBUG_LPWG_COORDINATES;
 module_param_named(debug_mask, touch_debug_mask, int, S_IRUGO|S_IWUSR|S_IWGRP);
 
 #ifdef LGE_TOUCH_TIME_DEBUG
-/*
-
-
+/* Debug mask value
+ * usage: echo [debug_mask] >
+ * /sys/module/lge_touch_core/parameters/time_debug_mask
  */
 u32 touch_time_debug_mask = DEBUG_TIME_PROFILE_NONE;
 module_param_named(time_debug_mask,
@@ -857,13 +857,13 @@ static int report_event(const struct lge_touch_data *ts)
 				ts->ts_curr_data.abs_data[i].width_minor,
 				ts->ts_curr_data.abs_data[i].orientation,
 				ts->ts_curr_data.abs_data[i].pressure);
+
 #if 0
 		if ((ts->ts_curr_data.report_id_mask &
 					(1 << ts->ts_curr_data.abs_data[i].id))
 				&& !(ts->ts_prev_data.report_id_mask &
 					(1 << ts->ts_curr_data.abs_data[i].id))) {
 			++ts->pdata->touch_count_num;
-
 			if (lockscreen_stat) {
 				TOUCH_INFO_MSG("%d finger pressed: <%d> "
 						"x[xxxx] y[xxxx] z[xxx]\n",
@@ -1470,7 +1470,7 @@ static void touch_trigger_handle(struct work_struct *work_trigger_handle)
 
 	if ((ts->ts_report_data.total_num
 			|| atomic_read(&ts->state.upgrade_state) == UPGRADE_START
-			|| mutex_is_locked(&ts->thread_lock))
+			|| mutex_is_locked(&ts->pdata->thread_lock))
 			&& ta_rebase_retry_count < MAX_RETRY_COUNT) {
 		++ta_rebase_retry_count;
 		TOUCH_DEBUG(DEBUG_BASE_INFO,
@@ -1486,9 +1486,9 @@ static void touch_trigger_handle(struct work_struct *work_trigger_handle)
 		return;
 	} else {
 		if (atomic_read(&ts->state.device_init_state) == INIT_DONE) {
-			if (mutex_is_locked(&ts->thread_lock))
+			if (mutex_is_locked(&ts->pdata->thread_lock))
 				return;
-			mutex_lock(&ts->thread_lock);
+			mutex_lock(&ts->pdata->thread_lock);
 			if (touch_ta_status)
 				HANDLE_GHOST_ALG_RET(ghost_alg_ret = rebase_ic(ts));
 			else
@@ -1499,14 +1499,14 @@ static void touch_trigger_handle(struct work_struct *work_trigger_handle)
 
 do_reset_curr_data:
 ignore:
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return;
 
 do_init:
 error:
 	safety_reset(ts);
 	touch_ic_init(ts, 0);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 }
 
 
@@ -1570,7 +1570,7 @@ static void firmware_upgrade_func(struct work_struct *work_upgrade)
 	enum error_type ret = NO_ERROR;
 	TOUCH_TRACE();
 
-	mutex_lock(&ts->thread_lock);
+	mutex_lock(&ts->pdata->thread_lock);
 	TOUCH_INFO_MSG("%s : firmware upgrade start\n", __func__);
 	interrupt_control(ts, INTERRUPT_DISABLE);
 	if (atomic_read(&ts->state.power_state) == POWER_OFF) {
@@ -1591,7 +1591,7 @@ static void firmware_upgrade_func(struct work_struct *work_upgrade)
 
 	memset(&ts->fw_info, 0, sizeof(struct touch_firmware_module));
 	TOUCH_INFO_MSG("%s : firmware upgrade end\n", __func__);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return;
 }
 
@@ -1600,7 +1600,7 @@ static void inspection_crack_func(struct work_struct *work_crack)
 	struct lge_touch_data *ts = container_of(to_delayed_work(work_crack),
 			struct lge_touch_data, work_crack);
 
-	mutex_lock(&ts->thread_lock);
+	mutex_lock(&ts->pdata->thread_lock);
 	TOUCH_INFO_MSG("%s : crack_check start\n", __func__);
 	if (atomic_read(&ts->state.upgrade_state) != UPGRADE_START) {
 		atomic_set(&ts->state.crack_test_state, CRACK_TEST_START);
@@ -1609,7 +1609,7 @@ static void inspection_crack_func(struct work_struct *work_crack)
 		atomic_set(&ts->state.crack_test_state, CRACK_TEST_FINISH);
 	}
 	TOUCH_INFO_MSG("%s : crack_check end\n", __func__);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 }
 
 /* touch_thread_irq_handler
@@ -1650,7 +1650,7 @@ static irqreturn_t touch_thread_irq_handler(int irq, void *dev_id)
 	enum ghost_error_type ghost_alg_ret = NO_ACTION;
 
 	TOUCH_TRACE();
-	mutex_lock(&ts->thread_lock);
+	mutex_lock(&ts->pdata->thread_lock);
 
 	HANDLE_RET(ret = touch_device_func->data(ts->client,
 				&ts->ts_curr_data, &ts->ts_prev_data));
@@ -1691,19 +1691,19 @@ do_reset_curr_data:
 	memset(&ts->ts_curr_data, 0, sizeof(struct touch_data));
 
 ignore:
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return IRQ_HANDLED;
 
 do_init:
 	safety_reset(ts);
 	touch_ic_init(ts, 0);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return IRQ_HANDLED;
 
 error:
 	safety_reset(ts);
 	touch_ic_init(ts, 0);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	TOUCH_ERR_MSG("Interrupt Handling fail\n");
 	return IRQ_NONE;
 }
@@ -1777,12 +1777,12 @@ void change_thermal_param(struct work_struct *work_thermal)
 	} else {
 		TOUCH_INFO_MSG("%s: Before changing thermal prarmeters...\n",
 				__func__);
-		mutex_lock(&ts->thread_lock);
+		mutex_lock(&ts->pdata->thread_lock);
 		touch_device_func->ic_ctrl(ts->client,
 				IC_CTRL_THERMAL, current_thermal_mode, NULL);
 		TOUCH_INFO_MSG("%s: Thermal prarmeters are changed.\n",
 				__func__);
-		mutex_unlock(&ts->thread_lock);
+		mutex_unlock(&ts->pdata->thread_lock);
 	}
 
 	return;
@@ -2211,9 +2211,9 @@ static ssize_t store_lpwg_data(struct i2c_client *client,
 
 	TOUCH_INFO_MSG("%s : reply = %d\n", __func__, reply);
 	if (touch_device_func->lpwg) {
-		mutex_lock(&ts->thread_lock);
+		mutex_lock(&ts->pdata->thread_lock);
 		touch_device_func->lpwg(client, LPWG_REPLY, reply, NULL);
-		mutex_unlock(&ts->thread_lock);
+		mutex_unlock(&ts->pdata->thread_lock);
 	}
 
 	atomic_set(&ts->state.uevent_state, UEVENT_IDLE);
@@ -2256,7 +2256,7 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 			type, value[0], value[1], value[2], value[3]);
 
 	if (touch_device_func->lpwg) {
-		mutex_lock(&ts->thread_lock);
+		mutex_lock(&ts->pdata->thread_lock);
 		switch (type) {
 		case 1:
 			touch_device_func->lpwg(client,
@@ -2310,7 +2310,7 @@ static ssize_t store_lpwg_notify(struct i2c_client *client,
 		default:
 			break;
 		}
-		mutex_unlock(&ts->thread_lock);
+		mutex_unlock(&ts->pdata->thread_lock);
 	}
 	return count;
 }
@@ -3039,7 +3039,7 @@ static int touch_suspend(struct device *dev)
 
 	if ((quick_cover_status == QUICKCOVER_CLOSE)
 			&& (atomic_read(&ts->state.power_state) != POWER_OFF)) {
-		mutex_lock(&ts->thread_lock);
+		mutex_lock(&ts->pdata->thread_lock);
 		touch_device_func->lpwg(ts->client,
 				LPWG_ACTIVE_AREA_X1,
 				ts->pdata->role->quickcover_filter->X1, NULL);
@@ -3052,7 +3052,7 @@ static int touch_suspend(struct device *dev)
 		touch_device_func->lpwg(ts->client,
 				LPWG_ACTIVE_AREA_Y2,
 				ts->pdata->role->quickcover_filter->Y2, NULL);
-		mutex_unlock(&ts->thread_lock);
+		mutex_unlock(&ts->pdata->thread_lock);
 	}
 
 	TOUCH_INFO_MSG("%s : touch_suspend done\n", __func__);
@@ -3084,7 +3084,7 @@ static int touch_resume(struct device *dev)
 		return 0;
 	}
 
-	mutex_lock(&ts->thread_lock);
+	mutex_lock(&ts->pdata->thread_lock);
 	if (ts->pdata->role->use_sleep_mode) {
 		power_control(ts, POWER_OFF);
 		power_control(ts, POWER_ON);
@@ -3104,7 +3104,7 @@ static int touch_resume(struct device *dev)
 		TOUCH_ERR_MSG("%s : touch ic init fail\n", __func__);
 
 	TOUCH_INFO_MSG("%s : touch_resume done\n", __func__);
-	mutex_unlock(&ts->thread_lock);
+	mutex_unlock(&ts->pdata->thread_lock);
 	return 0;
 }
 
@@ -3198,7 +3198,7 @@ static int touch_probe(struct i2c_client *client,
 	msleep(ts->pdata->role->booting_delay);
 
 	// it should be initialized before both init_func and enable_irq
-	mutex_init(&ts->thread_lock);
+	mutex_init(&ts->pdata->thread_lock);
 	INIT_DELAYED_WORK(&ts->work_init, touch_init_func);
 	INIT_DELAYED_WORK(&ts->work_upgrade, firmware_upgrade_func);
 	INIT_DELAYED_WORK(&ts->work_ime_drumming, change_ime_drumming_func);
@@ -3307,6 +3307,8 @@ static int touch_probe(struct i2c_client *client,
 #endif
 	ts_data = ts;
 	is_probe = 1;
+	factory_boot = lge_get_factory_boot();
+	TOUCH_INFO_MSG("factory boot check: %d\n", factory_boot);
 	TOUCH_INFO_MSG("touch_probe done\n");
 
 	return 0;

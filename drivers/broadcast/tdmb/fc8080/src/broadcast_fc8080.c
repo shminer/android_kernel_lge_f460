@@ -23,7 +23,7 @@
 #include <linux/of_gpio.h>
 
 #include <linux/clk.h>
-#include <linux/msm-bus.h> /* FEATURE_DMB_USE_BUS_SCALE*/
+#include <mach/msm_bus.h> /* FEATURE_DMB_USE_BUS_SCALE*/
 
 /* external function */
 extern int broadcast_fc8080_drv_if_isr(void);
@@ -86,7 +86,8 @@ static Device_drv device_fc8080 = {
 	&broadcast_fc8080_drv_if_get_msc,
 	&broadcast_fc8080_drv_if_reset_ch,
 	&broadcast_fc8080_drv_if_user_stop,
-	&broadcast_fc8080_drv_if_select_antenna
+	&broadcast_fc8080_drv_if_select_antenna,
+    &broadcast_fc8080_drv_if_set_nation
 };
 
 #if 0

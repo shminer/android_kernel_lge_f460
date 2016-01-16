@@ -2885,8 +2885,8 @@ wl_cfgp2p_start_p2p_device(struct wiphy *wiphy, struct wireless_dev *wdev)
 	}
 
 	p2p_on(cfg) = true;
-#if defined(P2P_IE_MISSING_FIX)
-	cfg->p2p_prb_noti = false;
+#if defined(CUSTOMER_HW10) && defined(WL_CFG80211_P2P_DEV_IF)	// [CSP#868459] TV connection issue
+    cfg->p2p_prb_noti = false;
 #endif
 
 	CFGP2P_DBG(("P2P interface started\n"));

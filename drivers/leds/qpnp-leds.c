@@ -169,7 +169,7 @@ void make_blink_led_pattern(int rgb, int delay_on, int delay_off)
 	rgb_lut_params.lut_pause_hi = delay_off/2;
 	rgb_lut_params.lut_pause_lo = delay_on/2;
 	rgb_lut_params.ramp_step_ms = 1;
-	rgb_lut_params.flags = 89;
+	rgb_lut_params.flags = 91;
 
 	if (mix_brightness_tunning) {
 #if defined(CONFIG_LEDS_WINDOW_COLOR)

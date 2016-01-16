@@ -617,7 +617,9 @@ static int diag_copy_dci(char __user *buf, size_t count,
 {
 	int total_data_len = 0;
 	int ret = 0;
+	int write_len = 0;
 	int exit_stat = 1;
+	uint8_t drain_again = 0;
 	struct diag_dci_buffer_t *buf_entry, *temp;
 	struct diag_smd_info *smd_info = NULL;
 
@@ -628,17 +630,30 @@ static int diag_copy_dci(char __user *buf, size_t count,
 
 	ret += 4;
 
+	if (ret >= count) {
+		pr_err("diag: In %s, invalid value for ret: %d, count: %d\n",
+		       __func__, ret, count);
+		return -EINVAL;
+	}
+
 	mutex_lock(&entry->write_buf_mutex);
 	list_for_each_entry_safe(buf_entry, temp, &entry->list_write_buf,
 								buf_track) {
+		if ((total_data_len + buf_entry->data_len) > (count - ret)) {
+			drain_again = 1;
+			break;
+		}
+
 		list_del(&buf_entry->buf_track);
 		mutex_lock(&buf_entry->data_mutex);
 		if ((buf_entry->data_len > 0) &&
 		    (buf_entry->in_busy) &&
 		    (buf_entry->data)) {
 			if (copy_to_user(buf+ret, (void *)buf_entry->data,
-					 buf_entry->data_len))
+					 buf_entry->data_len)) {
+				pr_err("diag: pkt dropped\n");
 				goto drop;
+			}
 			ret += buf_entry->data_len;
 			total_data_len += buf_entry->data_len;
 			diag_ws_on_copy(DIAG_WS_DCI);
@@ -677,26 +692,23 @@ drop:
 
 	if (total_data_len > 0) {
 		/* Copy the total data length */
-		COPY_USER_SPACE_OR_EXIT(buf+8, total_data_len, 4);
-		ret -= 4;
-		/*
-		 * Flush any read that is currently pending on DCI data and
-		 * command channnels. This will ensure that the next read is not
-		 * missed.
-		 */
-		flush_workqueue(driver->diag_dci_wq);
-		diag_ws_on_copy_complete(DIAG_WS_DCI);
+		write_len = copy_to_user(buf + 8, (void *)&total_data_len, 4);
+		if (write_len) {
+			goto exit;
+		}
 	} else {
 		pr_debug("diag: In %s, Trying to copy ZERO bytes, total_data_len: %d\n",
 			__func__, total_data_len);
 	}
 
-	entry->in_service = 0;
-	mutex_unlock(&entry->write_buf_mutex);
 
 	exit_stat = 0;
 exit:
+	entry->in_service = 0;
+	mutex_unlock(&entry->write_buf_mutex);
 	*pret = ret;
+	if (drain_again)
+		dci_drain_data(0);
 
 	return exit_stat;
 }
@@ -1418,6 +1430,7 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 	int remote_token;
 	int exit_stat;
 	int copy_data = 0;
+	int copy_dci_data = 0;
 	unsigned long flags;
 
 	for (i = 0; i < driver->num_clients; i++)
@@ -1668,7 +1681,6 @@ drop:
 
 	if (driver->data_ready[index] & DCI_DATA_TYPE) {
 		/* Copy the type of data being passed */
-		data_type = driver->data_ready[index] & DCI_DATA_TYPE;
 		driver->data_ready[index] ^= DCI_DATA_TYPE;
 		list_for_each_safe(start, temp, &driver->dci_client_list) {
 			entry = list_entry(start, struct diag_dci_client_tbl,
@@ -1681,7 +1693,9 @@ drop:
 								sizeof(int));
 			COPY_USER_SPACE_OR_EXIT(buf + ret,
 					entry->client_info.token, sizeof(int));
+			copy_dci_data = 1;
 			exit_stat = diag_copy_dci(buf, count, entry, &ret);
+			driver->data_ready[index] ^= DCI_DATA_TYPE;
 			if (exit_stat == 1)
 				goto exit;
 		}
@@ -1705,6 +1719,7 @@ drop:
 		goto exit;
 	}
 exit:
+	mutex_unlock(&driver->diagchar_mutex);
 	if (copy_data) {
 		/*
 		 * Flush any work that is currently pending on the data
@@ -1715,8 +1730,16 @@ exit:
 		wake_up(&driver->smd_wait_q);
 		diag_ws_on_copy_complete(DIAG_WS_MD);
 	}
-	mutex_unlock(&driver->diagchar_mutex);
-
+	if (copy_dci_data) {
+		/*
+		 * Flush any read that is currently pending on DCI data and
+		 * command channnels. This will ensure that the next read is not
+		 * missed.
+		 */
+		diag_ws_on_copy_complete(DIAG_WS_DCI);
+		flush_workqueue(driver->diag_dci_wq);
+	}
+	
 #ifdef CONFIG_USB_G_LGE_ANDROID_DIAG_OSP_SUPPORT
 	driver->diag_read_status = 1;
 	wake_up_interruptible(&driver->diag_read_wait_q);

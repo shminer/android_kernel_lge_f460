@@ -607,8 +607,8 @@ struct bcm_cfg80211 {
 	u8 block_gon_req_tx_count;
 	u8 block_gon_req_rx_count;
 #endif /* WL_CFG80211_GON_COLLISION */
-#if defined(P2P_IE_MISSING_FIX)
-	bool p2p_prb_noti;
+#if defined(CUSTOMER_HW10)        // [CSP#868459] TV connection issue
+    bool p2p_prb_noti;
 #endif
 	s32(*state_notifier) (struct bcm_cfg80211 *cfg,
 		struct net_info *_net_info, enum wl_status state, bool set);

@@ -38,7 +38,7 @@ int broadcast_fc8080_drv_if_power_on(void)
 		gpMPI_Buffer = (uint8 *)&gpMPI_Array[0];
 #endif /* FC8080_USES_STATIC_BUFFER*/
 	}
-/*                    */
+/*LGE_BROADCAST_I_0907*/
 	if (tunerbb_drv_fc8080_is_on() == TRUE) {
 		printk("tdmb_fc8080_power_on state true\n");
 
@@ -231,6 +231,12 @@ int broadcast_fc8080_drv_if_select_antenna(unsigned int sel)
 {
 	tunerbb_drv_fc8080_select_antenna(sel);
 	return OK;
+}
+
+int broadcast_fc8080_drv_if_set_nation(unsigned int nation)
+{
+    tunerbb_drv_fc8080_set_nation(nation);
+    return OK;
 }
 
 int broadcast_fc8080_drv_if_isr(void)

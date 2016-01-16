@@ -873,10 +873,11 @@ struct dwc3 {
 	bool			core_reset_after_phy_init;
 	bool			err_evt_seen;
 	bool			enable_suspend_event;
+	bool			usb3_u1u2_disable;
 	struct dwc3_gadget_events	dbg_gadget_events;
-	unsigned long		irq_cnt;
 
 	/* offload IRQ handling to tasklet */
+	unsigned long		irq_cnt;
 	int			irq;
 	struct tasklet_struct	bh;
 	unsigned                bh_completion_time[MAX_INTR_STATS];

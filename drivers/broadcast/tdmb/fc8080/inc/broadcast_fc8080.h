@@ -26,6 +26,7 @@ extern int broadcast_fc8080_drv_if_get_msc(char** buffer_ptr, unsigned int* buff
 extern int broadcast_fc8080_drv_if_reset_ch(void);
 extern int broadcast_fc8080_drv_if_user_stop(int mode);
 extern int broadcast_fc8080_drv_if_select_antenna(unsigned int sel);
+extern int broadcast_fc8080_drv_if_set_nation(unsigned int nation);
 extern int broadcast_fc8080_drv_if_isr(void);
 
 

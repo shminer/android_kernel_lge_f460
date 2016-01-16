@@ -396,7 +396,7 @@ static s32 wl_cfg80211_resume(struct wiphy *wiphy);
 static s32 wl_cfg80211_mgmt_tx_cancel_wait(struct wiphy *wiphy,
 	bcm_struct_cfgdev *cfgdev, u64 cookie);
 static s32 wl_cfg80211_del_station(struct wiphy *wiphy,
-	struct net_device *ndev, u8* mac_addr);
+	struct net_device *ndev, struct station_del_parameters *params);
 static s32 wl_cfg80211_change_station(struct wiphy *wiphy,
 	struct net_device *dev, u8 *mac, struct station_parameters *params);
 #endif /* WL_SUPPORT_BACKPORTED_KPATCHES || KERNEL_VER >= KERNEL_VERSION(3, 2, 0)) */
@@ -2712,8 +2712,8 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 					get_primary_mac(cfg, &primary_mac);
 					wl_cfgp2p_generate_bss_mac(&primary_mac,
 						&cfg->p2p->dev_addr, &cfg->p2p->int_addr);
-#if defined(P2P_IE_MISSING_FIX)
-					cfg->p2p_prb_noti = false;
+#if defined(CUSTOMER_HW10)       // [CSP#868459] TV connection issue
+                    cfg->p2p_prb_noti = false;
 #endif
 				}
 				wl_clr_p2p_status(cfg, GO_NEG_PHASE);
@@ -6511,12 +6511,11 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev,
 				wl_cfgp2p_set_management_ie(cfg, dev, bssidx,
 				VNDR_IE_PRBRSP_FLAG, (u8 *)(buf + ie_offset), ie_len);
 			cfg80211_mgmt_tx_status(cfgdev, *cookie, buf, len, true, GFP_KERNEL);
-#if defined(P2P_IE_MISSING_FIX)
-			if (!cfg->p2p_prb_noti) {
-				cfg->p2p_prb_noti = true;
-				WL_DBG(("%s: TX 802_1X Probe Response first time.\n",
-					__FUNCTION__));
-			}
+#if defined(CUSTOMER_HW10)       // [CSP#868459] TV connection issue
+	        if(!cfg->p2p_prb_noti) {
+                cfg->p2p_prb_noti = true;
+                WL_ERR(("%s: TX 802_1X Probe Response first time.\n", __FUNCTION__));
+            }
 #endif
 			goto exit;
 		} else if (ieee80211_is_disassoc(mgmt->frame_control) ||
@@ -8000,10 +7999,12 @@ static s32
 wl_cfg80211_del_station(
 	struct wiphy *wiphy,
 	struct net_device *ndev,
-	u8* mac_addr)
+	struct station_del_parameters *params)
 {
 	struct net_device *dev;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	const u8* mac_addr = params->mac;
+
 	scb_val_t scb_val;
 	s8 eabuf[ETHER_ADDR_STR_LEN];
 	int err;
@@ -8511,9 +8512,9 @@ fail:
 #endif /* LINUX_VERSION < VERSION(3,4,0) || WL_COMPAT_WIRELESS */
 
 #ifdef WL_SCHED_SCAN
-#define PNO_TIME		120 // 30
-#define PNO_REPEAT		2 // 4
-#define PNO_FREQ_EXPO_MAX	3 // 2
+#define PNO_TIME		300 //120 // LGE WIFI : 30 -> 120
+#define PNO_REPEAT		1 // 2 // LGE WIFI : 4 -> 2
+#define PNO_FREQ_EXPO_MAX	3 // 5 //LGE WIFI : 2 -> 5
 static bool
 is_ssid_in_list(struct cfg80211_ssid *ssid, struct cfg80211_ssid *ssid_list, int count)
 {
@@ -10783,8 +10784,8 @@ wl_notify_rx_mgmt_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			 * GO-NEG Phase
 			 */
 			if (cfg->p2p &&
-#if defined(P2P_IE_MISSING_FIX)
-				cfg->p2p_prb_noti &&
+#if defined(CUSTOMER_HW10)       // [CSP#868459] TV connection issue
+                cfg->p2p_prb_noti &&
 #endif
 				wl_get_p2p_status(cfg, GO_NEG_PHASE)) {
 				WL_DBG(("Filtering P2P probe_req while "

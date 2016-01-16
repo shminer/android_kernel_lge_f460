@@ -70,6 +70,10 @@
 #define LGE_BROADCAST_TDMB_IOCTL_SELECT_ANTENNA \
 	_IOW(LGE_BROADCAST_TDMB_IOCTL_MAGIC, 13, int)
 
+// national identification
+#define LGE_BROADCAST_TDMB_IOCTL_SET_NATION \
+    _IOW(LGE_BROADCAST_TDMB_IOCTL_MAGIC, 14, int)
+
 struct broadcast_tdmb_set_ch_info {
 	unsigned int	mode;
 	unsigned int	ch_num;
@@ -89,6 +93,7 @@ struct broadcast_tdmb_sig_info {
 	unsigned int	va_ber;
 	unsigned char	srv_state_flag;
 	unsigned int	antenna_level;
+	char			rssi;
 };
 
 struct broadcast_tdmb_ch_info {
@@ -124,6 +129,7 @@ struct broadcast_drv_if {
 	int (*broadcast_drv_if_reset_ch)(void);
 	int (*broadcast_drv_if_user_stop)(int mode);
 	int (*broadcast_drv_if_select_antenna)(unsigned int sel);
+    int (*broadcast_drv_if_set_nation)(unsigned int nation);
 };
 typedef struct broadcast_drv_if Device_drv ;
 
