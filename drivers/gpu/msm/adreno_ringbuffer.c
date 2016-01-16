@@ -355,6 +355,9 @@ static int _ringbuffer_bootstrap_ucode(struct adreno_ringbuffer *rb,
 		rb_size = bootstrap_size;
 	}
 
+	/* clear ME_HALT to start micro engine */
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_ME_CNTL, 0);
+
 	cmds = adreno_ringbuffer_allocspace(rb, NULL, rb_size);
 	if (cmds == NULL)
 			return -ENOMEM;
