@@ -1181,21 +1181,24 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 	int ret;
 	uint32_t i = 0;
 	struct msm_cpp_frame_info_t *this_frame = NULL;
+	struct cpp_device *cpp_dev = cpp_timer.data.cpp_dev;//LGE_CHANGE, QCT_Patch for cpp firmware reloading crash
 
 	pr_err("cpp_timer_callback called. (jiffies=%lu)\n",
 		jiffies);
-	if (!work) {
+	mutex_lock(&cpp_dev->mutex);
+	if (!work || cpp_timer.data.cpp_dev->state != CPP_STATE_ACTIVE ) {
 		pr_err("Invalid work:%p\n", work);
-		return;
+		goto end;
 	}
 	if (!atomic_read(&cpp_timer.used)) {
 		pr_err("Delayed trigger, IRQ serviced\n");
-		return;
+		goto end;
 	}
 
 	disable_irq(cpp_timer.data.cpp_dev->irq->start);
 	pr_err("Reloading firmware\n");
-	cpp_load_fw(cpp_timer.data.cpp_dev, NULL);
+	cpp_load_fw(cpp_timer.data.cpp_dev,
+		cpp_timer.data.cpp_dev->fw_name_bin);
 	pr_err("Firmware loading done\n");
 	enable_irq(cpp_timer.data.cpp_dev->irq->start);
 	msm_camera_io_w_mb(0x8, cpp_timer.data.cpp_dev->base +
@@ -1206,7 +1209,7 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 
 	if (!atomic_read(&cpp_timer.used)) {
 		pr_err("Delayed trigger, IRQ serviced\n");
-		return;
+		goto end;
 	}
 
 	this_frame = cpp_timer.data.processed_frame;
@@ -1224,8 +1227,11 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 	for (i = 0; i < this_frame->msg_len; i++)
 		msm_cpp_write(this_frame->cpp_cmd_msg[i],
 			cpp_timer.data.cpp_dev->base);
+end:
+	mutex_unlock(&cpp_dev->mutex);
 	return;
 }
+
 
 void cpp_timer_callback(unsigned long data)
 {
@@ -1250,10 +1256,6 @@ static int msm_cpp_send_frame_to_hardware(struct cpp_device *cpp_dev,
 
 		cpp_timer.data.processed_frame = process_frame;
 		atomic_set(&cpp_timer.used, 1);
-		/* install timer for cpp timeout */
-		CPP_DBG("Installing cpp_timer\n");
-		setup_timer(&cpp_timer.cpp_timer,
-			cpp_timer_callback, (unsigned long)&cpp_timer);
 		CPP_DBG("Starting timer to fire in %d ms. (jiffies=%lu)\n",
 			CPP_CMD_TIMEOUT_MS, jiffies);
 		ret = mod_timer(&cpp_timer.cpp_timer,
@@ -1559,6 +1561,7 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 			}
 			if (ioctl_ptr->ioctl_ptr == NULL) {
 				pr_err("ioctl_ptr->ioctl_ptr=NULL\n");
+				kfree(cpp_dev->fw_name_bin);
 				mutex_unlock(&cpp_dev->mutex);
 				return -EINVAL;
 			}
@@ -1737,6 +1740,9 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 				process_frame,
 				sizeof(struct msm_cpp_frame_info_t))) {
 					mutex_unlock(&cpp_dev->mutex);
+					kfree(process_frame->cpp_cmd_msg);
+					kfree(process_frame);
+					kfree(event_qcmd);
 					return -EINVAL;
 		}
 
@@ -1883,7 +1889,8 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 		break;
 	}
 	case VIDIOC_MSM_CPP_IOMMU_DETACH: {
-		if (cpp_dev->iommu_state == CPP_IOMMU_STATE_ATTACHED) {
+		if ((cpp_dev->iommu_state == CPP_IOMMU_STATE_ATTACHED) &&
+			(cpp_dev->stream_cnt == 0)) {
 			iommu_detach_device(cpp_dev->domain,
 				cpp_dev->iommu_ctx);
 			cpp_dev->iommu_state = CPP_IOMMU_STATE_DETACHED;
@@ -2194,6 +2201,11 @@ static int cpp_probe(struct platform_device *pdev)
 	cpp_dev->iommu_state = CPP_IOMMU_STATE_DETACHED;
 	cpp_timer.data.cpp_dev = cpp_dev;
 	atomic_set(&cpp_timer.used, 0);
+//LGE_CHANGE, move setup timer posision
+		/* install timer for cpp timeout */
+		CPP_DBG("Installing cpp_timer\n");
+		setup_timer(&cpp_timer.cpp_timer,
+			cpp_timer_callback, (unsigned long)&cpp_timer);
 	cpp_dev->fw_name_bin = NULL;
 	if (rc == 0)
 		CPP_DBG("SUCCESS.");

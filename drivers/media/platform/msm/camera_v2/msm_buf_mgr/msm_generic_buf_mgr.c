@@ -41,10 +41,21 @@ static int32_t msm_buf_mngr_get_buf(struct msm_buf_mngr_device *buf_mngr_dev,
 	}
 	new_entry->session_id = buf_info->session_id;
 	new_entry->stream_id = buf_info->stream_id;
+
+/* LGE_CHANGE_S, fix get buf crash, 2015-10-21*/
+#if 0
 	spin_lock_irqsave(&buf_mngr_dev->buf_q_spinlock, flags);
 	list_add_tail(&new_entry->entry, &buf_mngr_dev->buf_qhead);
 	spin_unlock_irqrestore(&buf_mngr_dev->buf_q_spinlock, flags);
 	buf_info->index = new_entry->vb2_buf->v4l2_buf.index;
+#else
+	spin_lock_irqsave(&buf_mngr_dev->buf_q_spinlock, flags);
+	list_add_tail(&new_entry->entry, &buf_mngr_dev->buf_qhead);
+	buf_info->index = new_entry->vb2_buf->v4l2_buf.index;
+	spin_unlock_irqrestore(&buf_mngr_dev->buf_q_spinlock, flags);
+#endif
+/* LGE_CHANGE_E, fix get buf crash, 2015-10-21*/
+
 	return 0;
 }
 
@@ -60,18 +71,18 @@ static int32_t msm_buf_mngr_buf_done(struct msm_buf_mngr_device *buf_mngr_dev,
 		if ((bufs->session_id == buf_info->session_id) &&
 			(bufs->stream_id == buf_info->stream_id) &&
 			(bufs->vb2_buf->v4l2_buf.index == buf_info->index)) {
-/*                                                                 */
+/* LGE_CHANGE_S, Crash rb_tree 2, 2013-12-09, yousung.kang@lge.com */
 #if 0
 			bufs->vb2_buf->v4l2_buf.sequence  = buf_info->frame_id;
 			bufs->vb2_buf->v4l2_buf.timestamp = buf_info->timestamp;
 			bufs->vb2_buf->v4l2_buf.reserved = 0;
 #endif
-/*                                                                 */
+/* LGE_CHANGE_E, Crash rb_tree 2, 2013-12-09, yousung.kang@lge.com */
 			ret = buf_mngr_dev->vb2_ops.buf_done
 					(bufs->vb2_buf,
 						buf_info->session_id,
 						buf_info->stream_id);
-/*                                                                 */
+/* LGE_CHANGE_S, Crash rb_tree 2, 2013-12-09, yousung.kang@lge.com */
 #if 1
 			if (!ret) {
 						bufs->vb2_buf->v4l2_buf.sequence  = buf_info->frame_id;
@@ -81,7 +92,7 @@ static int32_t msm_buf_mngr_buf_done(struct msm_buf_mngr_device *buf_mngr_dev,
 						pr_err("%s:vb2_ops failed %d type= %d\n", __func__, ret,bufs->vb2_buf->v4l2_buf.type);
             }
 #endif
-/*                                                                 */
+/* LGE_CHANGE_E, Crash rb_tree 2, 2013-12-09, yousung.kang@lge.com */
 			list_del_init(&bufs->entry);
 			kfree(bufs);
 			break;
