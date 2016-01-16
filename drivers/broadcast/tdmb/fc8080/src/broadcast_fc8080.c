@@ -23,7 +23,7 @@
 #include <linux/of_gpio.h>
 
 #include <linux/clk.h>
-#include <mach/msm_bus.h> /* FEATURE_DMB_USE_BUS_SCALE*/
+#include <linux/msm-bus.h> /* FEATURE_DMB_USE_BUS_SCALE*/
 
 /* external function */
 extern int broadcast_fc8080_drv_if_isr(void);

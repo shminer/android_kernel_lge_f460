@@ -57,3 +57,5 @@ obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o
 obj-$(CONFIG_MSM_SHARED_HEAP_ACCESS) += shared_memory.o
 obj-$(CONFIG_MSM_XPU_ERR_FATAL) += scm-xpu.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb-hotplug.o
+
+obj-$(CONFIG_MACH_LGE) += lge/

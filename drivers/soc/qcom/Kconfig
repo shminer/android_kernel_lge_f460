@@ -441,4 +441,6 @@ config MSM_XPU_ERR_FATAL
 
 source "drivers/soc/qcom/memshare/Kconfig"
 
+source "drivers/soc/qcom/lge/Kconfig"
+
 endif # ARCH_MSM
