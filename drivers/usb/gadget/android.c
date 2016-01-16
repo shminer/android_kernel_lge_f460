@@ -511,6 +511,11 @@ static void ffs_function_enable(struct android_usb_function *f)
 	struct android_dev *dev = f->android_dev;
 	struct functionfs_config *config = f->config;
 
+#ifdef CONFIG_USB_G_LGE_MULTIPLE_CONFIGURATION
+			if ( config->enabled)
+					return;
+#endif
+
 	config->enabled = true;
 
 	/* Disable the gadget until the function is ready */

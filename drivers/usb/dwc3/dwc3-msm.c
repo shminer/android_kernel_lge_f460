@@ -193,8 +193,6 @@ struct dwc3_msm {
 	unsigned long		lpm_flags;
 #define MDWC3_PHY_REF_AND_CORECLK_OFF	BIT(0)
 #define MDWC3_TCXO_SHUTDOWN		BIT(1)
-
-	u32 gctl_val;
 	u32 qscratch_ctl_val;
 	dev_t ext_chg_dev;
 	struct cdev ext_chg_cdev;
