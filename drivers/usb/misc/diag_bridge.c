@@ -32,8 +32,6 @@
 
 #define MAX_DIAG_BRIDGE_DEVS	2
 #define AUTOSUSP_DELAY_WITH_USB 1000
-static unsigned int  default_auto_susp_enabled;
-module_param(default_auto_susp_enabled, uint, S_IRUGO | S_IWUSR);
 
 struct diag_bridge {
 	struct usb_device	*udev;
@@ -84,15 +82,12 @@ int diag_bridge_open(int id, struct diag_bridge_ops *ops)
 
 	dev->ops = ops;
 	dev->err = 0;
-/* Do not update auto suspend delay for diag instance#1 (id == 1) i.e DCI */
-	if (!default_auto_susp_enabled && id != 1) {
+
 #ifdef CONFIG_PM_RUNTIME
-		dev->default_autosusp_delay =
-			dev->udev->dev.power.autosuspend_delay;
+	dev->default_autosusp_delay = dev->udev->dev.power.autosuspend_delay;
 #endif
-		pm_runtime_set_autosuspend_delay(&dev->udev->dev,
-				AUTOSUSP_DELAY_WITH_USB);
-	}
+	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+			AUTOSUSP_DELAY_WITH_USB);
 
 	kref_get(&dev->kref);
 
@@ -135,9 +130,8 @@ void diag_bridge_close(int id)
 	usb_kill_anchored_urbs(&dev->submitted);
 	dev->ops = 0;
 
-	if (dev->default_autosusp_delay)
-		pm_runtime_set_autosuspend_delay(&dev->udev->dev,
-				dev->default_autosusp_delay);
+	pm_runtime_set_autosuspend_delay(&dev->udev->dev,
+			dev->default_autosusp_delay);
 
 	kref_put(&dev->kref, diag_bridge_delete);
 }

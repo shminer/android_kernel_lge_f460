@@ -228,10 +228,8 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 			usb_pipeendpoint(this_urb->pipe), i);
 
 		err = usb_autopm_get_interface_async(port->serial->interface);
-		if (err < 0) {
-			clear_bit(i, &portdata->out_busy);
+		if (err < 0)
 			break;
-		}
 
 		/* send the data */
 		memcpy(this_urb->transfer_buffer, buf, todo);
@@ -426,7 +424,7 @@ static void usb_wwan_outdat_callback(struct urb *urb)
 
 	for (i = 0; i < N_OUT_URB; ++i) {
 		if (portdata->out_urbs[i] == urb) {
-			smp_mb__before_atomic();
+			smp_mb__before_clear_bit();
 			clear_bit(i, &portdata->out_busy);
 			break;
 		}
@@ -541,26 +539,12 @@ int usb_wwan_open(struct tty_struct *tty, struct usb_serial_port *port)
 }
 EXPORT_SYMBOL(usb_wwan_open);
 
-static void unbusy_queued_urb(struct urb *urb,
-					struct usb_wwan_port_private *portdata)
-{
-	int i;
-
-	for (i = 0; i < N_OUT_URB; i++) {
-		if (urb == portdata->out_urbs[i]) {
-			clear_bit(i, &portdata->out_busy);
-			break;
-		}
-	}
-}
-
 void usb_wwan_close(struct usb_serial_port *port)
 {
 	int i;
 	struct usb_serial *serial = port->serial;
 	struct usb_wwan_port_private *portdata;
 	struct usb_wwan_intf_private *intfdata = port->serial->private;
-	struct urb *urb;
 
 	portdata = usb_get_serial_port_data(port);
 
@@ -612,10 +596,8 @@ int usb_wwan_port_probe(struct usb_serial_port *port)
 	struct usb_wwan_port_private *portdata;
 	struct urb *urb;
 	u8 *buffer;
+	int err;
 	int i;
-
-	if (!port->bulk_in_size || !port->bulk_out_size)
-		return -ENODEV;
 
 	portdata = kzalloc(sizeof(*portdata), GFP_KERNEL);
 	if (!portdata)
@@ -644,6 +626,9 @@ int usb_wwan_port_probe(struct usb_serial_port *port)
 	}
 
 	for (i = 0; i < N_OUT_URB; i++) {
+		if (!port->bulk_out_size)
+			break;
+
 		buffer = kmalloc(OUT_BUFLEN, GFP_KERNEL);
 		if (!buffer)
 			goto bail_out_error2;
@@ -657,6 +642,13 @@ int usb_wwan_port_probe(struct usb_serial_port *port)
 	}
 
 	usb_set_serial_port_data(port, portdata);
+
+	if (port->interrupt_in_urb) {
+		err = usb_submit_urb(port->interrupt_in_urb, GFP_KERNEL);
+		if (err)
+			dev_dbg(&port->dev, "%s: submit irq_in urb failed %d\n",
+				__func__, err);
+	}
 
 	return 0;
 
@@ -791,8 +783,6 @@ static void play_delayed(struct usb_serial_port *port)
 			break;
 		}
 	}
-
-	return err;
 }
 
 int usb_wwan_resume(struct usb_serial *serial)

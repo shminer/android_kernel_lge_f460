@@ -148,7 +148,6 @@ struct ci13xxx_udc_driver {
 #define CI13XXX_CONTROLLER_UDC_STARTED_EVENT		6
 
 	void	(*notify_event) (struct ci13xxx *udc, unsigned event);
-	bool (*cancel_pending_suspend)(struct ci13xxx *udc);
 	bool    (*in_lpm) (struct ci13xxx *udc);
 	void    (*set_fpr_flag) (struct ci13xxx *udc);
 };
@@ -223,7 +222,6 @@ struct ci13xxx {
 /* PORTSC */
 #define PORTSC_FPR            BIT(6)
 #define PORTSC_SUSP           BIT(7)
-#define PORTSC_PR             BIT(8)
 #define PORTSC_HSP            BIT(9)
 #define PORTSC_PTC            (0x0FUL << 16)
 

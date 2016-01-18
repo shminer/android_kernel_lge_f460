@@ -68,7 +68,7 @@ int usb_gadget_map_request(struct usb_gadget *gadget,
 		}
 
 		req->num_mapped_sgs = mapped;
-	} else if (!req->dma_pre_mapped) {
+	} else {
 		req->dma = dma_map_single(&gadget->dev, req->buf, req->length,
 				is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 
@@ -93,16 +93,9 @@ void usb_gadget_unmap_request(struct usb_gadget *gadget,
 				is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 
 		req->num_mapped_sgs = 0;
-	} else if (!req->dma_pre_mapped && req->dma != DMA_ERROR_CODE) {
-		/*
-		 * If the DMA address has not been mapped by a higher layer,
-		 * then unmap it here. Otherwise, the DMA address will be
-		 * unmapped by the upper layer (where the request was queued).
-		 */
+	} else {
 		dma_unmap_single(&gadget->dev, req->dma, req->length,
-			is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
-
-		req->dma = DMA_ERROR_CODE;
+				is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 	}
 }
 EXPORT_SYMBOL_GPL(usb_gadget_unmap_request);
@@ -455,11 +448,6 @@ static ssize_t usb_udc_softconn_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t n)
 {
 	struct usb_udc		*udc = container_of(dev, struct usb_udc, dev);
-
-	if (!udc->driver) {
-		dev_err(dev, "soft-connect without a gadget driver\n");
-		return -EOPNOTSUPP;
-	}
 
 	if (sysfs_streq(buf, "connect")) {
 		usb_gadget_udc_start(udc->gadget, udc->driver);

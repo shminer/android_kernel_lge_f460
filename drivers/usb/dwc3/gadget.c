@@ -376,8 +376,6 @@ int dwc3_send_gadget_generic_command(struct dwc3 *dwc, int cmd, u32 param)
 			dev_vdbg(dwc->dev, "Command Complete --> %d\n",
 					DWC3_DGCMD_STATUS(reg));
 			ret = 0;
-			if (DWC3_DGCMD_STATUS(reg))
-				ret = -EINVAL;
 			break;
 		}
 
@@ -440,8 +438,6 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 			 */
 			if (reg & 0x2000)
 				ret = -EAGAIN;
-			else if (DWC3_DEPCMD_STATUS(reg))
-				ret = -EINVAL;
 			else
 				ret = 0;
 			break;
@@ -647,11 +643,12 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 		if (!usb_endpoint_xfer_isoc(desc))
 			return 0;
 
+		memset(&trb_link, 0, sizeof(trb_link));
+
 		/* Link TRB for ISOC. The HWO bit is never reset */
 		trb_st_hw = &dep->trb_pool[0];
 
 		trb_link = &dep->trb_pool[DWC3_TRB_NUM - 1];
-		memset(trb_link, 0, sizeof(*trb_link));
 
 		trb_link->bpl = lower_32_bits(dwc3_trb_dma_offset(dep, trb_st_hw));
 		trb_link->bph = upper_32_bits(dwc3_trb_dma_offset(dep, trb_st_hw));
@@ -699,10 +696,6 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 	u32			reg;
 
 	dwc3_remove_requests(dwc, dep);
-
-	/* make sure HW endpoint isn't stalled */
-	if (dep->flags & DWC3_EP_STALL)
-		__dwc3_gadget_ep_set_halt(dep, 0, false);
 
 	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
 	reg &= ~DWC3_DALEPENA_EP(dep->number);
@@ -1480,7 +1473,7 @@ out0:
 	return ret;
 }
 
-int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol)
+int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value)
 {
 	struct dwc3_gadget_ep_cmd_params	params;
 	struct dwc3				*dwc = dep->dwc;
@@ -1489,14 +1482,6 @@ int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol)
 	memset(&params, 0x00, sizeof(params));
 
 	if (value) {
-		if (!protocol && ((dep->direction && dep->flags & DWC3_EP_BUSY) ||
-				(!list_empty(&dep->req_queued) ||
-				 !list_empty(&dep->request_list)))) {
-			dev_dbg(dwc->dev, "%s: pending request, cannot halt\n",
-					dep->name);
-			return -EAGAIN;
-		}
-
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETSTALL, &params);
 		if (ret)
@@ -1537,7 +1522,7 @@ static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
 	}
 
 	dbg_event(dep->number, "HALT", value);
-	ret = __dwc3_gadget_ep_set_halt(dep, value, false);
+	ret = __dwc3_gadget_ep_set_halt(dep, value);
 out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
@@ -1558,7 +1543,7 @@ static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 	if (dep->number == 0 || dep->number == 1)
 		return dwc3_gadget_ep0_set_halt(ep, 1);
 	else
-		return __dwc3_gadget_ep_set_halt(dep, 1, false);
+		return dwc3_gadget_ep_set_halt(ep, 1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1789,7 +1774,6 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	if ((dwc->dotg && !dwc->vbus_active) ||
 		!dwc->gadget_driver) {
-
 		/*
 		 * Need to wait for vbus_session(on) from otg driver or to
 		 * the udc_start.
@@ -2315,8 +2299,6 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 			break;
 	} while (1);
 
-	dwc->gadget.xfer_isr_count++;
-
 	if (usb_endpoint_xfer_isoc(dep->endpoint.desc) &&
 			list_empty(&dep->req_queued)) {
 		if (list_empty(&dep->request_list))
@@ -2479,7 +2461,6 @@ static void dwc3_disconnect_gadget(struct dwc3 *dwc)
 		dwc->gadget_driver->disconnect(&dwc->gadget);
 		spin_lock(&dwc->lock);
 	}
-	dwc->gadget.xfer_isr_count = 0;
 }
 
 static void dwc3_stop_active_transfer(struct dwc3 *dwc, u32 epnum)
@@ -3116,6 +3097,8 @@ static irqreturn_t dwc3_thread_interrupt(int irq, void *_dwc)
 
 	start_time = ktime_get();
 
+	dbg_event(0xFF, "IRQ Thread", 0);
+
 	spin_lock_irqsave(&dwc->lock, flags);
 
 	for (i = 0; i < dwc->num_event_buffers; i++) {
@@ -3218,10 +3201,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	struct dwc3			*dwc = _dwc;
 	int				i;
 	irqreturn_t			ret = IRQ_NONE;
-	unsigned			temp_cnt = 0;
-	ktime_t				start_time;
 
-	start_time = ktime_get();
 	spin_lock(&dwc->lock);
 
 	dwc->irq_cnt++;
@@ -3238,17 +3218,9 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 		status = dwc3_process_event_buf(dwc, i);
 		if (status == IRQ_WAKE_THREAD)
 			ret = status;
-
-		temp_cnt += dwc->ev_buffs[i]->count;
 	}
 
 	spin_unlock(&dwc->lock);
-
-	dwc->irq_start_time[dwc->irq_dbg_index] = start_time;
-	dwc->irq_completion_time[dwc->irq_dbg_index] =
-		ktime_us_delta(ktime_get(), start_time);
-	dwc->irq_event_count[dwc->irq_dbg_index] = temp_cnt / 4;
-	dwc->irq_dbg_index = (dwc->irq_dbg_index + 1) % MAX_INTR_STATS;
 
 	if (ret == IRQ_WAKE_THREAD) {
 		disable_irq_nosync(irq);

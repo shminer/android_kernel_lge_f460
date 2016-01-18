@@ -40,4 +40,4 @@ bool lgeusb_get_host_os(void);
 int debug_pmic_register_for_usb(void);
 #endif
 
-#endif /*                */
+#endif /* __U_LGEUSB_H__ */

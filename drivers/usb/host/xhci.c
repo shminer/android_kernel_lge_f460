@@ -163,8 +163,7 @@ int xhci_start(struct xhci_hcd *xhci)
 				"waited %u microseconds.\n",
 				XHCI_MAX_HALT_USEC);
 	if (!ret)
-		xhci->xhc_state &= ~(XHCI_STATE_HALTED | XHCI_STATE_DYING);
-
+		xhci->xhc_state &= ~XHCI_STATE_HALTED;
 	return ret;
 }
 
@@ -1001,7 +1000,7 @@ int xhci_suspend(struct xhci_hcd *xhci)
  */
 int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 {
-	u32			command, temp = 0, status;
+	u32			command, temp = 0;
 	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
 	struct usb_hcd		*secondary_hcd;
 	int			retval = 0;
@@ -1125,12 +1124,8 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 
  done:
 	if (retval == 0) {
-		/* Resume root hubs only when have pending events. */
-		status = readl(&xhci->op_regs->status);
-		if (status & STS_EINT) {
-			usb_hcd_resume_root_hub(hcd);
-			usb_hcd_resume_root_hub(xhci->shared_hcd);
-		}
+		usb_hcd_resume_root_hub(hcd);
+		usb_hcd_resume_root_hub(xhci->shared_hcd);
 	}
 
 	/*
@@ -3401,9 +3396,6 @@ int xhci_discover_or_reset_device(struct usb_hcd *hcd, struct usb_device *udev)
 			return -EINVAL;
 	}
 
-	if (virt_dev->tt_info)
-		old_active_eps = virt_dev->tt_info->active_eps;
-
 	if (virt_dev->udev != udev) {
 		/* If the virt_dev and the udev does not match, this virt_dev
 		 * may belong to another udev.
@@ -4471,21 +4463,13 @@ static int xhci_change_max_exit_latency(struct xhci_hcd *xhci,
 	int ret;
 
 	spin_lock_irqsave(&xhci->lock, flags);
-
-	virt_dev = xhci->devs[udev->slot_id];
-
-	/*
-	 * virt_dev might not exists yet if xHC resumed from hibernate (S4) and
-	 * xHC was re-initialized. Exit latency will be set later after
-	 * hub_port_finish_reset() is done and xhci->devs[] are re-allocated
-	 */
-
-	if (!virt_dev || max_exit_latency == virt_dev->current_mel) {
+	if (max_exit_latency == xhci->devs[udev->slot_id]->current_mel) {
 		spin_unlock_irqrestore(&xhci->lock, flags);
 		return 0;
 	}
 
 	/* Attempt to issue an Evaluate Context command to change the MEL. */
+	virt_dev = xhci->devs[udev->slot_id];
 	command = xhci->lpm_command;
 	xhci_slot_copy(xhci, command->in_ctx, virt_dev->out_ctx);
 	spin_unlock_irqrestore(&xhci->lock, flags);

@@ -552,7 +552,7 @@ static int bos_desc(struct usb_composite_dev *cdev)
 	usb_ext->bLength = USB_DT_USB_EXT_CAP_SIZE;
 	usb_ext->bDescriptorType = USB_DT_DEVICE_CAPABILITY;
 	usb_ext->bDevCapabilityType = USB_CAP_TYPE_EXT;
-	usb_ext->bmAttributes = cpu_to_le32(USB_LPM_SUPPORT | USB_BESL_SUPPORT);
+	usb_ext->bmAttributes = cpu_to_le32(USB_LPM_SUPPORT);
 
 	if (gadget_is_superspeed(cdev->gadget)) {
 		/*
@@ -1928,7 +1928,7 @@ static void composite_debugfs_init(struct usb_composite_dev	*cdev)
 
 	debugfs_create_file("desc", 0444, dent, cdev, &debug_desc_ops);
 }
-#endif /*                                             */
+#endif /* CONFIG_USB_G_LGE_ANDROID && CONFIG_DEBUG_FS */
 
 static int composite_bind(struct usb_gadget *gadget,
 		struct usb_gadget_driver *gdriver)

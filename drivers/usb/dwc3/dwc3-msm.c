@@ -82,7 +82,7 @@ module_param(override_phy_init, int, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 
 /* Enable Proprietary charger detection */
-static bool prop_chg_detect = false;
+static bool prop_chg_detect = true;
 module_param(prop_chg_detect, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(prop_chg_detect, "Enable Proprietary charger detection");
 
@@ -193,6 +193,7 @@ struct dwc3_msm {
 	unsigned long		lpm_flags;
 #define MDWC3_PHY_REF_AND_CORECLK_OFF	BIT(0)
 #define MDWC3_TCXO_SHUTDOWN		BIT(1)
+
 	u32 qscratch_ctl_val;
 	dev_t ext_chg_dev;
 	struct cdev ext_chg_cdev;
@@ -1050,6 +1051,7 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned event)
 	}
 }
 
+
 #ifdef CONFIG_LGE_PM
 static ssize_t dwc3_reset_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
@@ -1086,6 +1088,7 @@ static ssize_t dwc3_reset_store(struct device *dev,
 static DEVICE_ATTR(dwc3_reset, S_IRUGO | S_IWUSR, dwc3_reset_show,
 		dwc3_reset_store);
 #endif
+
 
 static void dwc3_msm_block_reset(struct dwc3_ext_xceiv *xceiv, bool core_reset)
 {
@@ -1327,7 +1330,7 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 			dwc3_msm_write_readback(mdwc->base,
 					CHARGING_DET_CTRL_REG, 0x1F, 0x10);
 			if (mdwc->ext_chg_opened) {
-				complete(&mdwc->ext_chg_wait);
+				init_completion(&mdwc->ext_chg_wait);
 				mdwc->ext_chg_active = true;
 			}
 		}
@@ -2667,7 +2670,6 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 			mdwc->pmic_id_irq = 0;
 		}
 	}
-
 #ifdef CONFIG_LGE_PM
 	device_create_file(&pdev->dev, &dev_attr_dwc3_reset);
 #endif
@@ -2739,10 +2741,10 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 			!mdwc->charger.charging_disabled) {
 		mdwc->usb_psy.name = "usb";
 #ifdef CONFIG_LGE_PM
-		/*
-
-
-   */
+		/* B2-BSP-USB@lge.com
+		 * Set psy supply type when usb plug & unplug,
+		 * So, set as unknown type when probing.
+		 */
 		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_UNKNOWN;
 #else
 		mdwc->usb_psy.type = POWER_SUPPLY_TYPE_USB;
@@ -2914,7 +2916,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 #else
 			queue_work(system_nrt_wq,
 				&mdwc->id_work);
-#endif
+#endif		
 		local_irq_restore(flags);
 		enable_irq_wake(mdwc->pmic_id_irq);
 	}

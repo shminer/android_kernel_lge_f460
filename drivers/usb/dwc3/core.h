@@ -877,16 +877,12 @@ struct dwc3 {
 	struct dwc3_gadget_events	dbg_gadget_events;
 
 	/* offload IRQ handling to tasklet */
-	unsigned long		irq_cnt;
 	int			irq;
+	unsigned long		irq_cnt;
 	struct tasklet_struct	bh;
 	unsigned                bh_completion_time[MAX_INTR_STATS];
 	unsigned                bh_handled_evt_cnt[MAX_INTR_STATS];
 	unsigned                bh_dbg_index;
-	ktime_t			irq_start_time[MAX_INTR_STATS];
-	unsigned                irq_completion_time[MAX_INTR_STATS];
-	unsigned                irq_event_count[MAX_INTR_STATS];
-	unsigned                irq_dbg_index;
 };
 
 /* -------------------------------------------------------------------------- */

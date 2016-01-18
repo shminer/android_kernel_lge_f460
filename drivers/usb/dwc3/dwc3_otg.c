@@ -545,11 +545,11 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		power_supply_type = POWER_SUPPLY_TYPE_USB_FLOATED;
 	else
 #ifdef CONFIG_LGE_PM
-		/*
-
-
-
-   */
+		/* B2-BSP-USB@lge.com
+		 * healthd get battery psy type at init only.
+		 * If cable detach before healthd init,
+		 * healthd recognize usb psy as battery type.
+		 */
 		power_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
 #else
 		power_supply_type = POWER_SUPPLY_TYPE_BATTERY;
@@ -563,7 +563,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	update_status(1, dotg->charger->chg_type);
 #endif
 
-/*                                                             */
+/* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
 #ifdef CONFIG_LGE_PM
 	if (mA > 2 && lge_pm_get_cable_type() != NO_INIT_CABLE) {
 		if (dotg->charger->chg_type == DWC3_SDP_CHARGER) {
@@ -577,7 +577,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		}
 	}
 #endif
-/*                                        */
+/* END : janghyun.baek@lge.com 2012-12-26 */
 
 	if (dotg->charger->chg_type == DWC3_CDP_CHARGER)
 		mA = DWC3_IDEV_CHG_MAX;
@@ -817,7 +817,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					break;
 				case DWC3_SDP_CHARGER:
 					dwc3_otg_set_power(phy,
-								DWC3_MOD_SDP_CHG);
+								IUNIT);
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;

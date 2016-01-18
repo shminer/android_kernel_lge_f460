@@ -699,9 +699,6 @@ static int ffs_ep0_open(struct inode *inode, struct file *file)
 	if (unlikely(ffs->state == FFS_CLOSING))
 		return -EBUSY;
 
-	if (atomic_read(&ffs->opened))
-		return -EBUSY;
-
 	file->private_data = ffs;
 	ffs_data_opened(ffs);
 
@@ -765,7 +762,6 @@ static void ffs_epfile_io_complete(struct usb_ep *_ep, struct usb_request *req)
 	}
 }
 
-#define MAX_BUF_LEN	4096
 static ssize_t ffs_epfile_io(struct file *file,
 			     char __user *buf, size_t len, int read)
 {
@@ -778,9 +774,6 @@ static ssize_t ffs_epfile_io(struct file *file,
 	int buffer_len = 0;
 
 	pr_debug("%s: len %d, read %d\n", __func__, len, read);
-
-	if (atomic_read(&epfile->error))
-		return -ENODEV;
 
 	goto first_try;
 	do {
@@ -915,19 +908,10 @@ first_try:
 				ret = -ENODEV;
 			spin_unlock_irq(&epfile->ffs->eps_lock);
 			if (read && ret > 0) {
-				if (len != MAX_BUF_LEN && ret < len)
-					pr_err("less data(%zd) recieved than intended length(%zu)\n",
-								ret, len);
-				if (ret > len) {
+				if (ret > len)
 					ret = -EOVERFLOW;
-					pr_err("More data(%zd) recieved than intended length(%zu)\n",
-								ret, len);
-				} else if (unlikely(copy_to_user(
-							buf, data, ret))) {
-					pr_err("Fail to copy to user len:%zd\n",
-									ret);
+				else if (unlikely(copy_to_user(buf, data, ret)))
 					ret = -EFAULT;
-				}
 			}
 		}
 	}
@@ -935,8 +919,6 @@ first_try:
 	mutex_unlock(&epfile->mutex);
 error:
 	kfree(data);
-	if (ret < 0)
-		pr_err("Error: returning %zd value\n", ret);
 	return ret;
 }
 
@@ -983,7 +965,6 @@ ffs_epfile_release(struct inode *inode, struct file *file)
 
 	atomic_set(&epfile->error, 1);
 	ffs_data_closed(epfile->ffs);
-	file->private_data = NULL;
 
 	return 0;
 }
@@ -1409,15 +1390,9 @@ static void ffs_data_clear(struct ffs_data *ffs)
 {
 	ENTER();
 
-	pr_debug("%s: ffs->gadget= %p, ffs->flags= %lu\n", __func__,
-						ffs->gadget, ffs->flags);
 	if (test_and_clear_bit(FFS_FL_CALL_CLOSED_CALLBACK, &ffs->flags))
 		functionfs_closed_callback(ffs);
 
-	/* Dump ffs->gadget and ffs->flags */
-	if (ffs->gadget)
-		pr_err("%s: ffs->gadget= %p, ffs->flags= %lu\n", __func__,
-						ffs->gadget, ffs->flags);
 	BUG_ON(ffs->gadget);
 
 	if (ffs->epfiles)
@@ -1465,13 +1440,9 @@ static int functionfs_bind(struct ffs_data *ffs, struct usb_composite_dev *cdev)
 
 	ENTER();
 
-	if (WARN_ON(ffs->state != FFS_ACTIVE))
+	if (WARN_ON(ffs->state != FFS_ACTIVE
+		 || test_and_set_bit(FFS_FL_BOUND, &ffs->flags)))
 		return -EBADFD;
-
-	if (test_and_set_bit(FFS_FL_BOUND, &ffs->flags)) {
-		pr_warn("%s: already bound\n", __func__);
-		return -EALREADY;
-	}
 
 	if (!ffs->first_id || ffs->old_strings_count < ffs->strings_count) {
 		int first_id = usb_string_ids_n(cdev, ffs->strings_count);
@@ -1488,13 +1459,11 @@ static int functionfs_bind(struct ffs_data *ffs, struct usb_composite_dev *cdev)
 	ffs->ep0req->context = ffs;
 
 	lang = ffs->stringtabs;
-	if (lang) {
-		for (; *lang; ++lang) {
-			struct usb_string *str = (*lang)->strings;
-			int id = ffs->first_id;
-			for (; str->s; ++id, ++str)
-				str->id = id;
-		}
+	for (lang = ffs->stringtabs; *lang; ++lang) {
+		struct usb_string *str = (*lang)->strings;
+		int id = ffs->first_id;
+		for (; str->s; ++id, ++str)
+			str->id = id;
 	}
 
 	ffs->gadget = cdev->gadget;
@@ -1640,12 +1609,12 @@ static void ffs_func_eps_disable(struct ffs_function *func)
 
 	spin_lock_irqsave(&func->ffs->eps_lock, flags);
 	do {
-		atomic_set(&epfile->error, 1);
 		/* pending requests get nuked */
 		if (likely(ep->ep)) {
 			usb_ep_disable(ep->ep);
 			ep->ep->driver_data = NULL;
 		}
+		atomic_set(&epfile->error, 1);
 		epfile->ep = NULL;
 
 		++ep;

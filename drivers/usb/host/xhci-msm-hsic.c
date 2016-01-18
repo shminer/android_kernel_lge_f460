@@ -30,7 +30,6 @@
 #include <linux/debugfs.h>
 #include <asm/unaligned.h>
 #include <linux/pm_qos.h>
-#include <linux/moduleparam.h>
 
 #include "xhci.h"
 
@@ -90,10 +89,6 @@
  */
 #define MSM_HSIC_INT_MODERATION 12000
 
-#define WL_TIMEOUT 2000
-static int wl_divide = 1;
-module_param(wl_divide, int, 0644);
-
 static u64 dma_mask = DMA_BIT_MASK(64);
 
 struct mxhci_hsic_hcd {
@@ -151,10 +146,10 @@ static struct dbg_data dbg_hsic = {
 	.ctrl_lck = __RW_LOCK_UNLOCKED(clck),
 	.data_idx = 0,
 	.data_lck = __RW_LOCK_UNLOCKED(dlck),
-	.log_payload = 0,
-	.log_events = 0,
-	.inep_log_mask = 0,
-	.outep_log_mask = 0
+	.log_payload = 1,
+	.log_events = 1,
+	.inep_log_mask = 1,
+	.outep_log_mask = 1
 };
 
 static inline void dbg_inc(unsigned *idx)
@@ -660,9 +655,7 @@ static irqreturn_t mxhci_hsic_wakeup_irq(int irq, void *data)
 	xhci_dbg_log_event(&dbg_hsic, NULL, "Remote Wakeup IRQ",
 			mxhci->wakeup_int_cnt);
 
-	if (wl_divide == 1) pm_stay_awake(mxhci->dev);
-	else if (wl_divide > 1) pm_wakeup_event(mxhci->dev,
-		WL_TIMEOUT/wl_divide);
+	pm_stay_awake(mxhci->dev);
 
 	spin_lock(&mxhci->wakeup_lock);
 	if (mxhci->wakeup_irq_enabled) {
@@ -914,6 +907,8 @@ static int mxhci_hsic_suspend(struct mxhci_hsic_hcd *mxhci)
 	/* disable force-on mode for periph_on */
 	clk_set_flags(mxhci->system_clk, CLKFLAG_NORETAIN_PERIPH);
 
+	pm_qos_update_request(&mxhci->pm_qos_req_dma, PM_QOS_DEFAULT_VALUE);
+
 	pm_relax(mxhci->dev);
 
 #ifdef CONFIG_LGE_USB_XHCI_MSM_HSIC
@@ -937,9 +932,9 @@ static int mxhci_hsic_resume(struct mxhci_hsic_hcd *mxhci)
 		return 0;
 	}
 
-	if (wl_divide == 1) pm_stay_awake(mxhci->dev);
-	else if (wl_divide > 1) pm_wakeup_event(mxhci->dev,
-		WL_TIMEOUT/wl_divide);
+	pm_stay_awake(mxhci->dev);
+
+	pm_qos_update_request(&mxhci->pm_qos_req_dma, PM_QOS_CPU_DMA_LATENCY);
 
 	/* enable force-on mode for periph_on */
 	clk_set_flags(mxhci->system_clk, CLKFLAG_RETAIN_PERIPH);
@@ -1026,10 +1021,6 @@ int mxhci_hsic_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 	u32 status;
 
 	ret = xhci_hub_control(hcd, typeReq, wValue, wIndex, buf, wLength);
-	if (!hcd->primary_hcd)
-		return ret;
-
-	mxhci = hcd_to_hsic(hcd->primary_hcd);
 
 	if (!hcd->primary_hcd)
 		return ret;
@@ -1649,9 +1640,7 @@ static int mxhci_hsic_probe(struct platform_device *pdev)
 	init_waitqueue_head(&mxhci->phy_in_lpm_wq);
 
 	device_init_wakeup(&pdev->dev, 1);
-	if (wl_divide == 1) pm_stay_awake(mxhci->dev);
-	else if (wl_divide > 1) pm_wakeup_event(mxhci->dev,
-		WL_TIMEOUT/wl_divide);
+	pm_stay_awake(mxhci->dev);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
@@ -1665,6 +1654,9 @@ static int mxhci_hsic_probe(struct platform_device *pdev)
 	ret = mxhci_hsic_debugfs_init();
 	if (ret)
 		dev_dbg(&pdev->dev, "debugfs is not availabile\n");
+
+	pm_qos_add_request(&mxhci->pm_qos_req_dma, PM_QOS_CPU_DMA_LATENCY,
+			PM_QOS_DEFAULT_VALUE);
 	return 0;
 
 delete_wq:
@@ -1693,6 +1685,8 @@ static int mxhci_hsic_remove(struct platform_device *pdev)
 	u32 reg;
 
 	xhci_dbg_log_event(&dbg_hsic, NULL,  "mxhci_hsic_remove", 0);
+
+	pm_qos_remove_request(&mxhci->pm_qos_req_dma);
 
 	/* disable STROBE_PAD_CTL */
 	reg = readl_relaxed(TLMM_GPIO_HSIC_STROBE_PAD_CTL);
