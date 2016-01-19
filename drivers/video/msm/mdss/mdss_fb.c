@@ -1362,7 +1362,7 @@ static int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd,
 			goto fb_mmap_failed;
 		}
 	} else {
-		pr_err("No IOMMU Domain");
+		pr_err("No IOMMU Domain\n");
 		rc = -EINVAL;
 		goto fb_mmap_failed;
 
