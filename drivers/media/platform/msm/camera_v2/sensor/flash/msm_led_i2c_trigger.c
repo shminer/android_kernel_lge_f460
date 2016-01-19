@@ -81,22 +81,22 @@ int32_t msm_led_i2c_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 			rc = fctrl->func_tbl->flash_led_off(fctrl);
 		break;
 
-	case MSM_CAMERA_LED_TORCH:	/*                                                 */
+	case MSM_CAMERA_LED_TORCH:	/* LGE_CHANGE_S, Separate pre-flash and torch mode */
 	case MSM_CAMERA_LED_LOW:
-/*                                            */
+/* LGE_CHANGE_S, add flash config for dual led*/
 		if (fctrl->func_tbl->flash_led_low_config)
 			rc = fctrl->func_tbl->flash_led_low_config(fctrl, data);
-/*                                            */
+/* LGE_CHANGE_E, add flash config for dual led*/
 
 		if (fctrl->func_tbl->flash_led_low)
 			rc = fctrl->func_tbl->flash_led_low(fctrl);
 		break;
 
 	case MSM_CAMERA_LED_HIGH:
-/*                                            */
+/* LGE_CHANGE_S, add flash config for dual led*/
 		if (fctrl->func_tbl->flash_led_high_config)
 			rc = fctrl->func_tbl->flash_led_high_config(fctrl, data);
-/*                                            */
+/* LGE_CHANGE_E, add flash config for dual led*/
 
 		if (fctrl->func_tbl->flash_led_high)
 			rc = fctrl->func_tbl->flash_led_high(fctrl);

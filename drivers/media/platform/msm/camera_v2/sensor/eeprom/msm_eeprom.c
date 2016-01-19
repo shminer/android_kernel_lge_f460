@@ -400,7 +400,7 @@ static int msm_eeprom_parse_memory_map(struct device_node *of,
 		rc = of_property_read_u32_array(of, property,
 			(uint32_t *) &map[i].pageen, count);
 		if (rc < 0)
-			CDBG("%s: pageen not needed\n", __func__);
+			pr_err("%s: pageen not needed\n", __func__);
 
 		snprintf(property, PROPERTY_MAXSIZE, "qcom,saddr%d", i);
 		rc = of_property_read_u32_array(of, property,
@@ -447,9 +447,9 @@ static struct msm_cam_clk_info cam_8960_clk_info[] = {
 };
 
 static struct msm_cam_clk_info cam_8974_clk_info[] = {
-	/*                              */
+	/* LGE_CHANGE_S, EEPROM bring-up*/
 	[SENSOR_CAM_MCLK] = {"cam_src_clk", 24000000},
-	/*                              */
+	/* LGE_CHANGE_E, EEPROM bring-up*/
 	[SENSOR_CAM_CLK] = {"cam_clk", 0},
 };
 
@@ -680,12 +680,12 @@ ERROR3:
 ERROR2:
 	kfree(power_info->cam_vreg);
 ERROR1:
-/*                              */
+/* LGE_CHANGE_S, EEPROM bring-up*/
 	if (power_info->power_setting)
 		kfree(power_info->power_setting);
 	if (power_info->power_down_setting)
 		kfree(power_info->power_down_setting);
-/*                              */
+/* LGE_CHANGE_E, EEPROM bring-up*/
 	return rc;
 }
 

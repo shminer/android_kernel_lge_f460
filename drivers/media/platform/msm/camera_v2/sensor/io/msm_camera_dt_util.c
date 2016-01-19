@@ -443,10 +443,10 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 				ps[i].seq_val = SENSOR_GPIO_STANDBY;
 			else if (!strcmp(seq_name, "sensor_gpio_vdig"))
 				ps[i].seq_val = SENSOR_GPIO_VDIG;
-			/*                              */
+			/* LGE_CHANGE_S, EEPROM bring-up*/
 			else if (!strcmp(seq_name, "sensor_gpio_vio"))
 				ps[i].seq_val = SENSOR_GPIO_VIO;
-			/*                              */
+			/* LGE_CHANGE_E, EEPROM bring-up*/
 			else
 				rc = -EILSEQ;
 			break;
@@ -551,9 +551,9 @@ ERROR2:
 	kfree(array);
 ERROR1:
 	kfree(ps);
-/*                              */
+/* LGE_CHANGE_S, EEPROM bring-up*/
 	power_info->power_setting = NULL;
-/*                              */
+/* LGE_CHANGE_E, EEPROM bring-up*/
 	power_setting_size = 0;
 	return rc;
 }
@@ -775,7 +775,7 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 		CDBG("%s qcom,gpio-reset %d\n", __func__,
 			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_RESET]);
 	}
-	/*                                      */
+	/* LGE_CHANGE_S, Add gpio to control LDO*/
 	if (of_property_read_bool(of_node, "qcom,gpio-vana") == true) {
 		rc = of_property_read_u32(of_node, "qcom,gpio-vana", &val);
 		if (rc < 0) {
@@ -862,7 +862,7 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 		CDBG("%s qcom,gpio-vio %d\n", __func__,
 			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_OIS_RESET]);
 	}
-	/*                                      */
+	/* LGE_CHANGE_E, Add gpio to control LDO*/
 
 	if (of_property_read_bool(of_node, "qcom,gpio-standby") == true) {
 		rc = of_property_read_u32(of_node, "qcom,gpio-standby", &val);

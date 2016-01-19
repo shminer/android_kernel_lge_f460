@@ -17,7 +17,7 @@ DEFINE_MSM_MUTEX(imx135_mut);
 static struct msm_sensor_ctrl_t imx135_s_ctrl;
 
 static struct msm_sensor_power_setting imx135_power_setting[] = {
-/*                                        */
+/* LGE_CHANGE_S, Power setting include OIS*/
 	{
 		.seq_type = SENSOR_GPIO,
 		.seq_val = SENSOR_GPIO_RESET,
@@ -84,7 +84,7 @@ static struct msm_sensor_power_setting imx135_power_setting[] = {
 		.config_val = 0,
 		.delay = 1,
 	},
-/*                                        */
+/* LGE_CHANGE_E, Power setting include OIS*/
 };
 
 static struct v4l2_subdev_info imx135_subdev_info[] = {

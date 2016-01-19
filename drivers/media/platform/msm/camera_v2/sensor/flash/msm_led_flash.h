@@ -32,10 +32,10 @@ struct msm_flash_fn_t {
 	int32_t (*flash_led_off)(struct msm_led_flash_ctrl_t *);
 	int32_t (*flash_led_low)(struct msm_led_flash_ctrl_t *);
 	int32_t (*flash_led_high)(struct msm_led_flash_ctrl_t *);
-/*                                            */
+/* LGE_CHANGE_S, add flash config for dual led*/
 	int32_t (*flash_led_low_config)(struct msm_led_flash_ctrl_t *, void *);
 	int32_t (*flash_led_high_config)(struct msm_led_flash_ctrl_t *, void *);
-/*                                            */
+/* LGE_CHANGE_E, add flash config for dual led*/
 };
 
 struct msm_led_flash_reg_t {

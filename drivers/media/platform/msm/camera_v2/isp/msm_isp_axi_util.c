@@ -666,7 +666,7 @@ int msm_isp_release_axi_stream(struct vfe_device *vfe_dev, void *arg)
 
 	stream_info = &axi_data->stream_info[
 		HANDLE_TO_IDX(stream_release_cmd->stream_handle)];
-		
+
 	if (stream_info->state == AVALIABLE) {
 		pr_err("%s: Stream already released\n", __func__);
 		return -EINVAL;
@@ -925,7 +925,7 @@ static void msm_isp_process_done_buf(struct vfe_device *vfe_dev,
 		pr_err("%s: Invalid stream_idx \n", __func__);
 		return;
 	}
-	
+
 	if (SRC_TO_INTF(stream_info->stream_src) < VFE_SRC_MAX)
 		frame_id = vfe_dev->axi_data.
 			src_info[SRC_TO_INTF(stream_info->stream_src)].frame_id;
@@ -1719,7 +1719,6 @@ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
 					__func__);
 				continue;
 			}
-			stream_idx = HANDLE_TO_IDX(axi_data->free_wm[i]);
 			stream_info = &axi_data->stream_info[stream_idx];
 			ISP_DBG("%s: stream%d frame id: 0x%x\n",
 				__func__,

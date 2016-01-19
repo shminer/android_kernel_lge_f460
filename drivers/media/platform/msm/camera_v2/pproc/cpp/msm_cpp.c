@@ -180,7 +180,7 @@ static uint32_t msm_cpp_read(void __iomem *cpp_base)
 	uint32_t tmp, retry = 0;
 	do {
 		tmp = msm_camera_io_r(cpp_base + MSM_CPP_MICRO_FIFO_TX_STAT);
-	} while (((tmp & 0x2) == 0x0) && (retry++ < 10)) ;
+	} while (((tmp & 0x2) == 0x0) && (retry++ < 10));
 	if (retry < 10) {
 		tmp = msm_camera_io_r(cpp_base + MSM_CPP_MICRO_FIFO_TX_DATA);
 		CPP_DBG("Read data: 0%x\n", tmp);
@@ -208,7 +208,7 @@ static struct msm_cpp_buff_queue_info_t *msm_cpp_get_buff_queue_entry(
 	}
 
 	if (buff_queue_info == NULL) {
-		CPP_DBG("buffer queue entry for sess:%d strm:%d not found\n",
+		pr_err("error buffer queue entry for sess:%d strm:%d not found\n",
 			session_id, stream_id);
 	}
 	return buff_queue_info;
@@ -1232,7 +1232,6 @@ end:
 	return;
 }
 
-
 void cpp_timer_callback(unsigned long data)
 {
 	struct msm_cpp_work_t *work =
@@ -1516,7 +1515,7 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 	struct msm_camera_v4l2_ioctl_t *ioctl_ptr = arg;
 	int rc = 0;
 
-	if ((ioctl_ptr == NULL) || (ioctl_ptr->ioctl_ptr == NULL)){
+	if ((ioctl_ptr == NULL) || (ioctl_ptr->ioctl_ptr == NULL)) {
 		pr_err("ioctl_ptr is null\n");
 		return -EINVAL;
 	}
@@ -1561,8 +1560,8 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 			}
 			if (ioctl_ptr->ioctl_ptr == NULL) {
 				pr_err("ioctl_ptr->ioctl_ptr=NULL\n");
-				kfree(cpp_dev->fw_name_bin);
 				mutex_unlock(&cpp_dev->mutex);
+				kfree(cpp_dev->fw_name_bin);
 				return -EINVAL;
 			}
 			rc = (copy_from_user(cpp_dev->fw_name_bin,

@@ -397,6 +397,7 @@ int32_t msm_sensor_driver_probe(void *setting)
 	}
 
 	size = slave_info->power_setting_array.size;
+
 	/* Validate size */
 	if (size > MAX_POWER_CONFIG) {
 		pr_err("failed: invalid number of power_up_setting %d\n", size);

@@ -20,9 +20,9 @@
 #include "msm_camera_i2c.h"
 #include "msm_camera_dt_util.h"
 #include "msm_camera_io_util.h"
-/*                                                                                                    */
+/* LGE_CHANGE_S [20130622][youngbae.choi@lge.com] : To enter the deep sleep after finish camera close */
 #include <linux/wakelock.h>
-/*                                                                                                    */
+/* LGE_CHANGE_E [20130622][youngbae.choi@lge.com] : To enter the deep sleep after finish camera close */
 
 
 #define DEFINE_MSM_MUTEX(mutexname) \
@@ -30,11 +30,11 @@
 
 #define	MSM_ACTUATOT_MAX_VREGS (10)
 
-/*                                                                                                     */
+/* LGE_CHANGE_S Exception Lens Pos Default Infinity only enter moment, seongjo.kim@lge.com, 2013-06-23 */
 #define CAMERA_ENTER_MOMENT                      1
 #define CAMERA_ENTER_MOMENT_AFTER                2
 static int current_moment;
-/*                                                                                                     */
+/* LGE_CHANGE_E Exception Lens Pos Default Infinity only enter moment, seongjo.kim@lge.com, 2013-06-23 */
 struct msm_actuator_ctrl_t;
 
 enum msm_actuator_state_t {
@@ -110,9 +110,9 @@ struct msm_actuator_ctrl_t {
 	struct msm_actuator_vreg vreg_cfg;
 	struct park_lens_data_t park_lens;
 	uint32_t max_code_size;
-/*                                                                                                    */
+/* LGE_CHANGE_S [20130622][youngbae.choi@lge.com] : To enter the deep sleep after finish camera close */
 	struct wake_lock        camera_wake_lock;
-/*                                                                                                    */
+/* LGE_CHANGE_E [20130622][youngbae.choi@lge.com] : To enter the deep sleep after finish camera close */
 };
 
 #endif
