@@ -119,6 +119,13 @@ static int __init init(void)
 		return -ENOMEM;
 	}
 
+	/* Setup sysfs stuff */
+	input_boost_kobj = kobject_create_and_add("input_boost", kernel_kobj);
+	if (input_boost_kobj == NULL) {
+		pr_err("touchboost: subsystem register failed\n");
+		return -ENOMEM;
+	}
+	ret = sysfs_create_group(input_boost_kobj, &input_boost_option_group);
 	return ret;
 }
 late_initcall(init);
