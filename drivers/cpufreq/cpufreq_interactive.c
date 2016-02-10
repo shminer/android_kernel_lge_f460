@@ -411,7 +411,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	spin_lock_irqsave(&pcpu->target_freq_lock, flags);
 	cpu_load = loadadjfreq / pcpu->policy->cur;
-	boosted = tunables->boost_val || now < (last_input_time + get_input_boost_duration());
+	
+	boosted = boost_val || now < (get_input_time() + get_input_boost_duration());
 
 	if (cpu_load >= tunables->go_hispeed_load) {
 		if (pcpu->policy->cur < tunables->hispeed_freq) {
