@@ -35,7 +35,6 @@
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <asm/cputime.h>
-#include <linux/touchboost.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_barry_allen.h>
@@ -79,14 +78,14 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 90
+#define DEFAULT_GO_HISPEED_LOAD 80
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Sampling down factor to be applied to min_sample_time at max freq */
 static unsigned int sampling_down_factor;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 80
+#define DEFAULT_TARGET_LOAD 70
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -95,7 +94,7 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (40 * USEC_PER_MSEC)
+#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
 static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 
 /*
@@ -134,7 +133,7 @@ static bool boosted;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-#define TOP_STOCK_FREQ 2880000
+#define TOP_STOCK_FREQ 3091200 
 
 static bool io_is_busy;
 
@@ -389,9 +388,6 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	if (!pcpu->governor_enabled)
 		goto exit;
 
-	now = ktime_to_us(ktime_get());
-	boosted = now < (last_input_time + get_input_boost_duration());
-
 	pcpu->nr_timer_resched = 0;
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	now = update_load(data);
@@ -406,9 +402,9 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	loadadjfreq = (unsigned int)cputime_speedadj * 100;
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	pcpu->prev_load = cpu_load;
-	boosted = boost_val || now < (last_input_time + get_input_boost_duration());
+	boosted = boost_val || now < boostpulse_endtime;
 
-	if (cpu_load >= go_hispeed_load) {
+	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->policy->cur < hispeed_freq &&
 		    cpu_load <= MAX_LOCAL_LOAD) {
 			new_freq = hispeed_freq;
@@ -443,11 +439,6 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 				max_load >= up_threshold_any_cpu_load)
 				new_freq = sync_freq;
 		}
-	}
-
-	if (boosted) {
-		if (new_freq < input_boost_freq)
-			new_freq = input_boost_freq;
 	}
 
 	if (cpu_load <= MAX_LOCAL_LOAD &&
@@ -683,7 +674,7 @@ static void cpufreq_barry_allen_boost(void)
 	struct cpufreq_barry_allen_cpuinfo *pcpu;
 
 	boosted = true;
-
+	
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
 	for_each_online_cpu(i) {
@@ -1054,7 +1045,7 @@ static ssize_t show_ba_locked(struct kobject *kobj,
 {
 	if (ba_locked)
 		return snprintf(buf, PAGE_SIZE, "1\n");
-
+	
 	return snprintf(buf, PAGE_SIZE, "0\n");
 }
 
@@ -1073,7 +1064,7 @@ static ssize_t store_ba_locked(
 		ba_locked = true;
 	else
 		ba_locked = false;
-
+	
 	return count;
 }
 

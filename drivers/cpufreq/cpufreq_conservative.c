@@ -20,14 +20,13 @@
 #define DEF_FREQUENCY_STEP			(5)
 #define DEF_SAMPLING_DOWN_FACTOR		(1)
 #define MAX_SAMPLING_DOWN_FACTOR		(10)
-#define MICRO_FREQUENCY_MIN_SAMPLE_RATE	(10000)
 
 static DEFINE_PER_CPU(struct cs_cpu_dbs_info_s, cs_cpu_dbs_info);
 
 static inline unsigned int get_freq_target(struct cs_dbs_tuners *cs_tuners,
-					   unsigned int freq_mult)
+					   struct cpufreq_policy *policy)
 {
-	unsigned int freq_target = (cs_tuners->freq_step * freq_mult) / 100;
+	unsigned int freq_target = (cs_tuners->freq_step * policy->max) / 100;
 
 	/* max freq cannot be less than 100. But who knows... */
 	if (unlikely(freq_target == 0))
@@ -51,7 +50,6 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	struct cpufreq_policy *policy = dbs_info->cdbs.cur_policy;
 	struct dbs_data *dbs_data = policy->governor_data;
 	struct cs_dbs_tuners *cs_tuners = dbs_data->tuners;
-	u64 now;
 
 	/*
 	 * break out if we 'cannot' reduce the speed as the user might
@@ -60,32 +58,18 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	if (cs_tuners->freq_step == 0)
 		return;
 
-	now = ktime_to_us(ktime_get());
-
 	/* Check for frequency increase */
-	if (load > DEF_FREQUENCY_TWOSTEP_THRESHOLD) {
-		if (load >= cs_tuners->up_threshold)
-			dbs_info->down_skip = 0;
+	if (load > cs_tuners->up_threshold) {
+		dbs_info->down_skip = 0;
 
 		/* if we are already at full speed then break out early */
-		if (policy->curr == policy->max)
+		if (dbs_info->requested_freq == policy->max)
 			return;
 
-		if (load < cs_tuners->up_threshold && cs_tuners->twostep_counter++ < 2) {
-			cs_tuners->twostep_time = now;
-			dbs_info->requested_freq += get_freq_target(cs_tuners, policy->max >> 1);
-		} else {
-			if (load >= cs_tuners->up_threshold)
-				dbs_info->requested_freq += get_freq_target(cs_tuners, policy->max);
-
-			cs_tuners->twostep_counter = 0;
-		}
+		dbs_info->requested_freq += get_freq_target(cs_tuners, policy);
 
 		if (dbs_info->requested_freq > policy->max)
 			dbs_info->requested_freq = policy->max;
-
-		if (dbs_info->requested_freq == policy->cur)
-			return;
 
 		__cpufreq_driver_target(policy, dbs_info->requested_freq,
 			CPUFREQ_RELATION_H);
@@ -101,21 +85,12 @@ static void cs_check_cpu(int cpu, unsigned int load)
 	if (load < cs_tuners->down_threshold) {
 		unsigned int freq_target;
 		/*
-		 * we're scaling down, so reset the counter if
-		 * the conditions are met
-		 */
-		if (cs_tuners->twostep_counter) {
-			if ((now - cs_tuners->twostep_time) >= 150000)
-				cs_tuners->twostep_counter = 0;
-		}
-
-		/*
 		 * if we cannot reduce the frequency anymore, break out early
 		 */
 		if (policy->cur == policy->min)
 			return;
 
-		freq_target = get_freq_target(cs_tuners, policy->max);
+		freq_target = get_freq_target(cs_tuners, policy);
 		if (dbs_info->requested_freq > freq_target)
 			dbs_info->requested_freq -= freq_target;
 		else
@@ -357,10 +332,10 @@ static int cs_init(struct dbs_data *dbs_data)
 	tuners->sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR;
 	tuners->ignore_nice_load = 0;
 	tuners->freq_step = DEF_FREQUENCY_STEP;
-	tuners->twostep_counter = 0;
 
 	dbs_data->tuners = tuners;
-	dbs_data->min_sampling_rate = MICRO_FREQUENCY_MIN_SAMPLE_RATE;
+	dbs_data->min_sampling_rate = MIN_SAMPLING_RATE_RATIO *
+		jiffies_to_usecs(10);
 	mutex_init(&dbs_data->mutex);
 	return 0;
 }
