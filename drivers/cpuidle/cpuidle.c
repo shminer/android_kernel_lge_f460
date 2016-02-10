@@ -510,8 +510,7 @@ static int cpuidle_latency_notify(struct notifier_block *b,
 	preempt_disable();
 	smp_call_function_many(cpus, smp_callback, NULL, 1);
 	preempt_enable();
-
-	return NOTIFY_OK;
+ 	return NOTIFY_OK;
 }
 
 static struct notifier_block cpuidle_latency_notifier = {
