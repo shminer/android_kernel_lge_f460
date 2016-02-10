@@ -195,7 +195,6 @@ static int boost_mig_sync_thread(void *data)
 	return 0;
 }
 
-#ifndef CONFIG_SCHED_BFS
 static int boost_migration_notify(struct notifier_block *nb,
 				unsigned long unused, void *arg)
 {
@@ -235,7 +234,6 @@ static int boost_migration_notify(struct notifier_block *nb,
 static struct notifier_block boost_migration_nb = {
 	.notifier_call = boost_migration_notify,
 };
-#endif
 
 static int cpu_boost_init(void)
 {
@@ -258,10 +256,8 @@ static int cpu_boost_init(void)
 					"boost_sync/%d", cpu);
 		set_cpus_allowed(s->thread, *cpumask_of(cpu));
 	}
-#ifndef CONFIG_SCHED_BFS
 	atomic_notifier_chain_register(&migration_notifier_head,
 					&boost_migration_nb);
-#endif
 
 	return 0;
 }
