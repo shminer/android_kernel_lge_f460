@@ -141,3 +141,4 @@ struct nr_stats_s {
 DECLARE_PER_CPU(struct nr_stats_s, runqueue_stats);
 
 #endif
+
