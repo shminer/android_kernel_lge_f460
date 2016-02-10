@@ -241,7 +241,6 @@ static struct global_rq grq ____cacheline_aligned;
 #endif
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
-DEFINE_PER_CPU_SHARED_ALIGNED(struct nr_stats_s, runqueue_stats);
 static DEFINE_MUTEX(sched_hotcpu_mutex);
 
 #ifdef CONFIG_SMP
@@ -923,85 +922,11 @@ static int effective_prio(struct task_struct *p)
 	return p->prio;
 }
 
-/* Intelli_plug support */
-static inline unsigned int do_avg_nr_running(struct rq *rq)
-{
-
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-	unsigned int ave_nr_running = nr_stats->ave_nr_running;
-	s64 nr, deltax;
-
-	deltax = rq->clock_task - nr_stats->nr_last_stamp;
-	nr = NR_AVE_SCALE(grq.nr_running);
-
-	if (deltax > NR_AVE_PERIOD)
-		ave_nr_running = nr;
-	else
-		ave_nr_running +=
-			NR_AVE_DIV_PERIOD(deltax * (nr - ave_nr_running));
-
-	return ave_nr_running;
-}
-
-unsigned long avg_nr_running(void)
-{
-	unsigned long i, sum = 0;
-	unsigned int seqcnt, ave_nr_running;
-
-	for_each_online_cpu(i) {
-		struct nr_stats_s *stats = &per_cpu(runqueue_stats, i);
-		struct rq *q = cpu_rq(i);
-
-		/*
-		 * Update average to avoid reading stalled value if there were
-		 * no run-queue changes for a long time. On the other hand if
-		 * the changes are happening right now, just read current value
-		 * directly.
-		 */
-		seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-		ave_nr_running = do_avg_nr_running(q);
-		if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-			read_seqcount_begin(&stats->ave_seqcnt);
-			ave_nr_running = stats->ave_nr_running;
-		}
-
-		sum += ave_nr_running;
-	}
-
-	return sum;
-}
-
-unsigned long avg_cpu_nr_running(unsigned int cpu)
-{
-	unsigned int seqcnt, ave_nr_running;
-
-	struct nr_stats_s *stats = &per_cpu(runqueue_stats, cpu);
-	struct rq *q = cpu_rq(cpu);
-
-	/*
-	 * Update average to avoid reading stalled value if there were
-	 * no run-queue changes for a long time. On the other hand if
-	 * the changes are happening right now, just read current value
-	 * directly.
-	 */
-	seqcnt = read_seqcount_begin(&stats->ave_seqcnt);
-	ave_nr_running = do_avg_nr_running(q);
-	if (read_seqcount_retry(&stats->ave_seqcnt, seqcnt)) {
-		read_seqcount_begin(&stats->ave_seqcnt);
-		ave_nr_running = stats->ave_nr_running;
-	}
-
-	return ave_nr_running;
-}
-
 /*
  * activate_task - move a task to the runqueue. Enter with grq locked.
  */
 static void activate_task(struct task_struct *p, struct rq *rq)
 {
-	
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-	
 	update_clocks(rq);
 
 	/*
@@ -1019,13 +944,7 @@ static void activate_task(struct task_struct *p, struct rq *rq)
 	if (task_contributes_to_load(p))
 		grq.nr_uninterruptible--;
 	enqueue_task(p);
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
-	rq->soft_affined++;
-	p->on_rq = 1;
 	grq.nr_running++;
-	write_seqcount_end(&nr_stats->ave_seqcnt);
 	inc_qnr();
 }
 
@@ -1035,19 +954,11 @@ static inline void clear_sticky(struct task_struct *p);
  * deactivate_task - If it's running, it's not on the grq and we can just
  * decrement the nr_running. Enter with grq locked.
  */
-static inline void deactivate_task(struct task_struct *p, struct rq *rq)
+static inline void deactivate_task(struct task_struct *p)
 {
-	struct nr_stats_s *nr_stats = &per_cpu(runqueue_stats, rq->cpu);
-	
 	if (task_contributes_to_load(p))
 		grq.nr_uninterruptible++;
-	write_seqcount_begin(&nr_stats->ave_seqcnt);
-	nr_stats->ave_nr_running = do_avg_nr_running(rq);
-	nr_stats->nr_last_stamp = rq->clock_task;
-	rq->soft_affined--;
-	p->on_rq = 0;
 	grq.nr_running--;
-	write_seqcount_end(&nr_stats->ave_seqcnt);
 	clear_sticky(p);
 }
 
@@ -1072,10 +983,6 @@ void set_task_cpu(struct task_struct *p, unsigned int cpu)
 	 * per-task data have been completed by this moment.
 	 */
 	smp_wmb();
-	if (p->on_rq) {
-		task_rq(p)->soft_affined--;
-		cpu_rq(cpu)->soft_affined++;
-	}
 	task_thread_info(p)->cpu = cpu;
 }
 
@@ -1171,52 +1078,6 @@ static inline void take_task(int cpu, struct task_struct *p)
 #ifndef tsk_is_polling
 #define tsk_is_polling(t) 0
 #endif
-
-void wake_q_add(struct wake_q_head *head, struct task_struct *task)
-{
-	struct wake_q_node *node = &task->wake_q;
-
-	/*
-	 * Atomically grab the task, if ->wake_q is !nil already it means
-	 * its already queued (either by us or someone else) and will get the
-	 * wakeup due to that.
-	 *
-	 * This cmpxchg() implies a full barrier, which pairs with the write
-	 * barrier implied by the wakeup in wake_up_list().
-	 */
-	if (cmpxchg(&node->next, NULL, WAKE_Q_TAIL))
-		return;
-
-	get_task_struct(task);
-
-	/*
-	 * The head is context local, there can be no concurrency.
-	 */
-	*head->lastp = node;
-	head->lastp = &node->next;
-}
-
-void wake_up_q(struct wake_q_head *head)
-{
-	struct wake_q_node *node = head->first;
-
-	while (node != WAKE_Q_TAIL) {
-		struct task_struct *task;
-
-		task = container_of(node, struct task_struct, wake_q);
-		BUG_ON(!task);
-		/* task can safely be re-inserted now */
-		node = node->next;
-		task->wake_q.next = NULL;
-
-		/*
-		 * wake_up_process() implies a wmb() to pair with the queueing
-		 * in wake_q_add() so as not to miss wakeups.
-		 */
-		wake_up_process(task);
-		put_task_struct(task);
-	}
-}
 
 /*
  * resched_curr - mark rq's current task 'to be rescheduled now'.
@@ -1770,6 +1631,7 @@ void wake_up_new_task(struct task_struct *p)
 	update_task_priodl(p);
 
 	activate_task(p, rq);
+	p->on_rq = 1;
 	trace_sched_wakeup_new(p, 1);
 	if (unlikely(p->policy == SCHED_FIFO))
 		goto after_ts_init;
@@ -2077,15 +1939,18 @@ unsigned long nr_active(void)
 	return nr_running() + nr_uninterruptible();
 }
 
-/* Beyond a task running on this CPU, load is equal everywhere on BFS, so we
- * base it on the number of running or queued tasks with their ->rq pointer
- * set to this cpu as being the CPU they're more likely to run on. */
+/* Beyond a task running on this CPU, load is equal everywhere on BFS */
+static inline unsigned long cpu_load(struct rq *rq)
+{
+	return rq->rq_running + ((queued_notrunning() + nr_uninterruptible()) / grq.noc);
+}
+
 void get_iowait_load(unsigned long *nr_waiters, unsigned long *load)
 {
 	struct rq *this = this_rq();
 
 	*nr_waiters = atomic_read(&this->nr_iowait);
-	*load = this->soft_affined;
+	*load = cpu_load(this);
 }
 
 /* Variables and functions for calc_load */
@@ -3389,7 +3254,7 @@ need_resched:
 		prev->last_ran = rq->clock_task;
 
 		if (deactivate)
-			deactivate_task(prev, rq);
+			deactivate_task(prev);
 		else {
 			/* Task changed affinity off this CPU */
 			if (likely(!needs_other_cpu(prev, cpu))) {
@@ -7204,8 +7069,7 @@ void __init sched_init(void)
 #endif
 
 #ifdef CONFIG_RT_MUTEXES
-	init_task.pi_waiters = RB_ROOT;
-	init_task.pi_waiters_leftmost = NULL;
+	plist_head_init(&init_task.pi_waiters);
 #endif
 
 	/*
