@@ -42,7 +42,18 @@ struct touchboost_inputopen {
  * core is allowed to ramp the cpu down after an input event. That logic is done
  * by you, this var only outputs the last time in us an event was captured
  */
-u64 last_input_time = 0;
+static u64 last_input_time = 0;
+
+inline u64 get_input_time(void)
+{
+	return last_input_time;
+}
+
+/* Get input_duration in uS */
+inline int get_input_boost_duration(void)
+{
+	return input_boost_duration_ms * 1000;
+}
 
 static void boost_input_event(struct input_handle *handle,
                 unsigned int type, unsigned int code, int value)
@@ -109,6 +120,63 @@ static struct input_handler boost_input_handler = {
 	.id_table       = boost_ids,
 };
 
+/* Sysfs */
+static ssize_t show_input_boost_freq(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", input_boost_freq);
+}
+
+static ssize_t store_input_boost_freq(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	input_boost_freq = val;
+	return count;
+}
+
+static ssize_t show_input_boost_duration_ms(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", input_boost_duration_ms);
+}
+
+static ssize_t store_input_boost_duration_ms(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+	input_boost_duration_ms = val > MAX_INPUT_BOOST_DURATION_MS ? MAX_INPUT_BOOST_DURATION_MS : val;
+	return count;
+}
+
+static struct kobj_attribute input_boost_freq_attr =
+	__ATTR(input_boost_freq, 0644, show_input_boost_freq,
+		store_input_boost_freq);
+
+static struct kobj_attribute input_boost_duration_ms_attr =
+	__ATTR(input_boost_duration_ms, 0644, show_input_boost_duration_ms,
+		store_input_boost_duration_ms);
+
+static struct attribute *input_boost_attrs[] = {
+	&input_boost_freq_attr.attr,
+	&input_boost_duration_ms_attr.attr,
+	NULL,
+};
+
+static struct attribute_group input_boost_option_group = {
+	.attrs = input_boost_attrs,
+};
+/* Sysfs End */
+
 static int __init init(void)
 {
 	int ret;
@@ -126,6 +194,7 @@ static int __init init(void)
 		return -ENOMEM;
 	}
 	ret = sysfs_create_group(input_boost_kobj, &input_boost_option_group);
+
 	return ret;
 }
 late_initcall(init);
