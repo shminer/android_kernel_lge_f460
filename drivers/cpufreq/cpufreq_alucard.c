@@ -29,7 +29,6 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include <linux/touchboost.h>
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -37,7 +36,7 @@
 
 /* Tuning Interface */
 #ifdef CONFIG_MACH_LGE
-#define FREQ_RESPONSIVENESS		1958400
+#define FREQ_RESPONSIVENESS		2265600
 #else
 #define FREQ_RESPONSIVENESS		1134000
 #endif
@@ -54,6 +53,7 @@
 /* Pump Inc/Dec for all cores */
 #define PUMP_INC_STEP_AT_MIN_FREQ	2
 #define PUMP_INC_STEP			2
+#define PUMP_DEC_STEP_AT_MIN_FREQ	2
 #define PUMP_DEC_STEP			1
 
 /* sample rate */
@@ -71,6 +71,7 @@ struct cpufreq_alucard_cpuinfo {
 	int pump_inc_step;
 	int pump_inc_step_at_min_freq;
 	int pump_dec_step;
+	int pump_dec_step_at_min_freq;
 	bool governor_enabled;
 	unsigned int up_rate;
 	unsigned int down_rate;
@@ -151,6 +152,10 @@ show_pcpu_param(pump_inc_step, 1);
 show_pcpu_param(pump_inc_step, 2);
 show_pcpu_param(pump_inc_step, 3);
 show_pcpu_param(pump_inc_step, 4);
+show_pcpu_param(pump_dec_step_at_min_freq, 1);
+show_pcpu_param(pump_dec_step_at_min_freq, 2);
+show_pcpu_param(pump_dec_step_at_min_freq, 3);
+show_pcpu_param(pump_dec_step_at_min_freq, 4);
 show_pcpu_param(pump_dec_step, 1);
 show_pcpu_param(pump_dec_step, 2);
 show_pcpu_param(pump_dec_step, 3);
@@ -213,6 +218,10 @@ store_pcpu_pump_param(pump_inc_step, 1);
 store_pcpu_pump_param(pump_inc_step, 2);
 store_pcpu_pump_param(pump_inc_step, 3);
 store_pcpu_pump_param(pump_inc_step, 4);
+store_pcpu_pump_param(pump_dec_step_at_min_freq, 1);
+store_pcpu_pump_param(pump_dec_step_at_min_freq, 2);
+store_pcpu_pump_param(pump_dec_step_at_min_freq, 3);
+store_pcpu_pump_param(pump_dec_step_at_min_freq, 4);
 store_pcpu_pump_param(pump_dec_step, 1);
 store_pcpu_pump_param(pump_dec_step, 2);
 store_pcpu_pump_param(pump_dec_step, 3);
@@ -226,6 +235,10 @@ define_one_global_rw(pump_inc_step_1);
 define_one_global_rw(pump_inc_step_2);
 define_one_global_rw(pump_inc_step_3);
 define_one_global_rw(pump_inc_step_4);
+define_one_global_rw(pump_dec_step_at_min_freq_1);
+define_one_global_rw(pump_dec_step_at_min_freq_2);
+define_one_global_rw(pump_dec_step_at_min_freq_3);
+define_one_global_rw(pump_dec_step_at_min_freq_4);
 define_one_global_rw(pump_dec_step_1);
 define_one_global_rw(pump_dec_step_2);
 define_one_global_rw(pump_dec_step_3);
@@ -423,6 +436,10 @@ static struct attribute *alucard_attributes[] = {
 	&pump_inc_step_2.attr,
 	&pump_inc_step_3.attr,
 	&pump_inc_step_4.attr,
+	&pump_dec_step_at_min_freq_1.attr,
+	&pump_dec_step_at_min_freq_2.attr,
+	&pump_dec_step_at_min_freq_3.attr,
+	&pump_dec_step_at_min_freq_4.attr,
 	&pump_dec_step_1.attr,
 	&pump_dec_step_2.attr,
 	&pump_dec_step_3.attr,
@@ -487,17 +504,11 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	int inc_cpu_load = alucard_tuners_ins.inc_cpu_load;
 	int pump_inc_step = this_alucard_cpuinfo->pump_inc_step;
 	int pump_dec_step = this_alucard_cpuinfo->pump_dec_step;
-	unsigned int next_freq = 0;
 	unsigned int max_load = 0;
 	unsigned int cpus_up_rate = alucard_tuners_ins.cpus_up_rate;
 	unsigned int cpus_down_rate = alucard_tuners_ins.cpus_down_rate;
 	unsigned int index = 0;
 	unsigned int j;
-	bool boosted;
-	u64 now;
-
-	now = ktime_to_us(ktime_get());
-	boosted = now < (last_input_time + get_input_boost_duration());
 
 	policy = this_alucard_cpuinfo->cur_policy;
 	if (!policy)
@@ -513,7 +524,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 		u64 cur_wall_time, cur_idle_time;
 		unsigned int idle_time, wall_time;
 		unsigned int load;
-
+		
 		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time, 0);
 
 		wall_time = (unsigned int)
@@ -539,6 +550,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 		inc_cpu_load = alucard_tuners_ins.inc_cpu_load_at_min_freq;
 		dec_cpu_load = alucard_tuners_ins.dec_cpu_load_at_min_freq;
 		pump_inc_step = this_alucard_cpuinfo->pump_inc_step_at_min_freq;
+		pump_dec_step = this_alucard_cpuinfo->pump_dec_step_at_min_freq;
 	}
 	/* Check for frequency increase or for frequency decrease */
 	if (max_load >= inc_cpu_load && index < this_alucard_cpuinfo->max_index) {
@@ -551,11 +563,10 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 			this_alucard_cpuinfo->up_rate = 1;
 			this_alucard_cpuinfo->down_rate = 1;
 
-			next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
-			if (boosted && policy->cur < input_boost_freq
-                       && next_freq < input_boost_freq)
-                       next_freq = input_boost_freq;
-					__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
+			if (this_alucard_cpuinfo->freq_table[index].frequency != CPUFREQ_ENTRY_INVALID)
+				__cpufreq_driver_target(policy,
+										this_alucard_cpuinfo->freq_table[index].frequency,
+										CPUFREQ_RELATION_L);
 		} else {
 			if (this_alucard_cpuinfo->up_rate < cpus_up_rate)
 				++this_alucard_cpuinfo->up_rate;
@@ -572,11 +583,10 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 			this_alucard_cpuinfo->up_rate = 1;
 			this_alucard_cpuinfo->down_rate = 1;
 
-			next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
-			if (boosted && policy->cur < input_boost_freq
-                       && next_freq < input_boost_freq)
-                       next_freq = input_boost_freq;
-					__cpufreq_driver_target(policy, next_freq, CPUFREQ_RELATION_L);
+			if (this_alucard_cpuinfo->freq_table[index].frequency != CPUFREQ_ENTRY_INVALID)
+				__cpufreq_driver_target(policy,
+										this_alucard_cpuinfo->freq_table[index].frequency,
+										CPUFREQ_RELATION_L);
 		} else {
 			if (this_alucard_cpuinfo->down_rate < cpus_down_rate)
 				++this_alucard_cpuinfo->down_rate;
@@ -588,7 +598,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 
 static void do_alucard_timer(struct work_struct *work)
 {
-	struct cpufreq_alucard_cpuinfo *this_alucard_cpuinfo =
+	struct cpufreq_alucard_cpuinfo *this_alucard_cpuinfo = 
 		container_of(work, struct cpufreq_alucard_cpuinfo, work.work);
 	int delay;
 
@@ -629,7 +639,7 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 			return -EINVAL;
 		}
 		cpufreq_frequency_table_policy_minmax_limits(policy,
-				this_alucard_cpuinfo);
+				this_alucard_cpuinfo);	
 
 		for_each_cpu(j, policy->cpus) {
 			struct cpufreq_alucard_cpuinfo *j_alucard_cpuinfo = &per_cpu(od_alucard_cpuinfo, j);
@@ -730,6 +740,7 @@ static int __init cpufreq_gov_alucard_init(void)
 		this_alucard_cpuinfo->pump_inc_step_at_min_freq = PUMP_INC_STEP_AT_MIN_FREQ;
 		this_alucard_cpuinfo->pump_inc_step = PUMP_INC_STEP;
 		this_alucard_cpuinfo->pump_dec_step = PUMP_DEC_STEP;
+		this_alucard_cpuinfo->pump_dec_step_at_min_freq = PUMP_DEC_STEP_AT_MIN_FREQ;
 	}
 
 	alucard_wq = alloc_workqueue("alucard_wq", WQ_HIGHPRI, 0);
