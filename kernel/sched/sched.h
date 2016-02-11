@@ -12,11 +12,6 @@
 
 extern __read_mostly int scheduler_running;
 
-#define SCHED_POLICY_PERFORMANCE	(0x1)
-#define SCHED_POLICY_POWERSAVING	(0x2)
-
-extern int __read_mostly sched_balance_policy;
-
 /*
  * Convert user-nice values [ -20 ... 0 ... 19 ]
  * to static priority [ MAX_RT_PRIO..MAX_PRIO-1 ],
@@ -267,6 +262,12 @@ struct cfs_rq {
 #endif
 
 #ifdef CONFIG_SMP
+/*
+ * Load-tracking only depends on SMP, FAIR_GROUP_SCHED dependency below may be
+ * removed when useful for applications beyond shares distribution (e.g.
+ * load-balance).
+ */
+#ifdef CONFIG_FAIR_GROUP_SCHED
 	/*
 	 * CFS Load tracking
 	 * Under CFS, load is tracked on a per-entity basis and aggregated up.
@@ -276,8 +277,9 @@ struct cfs_rq {
 	unsigned long runnable_load_avg, blocked_load_avg;
 	atomic64_t decay_counter;
 	u64 last_decay;
-	atomic_long_t removed_load;
 
+#endif /* CONFIG_FAIR_GROUP_SCHED */
+/* These always depend on CONFIG_FAIR_GROUP_SCHED */
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	u32 tg_runnable_contrib;
 	unsigned long tg_load_contrib;
@@ -391,9 +393,6 @@ struct root_domain {
 extern struct root_domain def_root_domain;
 
 #endif /* CONFIG_SMP */
-
-/* full cpu utilization */
-#define FULL_UTIL	SCHED_POWER_SCALE
 
 /*
  * This is the main, per-CPU runqueue data structure.
@@ -534,7 +533,6 @@ struct rq {
 #endif
 
 	struct sched_avg avg;
-	unsigned int util;
 };
 
 static inline int cpu_of(struct rq *rq)
