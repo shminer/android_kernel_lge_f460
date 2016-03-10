@@ -314,7 +314,6 @@ static void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
 /*
  * This function is protected against re-entrancy.
  */
-#include <linux/coresight.h>
 void die(const char *str, struct pt_regs *regs, int err)
 {
 	enum bug_trap_type bug_type = BUG_TRAP_TYPE_NONE;
@@ -341,9 +340,6 @@ void arm_notify_die(const char *str, struct pt_regs *regs,
 
 		force_sig_info(info->si_signo, info, current);
 	} else {
-		//QCTK-ANDERSON
-		//Abort coresight as soon as possible to record more events
-		coresight_abort();
 		die(str, regs, err);
 	}
 }
