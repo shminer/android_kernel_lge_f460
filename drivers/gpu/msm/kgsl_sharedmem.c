@@ -556,7 +556,8 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 
 static void kgsl_coherent_free(struct kgsl_memdesc *memdesc)
 {
-	kgsl_driver.stats.coherent -= memdesc->size;
+	atomic_sub(memdesc->size,
+			&kgsl_driver.stats.coherent);
 	dma_free_coherent(memdesc->dev, memdesc->size,
 			  memdesc->hostptr, memdesc->physaddr);
 }
@@ -815,7 +816,7 @@ kgsl_sharedmem_alloc_coherent(struct kgsl_device *device,
 
 	memdesc->size = size;
 	memdesc->ops = &kgsl_coherent_ops;
-	memdesc->dev = device->parentdev;
+	memdesc->dev = &device->pdev->dev;
 
 	memdesc->hostptr = dma_alloc_coherent(memdesc->dev, size,
 					&memdesc->physaddr, GFP_KERNEL);
@@ -830,8 +831,8 @@ kgsl_sharedmem_alloc_coherent(struct kgsl_device *device,
 
 	/* Record statistics */
 
-	KGSL_STATS_ADD(size, kgsl_driver.stats.coherent,
-		       kgsl_driver.stats.coherent_max);
+	KGSL_STATS_ADD(size, &kgsl_driver.stats.coherent,
+		       &kgsl_driver.stats.coherent_max);
 
 err:
 	if (result)
