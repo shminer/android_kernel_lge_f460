@@ -1461,7 +1461,7 @@ static int dsi_event_thread(void *data)
 	struct mdss_dsi_event *ev;
 	struct dsi_event_q *evq;
 	struct mdss_dsi_ctrl_pdata *ctrl;
-#ifdef CONFIG_MACH_LGE
+#ifdef CONFIG_LGE_DEVFREQ_DFPS
 	struct mdss_dsi_ctrl_pdata *other_ctrl = NULL;
 #endif
 	unsigned long flag;
