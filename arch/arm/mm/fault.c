@@ -135,7 +135,6 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 /*
  * Oops.  The kernel tried to access some page that wasn't present.
  */
- #include <linux/coresight.h>
 static void
 __do_kernel_fault(struct mm_struct *mm, unsigned long addr, unsigned int fsr,
 		  struct pt_regs *regs)
@@ -145,10 +144,6 @@ __do_kernel_fault(struct mm_struct *mm, unsigned long addr, unsigned int fsr,
 	 */
 	if (fixup_exception(regs))
 		return;
-
-	//QCTK-ANDERSON
-	//Abort coresight as soon as possible to record more events
-	coresight_abort();
 
 	/*
 	 * No handler, we'll have to terminate things with extreme prejudice.
