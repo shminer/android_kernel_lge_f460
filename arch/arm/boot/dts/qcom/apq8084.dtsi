@@ -62,9 +62,6 @@
 	};
 
 	soc: soc { };
-<<<<<<< HEAD
-
-=======
 	cpus {
 		#size-cells = <0>;
 		#address-cells = <1>;
@@ -173,7 +170,6 @@
 			            314640>; //2649600 kHz
 		};
 	};
->>>>>>> 5159d31... boot: dtsi: Adds the current values for the cores in uA in the device tree.
 	memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
