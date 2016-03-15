@@ -26,7 +26,7 @@
 #include <linux/touchboost.h>
 
 #ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
+#include <soc/qcom/state_notifier.h>
 #endif
 
 struct cpufreq_impulse_cpuinfo {
