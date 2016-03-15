@@ -15,9 +15,7 @@
 #include <linux/sysfs.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
- #ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
+#include <soc/qcom/state_notifier.h>
 
 #include <soc/qcom/limiter.h>
 
@@ -36,11 +34,9 @@ static void update_cpu_max_freq(unsigned int cpu)
 {
 	uint32_t max_freq;
 
-#ifdef CONFIG_STATE_NOTIFIER
 	if (state_suspended)
 		max_freq = limit.suspend_max_freq;
 	else
-#endif
 		max_freq = limit.resume_max_freq[cpu];
 
 	if (!max_freq)
@@ -60,7 +56,7 @@ static void update_cpu_min_freq(unsigned int cpu)
 	if (!min_freq)
 		return;
 
-	if (min_freq	> limit.suspend_max_freq)
+	if (state_suspended && min_freq	> limit.suspend_max_freq)
 		return;
 
 	mutex_lock(&limit.msm_limiter_mutex[cpu]);
@@ -69,7 +65,7 @@ static void update_cpu_min_freq(unsigned int cpu)
 	cpufreq_set_freq(0, min_freq, cpu);
 	mutex_unlock(&limit.msm_limiter_mutex[cpu]);
 }
-/*
+
 static void msm_limiter_run(void)
 {
 	int cpu = 0;
@@ -77,10 +73,11 @@ static void msm_limiter_run(void)
 	for_each_possible_cpu(cpu) {
 		update_cpu_max_freq(cpu);
 
+		if (state_suspended)
+			update_cpu_min_freq(cpu);
 	}
 }
-*/
-#ifdef CONFIG_STATE_NOTIFIER
+
 static int state_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -98,21 +95,18 @@ static int state_notifier_callback(struct notifier_block *this,
 
 	return NOTIFY_OK;
 }
-#endif
 
 static int msm_limiter_start(void)
 {
 	unsigned int cpu = 0;
 	int ret = 0;
 
-#ifdef CONFIG_STATE_NOTIFIER
 	limit.notif.notifier_call = state_notifier_callback;
 	if (state_register_client(&limit.notif)) {
 		pr_err("%s: Failed to register State notifier callback\n",
 			MSM_LIMITER);
 		goto err_out;
 	}
-#endif
 
 	for_each_possible_cpu(cpu)
 		mutex_init(&limit.msm_limiter_mutex[cpu]);
@@ -123,7 +117,7 @@ static int msm_limiter_start(void)
 	}
 
 	return ret;
-// err_out:
+err_out:
 	limit.limiter_enabled = 0;
 	return ret;
 }
@@ -135,9 +129,8 @@ static void msm_limiter_stop(void)
 	for_each_possible_cpu(cpu)	
 		mutex_destroy(&limit.msm_limiter_mutex[cpu]);
 
-#ifdef CONFIG_STATE_NOTIFIER
 	state_unregister_client(&limit.notif);
-#endif
+
 	limit.notif.notifier_call = NULL;
 }
 

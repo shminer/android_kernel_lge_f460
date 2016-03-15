@@ -1,5 +1,5 @@
 #define MSM_LIMITER			"msm_limiter"
-#define LIMITER_ENABLED			0
+#define LIMITER_ENABLED			1
 #define MPD_ENABLED			0
 #if defined(CONFIG_ARCH_MSM8916)
 #define DEFAULT_SUSPEND_FREQUENCY	998400

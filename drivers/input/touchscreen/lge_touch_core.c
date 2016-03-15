@@ -40,6 +40,10 @@
 #include <linux/input/lge_touch_core.h>
 #include <linux/moduleparam.h>
 
+#ifdef CONFIG_STATE_NOTIFIER
+#include <soc/qcom/state_notifier.h>
+#endif
+
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 #elif defined(CONFIG_FB)
@@ -3055,6 +3059,10 @@ static int touch_suspend(struct device *dev)
 		mutex_unlock(&ts->pdata->thread_lock);
 	}
 
+	#ifdef CONFIG_STATE_NOTIFIER
+		state_suspend();
+	#endif
+
 	TOUCH_INFO_MSG("%s : touch_suspend done\n", __func__);
 	return 0;
 }
@@ -3105,6 +3113,11 @@ static int touch_resume(struct device *dev)
 
 	TOUCH_INFO_MSG("%s : touch_resume done\n", __func__);
 	mutex_unlock(&ts->pdata->thread_lock);
+
+	#ifdef CONFIG_STATE_NOTIFIER
+		state_resume();
+	#endif
+
 	return 0;
 }
 
