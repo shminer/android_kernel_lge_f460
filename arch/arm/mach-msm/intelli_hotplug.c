@@ -19,7 +19,7 @@
 #include <linux/input.h>
 #include <linux/kobject.h>
 #ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
+#include <soc/state_notifier.h>
 #else
 #include <linux/fb.h>
 #endif
