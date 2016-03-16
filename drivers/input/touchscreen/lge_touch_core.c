@@ -40,6 +40,9 @@
 #include <linux/input/lge_touch_core.h>
 #include <linux/moduleparam.h>
 
+//add double_tap_wake feedback
+#include "../../misc/tspdrv/imm_timed_output.h"
+
 #ifdef CONFIG_STATE_NOTIFIER
 #include <soc/qcom/state_notifier.h>
 #endif
@@ -191,6 +194,10 @@ void send_uevent_lpwg(struct i2c_client *client, int type)
 		atomic_set(&ts->state.uevent_state, UEVENT_BUSY);
 		send_uevent(&client->dev, lpwg_uevent[type-1]);
 		if (type == LPWG_DOUBLE_TAP) {
+			// Add double_tap_wake feedback
+			_tspdrv_vib_enable(0);
+			_tspdrv_vib_enable(10);
+			_tspdrv_vib_enable(23);
 			input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
 			input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
 			input_sync(ts->input_dev);

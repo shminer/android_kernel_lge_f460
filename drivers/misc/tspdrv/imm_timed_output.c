@@ -25,21 +25,19 @@ static void ImmVibeSPI_Control(struct work_struct *work)
 	}
 }
 
-static void tspdrv_vib_enable(struct timed_output_dev *dev, int value)
+void _tspdrv_vib_enable(int value)
 {
-	
 	hrtimer_cancel(&vib_timer);
-
 	if(value == 0) {
 		atomic_set(&vib_state, 0); //Turn Off the vibrator
 		schedule_work(&vibrator_work);
  	}
 	else {
 		value = (value > max_timeout_ms ? max_timeout_ms : value);
-        /*[LGE_BSP_START][yunmo.yang@lge.com] Unlimit Vibrator Bug fix*/
+        		/*[LGE_BSP_START][yunmo.yang@lge.com] Unlimit Vibrator Bug fix*/
 		if(value < 10)
-            value = 10;
-        /*[LGE_BSP_END][yunmo.yang@lge.com] Unlimit Vibrator Bug fix*/
+			value = 10;
+       		 /*[LGE_BSP_END][yunmo.yang@lge.com] Unlimit Vibrator Bug fix*/
 
 		atomic_set(&vib_state, 1);
 		schedule_work(&vibrator_work);
@@ -48,7 +46,12 @@ static void tspdrv_vib_enable(struct timed_output_dev *dev, int value)
 			ktime_set(value/ 1000, (value % 1000) * 1000000),
 			HRTIMER_MODE_REL);
 	}
+}
+EXPORT_SYMBOL(_tspdrv_vib_enable);
 
+static void tspdrv_vib_enable(struct timed_output_dev *dev, int value)
+{
+	_tspdrv_vib_enable(value);
 }
 
 static int tspdrv_vib_get_time(struct timed_output_dev *dev)
