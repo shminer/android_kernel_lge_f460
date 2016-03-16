@@ -111,7 +111,7 @@ $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_HEADERS_INSTALL)
 	$(mv-modules)
 	$(clean-module-folder)
 
-ifeq ($(PRODUCT_SUPPORT_EXFAT), y)
+ifeq ($(PRODUCT_SUPPORT_EXFAT), true)
 	@cp -f $(ANDROID_BUILD_TOP)/kernel/scripts/tuxera_update.sh $(ANDROID_BUILD_TOP)
 	@sh tuxera_update.sh --target target/lg.d/mobile-apq8084 --use-cache --latest --max-cache-entries 2 --source-dir $(ANDROID_BUILD_TOP)/kernel --output-dir $(ANDROID_BUILD_TOP)/$(KERNEL_OUT) -a --user lg-mobile --pass AumlTsj0ou
 	@tar -xzf tuxera-exfat*.tgz
