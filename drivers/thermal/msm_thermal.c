@@ -75,9 +75,9 @@ static struct msm_thermal_data msm_thermal_info;
 static struct msm_thermal_data_intelli msm_thermal_info_local = {
 	.sensor_id = 5,
 	.poll_ms = DEFAULT_POLLING_MS,
-	.limit_temp_degC = 60,
+	.limit_temp_degC = 52,
 	.temp_hysteresis_degC = 5,
-	.limit_safe_temp_degC = 75,
+	.limit_safe_temp_degC = 60,
 	.freq_step = 2,
 	.freq_control_mask = 0xf,
 	.core_limit_temp_degC = 80,
