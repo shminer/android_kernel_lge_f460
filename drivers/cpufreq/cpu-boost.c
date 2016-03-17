@@ -27,7 +27,7 @@
 #include <linux/input.h>
 #include <linux/time.h>
 #ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
+#include <soc/qcom/state_notifier.h>
 #endif
 
 struct cpu_sync {
