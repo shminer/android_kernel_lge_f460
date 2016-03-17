@@ -197,7 +197,7 @@ void send_uevent_lpwg(struct i2c_client *client, int type)
 			// Add double_tap_wake feedback
 			_tspdrv_vib_enable(0);
 			_tspdrv_vib_enable(10);
-			_tspdrv_vib_enable(23);
+			_tspdrv_vib_enable(45);
 			input_report_key(ts->input_dev, KEY_POWER, BUTTON_PRESSED);
 			input_report_key(ts->input_dev, KEY_POWER, BUTTON_RELEASED);
 			input_sync(ts->input_dev);
