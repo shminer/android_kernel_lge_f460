@@ -1085,7 +1085,6 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 	if (ret)
 		goto fail;
 
-	msm_iommu_flush_pagetable(&priv->pt, va, len);
 fail:
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
@@ -1107,7 +1106,6 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 	if (ret < 0)
 		goto fail;
 
-	msm_iommu_flush_pagetable(&priv->pt, va, len);
 	ret = __flush_iotlb(domain);
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
@@ -1134,7 +1132,6 @@ static int msm_iommu_map_range(struct iommu_domain *domain, unsigned long va,
 	}
 
 	ret = msm_iommu_pagetable_map_range(&priv->pt, va, sg, len, prot);
-	msm_iommu_flush_pagetable(&priv->pt, va, len);
 
 fail:
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
@@ -1152,7 +1149,6 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned long va,
 	priv = domain->priv;
 	msm_iommu_pagetable_unmap_range(&priv->pt, va, len);
 
-	msm_iommu_flush_pagetable(&priv->pt, va, len);
 	__flush_iotlb(domain);
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
