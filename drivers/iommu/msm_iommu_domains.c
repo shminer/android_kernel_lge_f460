@@ -82,7 +82,6 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 		struct scatterlist *sglist;
 		unsigned int nrpages = PFN_ALIGN(size) >> PAGE_SHIFT;
 		struct page *dummy_page = phys_to_page(phy_addr);
-		size_t map_ret;
 
 		sglist = vmalloc(sizeof(*sglist) * nrpages);
 		if (!sglist) {
@@ -95,14 +94,10 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 		for (i = 0; i < nrpages; i++)
 			sg_set_page(&sglist[i], dummy_page, PAGE_SIZE, 0);
 
-		map_ret = iommu_map_sg(domain, temp_iova, sglist, nrpages,
-					prot);
-		if (map_ret != size) {
+		ret = iommu_map_range(domain, temp_iova, sglist, size, prot);
+		if (ret) {
 			pr_err("%s: could not map extra %lx in domain %p\n",
 				__func__, start_iova, domain);
-			ret = -EINVAL;
-		} else {
-			ret = 0;
 		}
 
 		vfree(sglist);
