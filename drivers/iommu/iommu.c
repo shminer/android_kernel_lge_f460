@@ -847,24 +847,14 @@ size_t default_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 {
 	struct scatterlist *s;
 	size_t mapped = 0;
-	unsigned int i, min_pagesz;
+	unsigned int i;
 	int ret;
 
-	if (unlikely(domain->ops->pgsize_bitmap == 0UL))
-		return 0;
-
-	min_pagesz = 1 << __ffs(domain->ops->pgsize_bitmap);
-
 	for_each_sg(sg, s, nents, i) {
-		phys_addr_t phys = page_to_phys(sg_page(s)) + s->offset;
+		phys_addr_t phys = page_to_phys(sg_page(s));
 
-		/*
-		 * We are mapping on IOMMU page boundaries, so offset within
-		 * the page must be 0. However, the IOMMU may support pages
-		 * smaller than PAGE_SIZE, so s->offset may still represent
-		 * an offset of that boundary within the CPU page.
-		 */
-		if (!IS_ALIGNED(s->offset, min_pagesz))
+		/* We are mapping on page boundarys, so offset must be 0 */
+		if (s->offset)
 			goto out_err;
 
 		ret = iommu_map(domain, iova + mapped, phys, s->length, prot);
