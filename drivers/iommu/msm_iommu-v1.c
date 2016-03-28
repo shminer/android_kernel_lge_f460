@@ -1413,7 +1413,7 @@ irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id)
 	}
 
 	fsr = GET_FSR(drvdata->cb_base, ctx_drvdata->num);
-	if (fsr & 0x1FF) {
+	if (fsr) {
 		if (!ctx_drvdata->attached_domain) {
 			pr_err("Bad domain in interrupt handler\n");
 			ret = -ENOSYS;
