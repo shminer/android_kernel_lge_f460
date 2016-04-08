@@ -111,6 +111,8 @@ u8  is_probe = 0;
 static struct lge_touch_data *ts_data = NULL;
 int factory_boot = 0;
 
+bool dtw_suspended;
+
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4
 extern bool i2c_suspended;
 #endif
@@ -185,6 +187,10 @@ static char *lpwg_uevent[VALID_LPWG_UEVENT_SIZE][2] = {
 void send_uevent_lpwg(struct i2c_client *client, int type)
 {
 	struct lge_touch_data *ts = i2c_get_clientdata(client);
+
+	/* Allow wake up only if touchscreen resume */
+	if (dtw_suspended)
+		atomic_set(&ts->state.uevent_state, UEVENT_IDLE);
 
 	wake_lock_timeout(&ts->lpwg_wake_lock, msecs_to_jiffies(3000));
 
@@ -3103,7 +3109,7 @@ static int touch_suspend(struct device *dev)
 	#ifdef CONFIG_STATE_NOTIFIER
 		state_suspend();
 	#endif
-
+	dtw_suspended = true;
 	TOUCH_INFO_MSG("%s : touch_suspend done\n", __func__);
 	return 0;
 }
@@ -3151,6 +3157,8 @@ static int touch_resume(struct device *dev)
 
 	if (touch_ic_init(ts, 0) < 0)
 		TOUCH_ERR_MSG("%s : touch ic init fail\n", __func__);
+
+	dtw_suspended = false;
 
 	TOUCH_INFO_MSG("%s : touch_resume done\n", __func__);
 	mutex_unlock(&ts->pdata->thread_lock);
