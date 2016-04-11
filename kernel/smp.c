@@ -37,7 +37,6 @@ struct call_single_queue {
 
 static DEFINE_PER_CPU_SHARED_ALIGNED(struct call_single_queue, call_single_queue);
 
-static void flush_smp_call_function_queue(bool warn_cpu_offline);
 
 static int
 hotplug_cfd(struct notifier_block *nfb, unsigned long action, void *hcpu)
