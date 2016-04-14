@@ -44,6 +44,9 @@
 #include "lpm-levels.h"
 #include "lpm-workarounds.h"
 #include <trace/events/power.h>
+#ifdef CONFIG_STATE_NOTIFIER
+#include <linux/state_notifier.h>
+#endif
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
 
@@ -269,6 +272,11 @@ static int cpu_power_select(struct cpuidle_device *dev,
 
 	if (!cpu)
 		return -EINVAL;
+
+#ifdef CONFIG_STATE_NOTIFIER
+	if (state_suspended)
+		sleep_disabled = false;
+#endif
 
 	if (sleep_disabled)
 		return 0;
