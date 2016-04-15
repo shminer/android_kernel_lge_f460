@@ -45,7 +45,7 @@
 #include "lpm-workarounds.h"
 #include <trace/events/power.h>
 #ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
+#include <soc/qcom/state_notifier.h>
 #endif
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
