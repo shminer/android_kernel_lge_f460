@@ -7,7 +7,7 @@
 */
 
 #include "fuse_i.h"
-#include "fuse_shortcircuit.h"
+#include "fuse_stacked.h"
 
 #include <linux/pagemap.h>
 #include <linux/slab.h>
@@ -269,7 +269,7 @@ void fuse_release_common(struct file *file, int opcode)
 	if (unlikely(!ff))
 		return;
 
-	fuse_shortcircuit_release(ff);
+	fuse_stacked_release(ff);
 
 	req = ff->reserved_req;
 	fuse_prepare_release(ff, file->f_flags, opcode);
@@ -988,7 +988,7 @@ static ssize_t fuse_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	}
 
 	if (ff && ff->rw_lower_file)
-		ret_val = fuse_shortcircuit_aio_read(iocb, iov, nr_segs, pos);
+		ret_val = fuse_stacked_aio_read(iocb, iov, nr_segs, pos);
 	else
 		ret_val = generic_file_aio_read(iocb, iov, nr_segs, pos);
 
@@ -1290,7 +1290,7 @@ static ssize_t fuse_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 		 * some processes writing directly to the lower filesystem
 		 * without using fuse.
 		 */
-		written = fuse_shortcircuit_aio_write(iocb, iov, nr_segs,
+		written = fuse_stacked_aio_write(iocb, iov, nr_segs,
 							iocb->ki_pos);
 		goto out;
 	}
