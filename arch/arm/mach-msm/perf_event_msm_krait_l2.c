@@ -633,9 +633,8 @@ static int __init register_krait_l2_pmu_driver(void)
 	disable_counter(l2_cycle_ctr_idx);
 	for (i = 0; i < total_l2_ctrs; i++)
 		disable_counter(i);
-#ifdef CONFIG_PERF_EVENTS_RESET_PMU_DEBUGFS
+
 	msm_perf_register_l2_reset_callback(&l2_reset_pmu);
-#endif
 	return platform_driver_register(&krait_l2_pmu_driver);
 }
 
