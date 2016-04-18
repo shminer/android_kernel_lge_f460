@@ -19,7 +19,7 @@
 #include <linux/io.h>
 #include <linux/ftrace.h>
 #include <linux/msm_adreno_devfreq.h>
-#include <linux/state_notifier.h>
+#include <soc/qcom/state_notifier.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
 #ifdef CONFIG_ADRENO_IDLER
