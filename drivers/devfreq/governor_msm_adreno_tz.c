@@ -19,6 +19,7 @@
 #include <linux/io.h>
 #include <linux/ftrace.h>
 #include <linux/msm_adreno_devfreq.h>
+#include <linux/state_notifier.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
 #ifdef CONFIG_ADRENO_IDLER
@@ -186,7 +187,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * entered pm-suspend or screen-off state.
 	 */
 
-	if (suspended) {
+	if (state_suspended) {
 		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
