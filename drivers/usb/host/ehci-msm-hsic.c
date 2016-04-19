@@ -48,7 +48,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/clk/msm-clk.h>
 
-#include <llinux/msm-bus.h>
+#include <linux/msm-bus.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_xo.h>
 #include <mach/rpm-regulator.h>
