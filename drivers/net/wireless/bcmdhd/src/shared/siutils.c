@@ -2,7 +2,7 @@
  * Misc utility routines for accessing chip-specific features
  * of the SiliconBackplane-based Broadcom chips.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -574,7 +574,9 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		sih->chippkg = BCM4329_182PIN_PKG_ID;
 	}
 	sih->issim = IS_SIM(sih->chippkg);
-
+#ifdef CHIP_DEBUG_FOR_LGE
+	pr_err("%s chip=%x rev=%d \n", __func__, CHIPID(sih->chip), sih->chiprev);
+#endif
 	/* scan for cores */
 	if (CHIPTYPE(sii->pub.socitype) == SOCI_SB) {
 		SI_MSG(("Found chip type SB (0x%08x)\n", w));

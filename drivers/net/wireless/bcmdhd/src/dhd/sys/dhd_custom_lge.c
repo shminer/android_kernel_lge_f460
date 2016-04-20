@@ -1,6 +1,6 @@
 /*
 * Customer HW 10 dependant file
-* Copyright (C) 1999-2015, Broadcom Corporation
+* Copyright (C) 1999-2014, Broadcom Corporation
 * 
 *      Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -448,23 +448,9 @@ int set_softap_params(dhd_pub_t *dhd)
 #ifdef CUSTOM_DSCP_TO_PRIO_MAPPING
 		dhd_dscpmap_enable = 1;
 #endif
-
-#ifndef BCM4339_CHIP
 		iovar_set = 0;
 		bcm_mkiovar("ampdu_rts", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-#endif
-
-#ifdef BCM4339_CHIP
-		iovar_set = 6;
-		bcm_mkiovar("ampdu_retry_limit", (char *)&iovar_set, 4, iov_buf, sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-
-		iovar_set = 4;
-		bcm_mkiovar("ampdu_rr_retry_limit", (char *)&iovar_set, 4, iov_buf,
-		 sizeof(iov_buf));
-		dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iov_buf, sizeof(iov_buf), TRUE, 0);
-#endif
 
 #ifdef BCM4334_CHIP
 		iovar_set = 1;
