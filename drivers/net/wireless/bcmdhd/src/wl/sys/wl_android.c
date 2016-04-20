@@ -1,14 +1,14 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
- *
+ * Copyright (C) 1999-2014, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.c 529325 2015-01-27 06:16:12Z $
+ * $Id: wl_android.c 515139 2014-11-13 08:47:48Z $
  */
 
 #include <linux/module.h>
@@ -52,9 +52,6 @@
 #ifdef WL_NAN
 #include <wl_cfgnan.h>
 #endif /* WL_NAN */
-#if defined(CONFIG_PRE_SELF_DIAGNOSIS)
-#include <soc/qcom/lge/board_lge.h>
-#endif
 
 /*
  * Android private command strings, PLEASE define new private commands here
@@ -141,10 +138,6 @@
 #define CMD_PNODEBUG_SET	"PNODEBUG"
 #define CMD_WLS_BATCHING	"WLS_BATCHING"
 #endif /* PNO_SUPPORT */
-
-#ifdef LPS_SUPPORT
-#define CMD_LPS		"LPS"
-#endif /* LPS_SUPPORT */
 
 #define CMD_OKC_SET_PMK		"SET_PMK"
 #define CMD_OKC_ENABLE		"OKC_ENABLE"
@@ -244,11 +237,6 @@ typedef struct android_wifi_af_params {
 #define CMD_P2P_SET_WFDIE_RESP      "P2P_SET_WFDIE_RESP"
 #define CMD_P2P_GET_WFDIE_RESP      "P2P_GET_WFDIE_RESP"
 #endif /* P2PRESP_WFDIE_SRC */
-
-#ifdef WLWFDS
-#define CMD_ADD_WFDS_HASH	"ADD_WFDS_HASH"
-#define CMD_DEL_WFDS_HASH	"DEL_WFDS_HASH"
-#endif /* WLWFDS */
 
 /* related with CMD_GET_LINK_STATUS */
 #define WL_ANDROID_LINK_VHT					0x01
@@ -435,7 +423,7 @@ static int lock_cookie_wifi = 'W' | 'i'<<8 | 'F'<<16 | 'i'<<24;	/* cookie is "Wi
 extern bool ap_fw_loaded;
 #if defined(CUSTOMER_HW4)
 extern char iface_name[IFNAMSIZ];
-#endif
+#endif 
 
 /**
  * Local (static) functions and variables
@@ -450,48 +438,6 @@ static int g_wifi_on = TRUE;
 /**
  * Local (static) function definitions
  */
-
-#ifdef WLWFDS
-static int wl_android_set_wfds_hash(
-	struct net_device *dev, char *command, int total_len, bool enable)
-{
-	int error = 0;
-	wl_p2p_wfds_hash_t *wfds_hash = NULL;
-	char *smbuf = NULL;
-	smbuf = kmalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
-
-	if (smbuf == NULL) {
-		DHD_ERROR(("%s: failed to allocated memory %d bytes\n",
-			__FUNCTION__, WLC_IOCTL_MAXLEN));
-			goto set_wfds_hash_out;
-	}
-
-	if (enable) {
-		wfds_hash = (wl_p2p_wfds_hash_t *)(command + strlen(CMD_ADD_WFDS_HASH) + 1);
-		error = wldev_iovar_setbuf(dev, "p2p_add_wfds_hash", wfds_hash,
-			sizeof(wl_p2p_wfds_hash_t), smbuf, WLC_IOCTL_MAXLEN, NULL);
-	}
-	else {
-		wfds_hash = (wl_p2p_wfds_hash_t *)(command + strlen(CMD_DEL_WFDS_HASH) + 1);
-		error = wldev_iovar_setbuf(dev, "p2p_del_wfds_hash", wfds_hash,
-			sizeof(wl_p2p_wfds_hash_t), smbuf, WLC_IOCTL_MAXLEN, NULL);
-	}
-
-	if (error) {
-		DHD_ERROR(("%s: failed to %s, error=%d\n", __FUNCTION__, command, error));
-	}
-
-set_wfds_hash_out:
-	if (smbuf)
-		kfree(smbuf);
-
-	if (error)
-		return -1;
-	else
-		return 0;
-}
-#endif /* WLWFDS */
-
 static int wl_android_get_link_speed(struct net_device *net, char *command, int total_len)
 {
 	int link_speed;
@@ -1767,21 +1713,6 @@ int wl_android_wifi_on(struct net_device *dev)
 		} while (retry-- > 0);
 		if (ret != 0) {
 			DHD_ERROR(("\nfailed to power up wifi chip, max retry reached **\n\n"));
-#if defined(CONFIG_PRE_SELF_DIAGNOSIS)
-            lge_pre_self_diagnosis((char *) "platform", 15,(char *) "WIFI", "wifi on fail", 20010);
-#endif
-#if defined(CONFIG_CHECK_CPU)
-            lge_fac_check_cpu((char *) "platform", 15,(char *) "WIFI", "wifi on fail", 20010);
-#endif
-#if defined(CONFIG_CHECK_EMMC)
-            lge_fac_check_emmc((char *) "platform", 15,(char *) "WIFI", "wifi on fail", 20010);
-#endif
-#if defined(CONFIG_CHECK_RAM)
-            lge_fac_check_ram((char *) "platform", 15,(char *) "WIFI", "wifi on fail", 20010);
-#endif
-#if defined(CONFIG_CHECK_MATCHED)
-            lge_fac_check_matched((char *) "platform", 15,(char *) "WIFI", "wifi on fail", 20010);
-#endif
 			goto exit;
 		}
 #ifdef BCMSDIO
@@ -2878,13 +2809,6 @@ wl_android_set_miracast(struct net_device *dev, char *command, int total_len)
 		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
 		if (ret)
 			goto resume;
-
-#if defined(BCM4339_CHIP)
-		config.iovar = "phy_watchdog";
-		config.param = 0;
-		ret = wl_android_iolist_add(dev, &miracast_resume_list, &config);
-		DHD_INFO(("%s: do iovar cmd=%s (ret=%d)\n", __FUNCTION__, config.iovar, ret));
-#endif
 #else
 		/* tunr off pm */
 		val = 0;
@@ -3277,97 +3201,6 @@ static int wl_android_get_link_status(struct net_device *dev, char *command,
 	return bytes_written;
 }
 
-#ifdef LPS_SUPPORT /* Low Power SCAN(BSSID based PNO) */
-#define MAX_LPS_BSSID_NUM	100
-
-int wl_android_set_lps(struct net_device *dev, const char *cmd)
-{
-	char sbuf[32];
-	const char *str;
-	int i, nbss = 0;
-	uint16 mode = 0;
-	wl_pfn_bssid_t *lps_bssid_list = NULL;
-	struct dhd_pno_hotlist_params hotlist_params;
-	static bool lps_running = false;
-
-	DHD_PNO(("wl_android_set_lps: entering cmd=%s\n", cmd));
-
-	if (strstr(cmd, "enter") && !lps_running) {
-		DHD_PNO(("wl_android_set_lps: LPS mode enter\n"));
-		mode |= WL_PFN_SUPPRESSLOST_MASK;
-	} else if (strstr(cmd, "leave") && !lps_running) {
-		DHD_PNO(("wl_android_set_lps: LPS mode leave\n"));
-		mode |= WL_PFN_SUPPRESSFOUND_MASK;
-	} else if (strstr(cmd, "stop")) {
-		DHD_PNO(("wl_android_set_lps: LPS mode stop\n"));
-		lps_running = false;
-		dhd_dev_pno_stop_for_hotlist(dev);
-		return 0;
-	} else {
-		DHD_PNO(("wl_android_set_lps: Wrong LPS mode or running(%d). \n", lps_running));
-		return -1;
-	}
-
-	memset(&hotlist_params, 0x0, sizeof(hotlist_params));
-	str = strstr(cmd, " scan_fr=");
-	if (str) {
-		str += 9;
-		hotlist_params.scan_fr = bcm_atoi(str);
-	} else {
-		DHD_PNO(("wl_android_set_lps: scan_fr param is not set\n"));
-		return -1;
-	}
-
-	str = strstr(cmd, " nbss=");
-	if (str) {
-		str += 6;
-		nbss = bcm_atoi(str);
-	} else {
-		DHD_PNO(("wl_android_set_lps: nbss param is not set\n"));
-		return -1;
-	}
-	nbss = MIN(nbss, MAX_LPS_BSSID_NUM);
-	hotlist_params.nbssid = nbss;
-	DHD_PNO(("wl_android_set_lps: scan_fr(%d), nbss(%d), mode(0x%02x)\n",
-		hotlist_params.scan_fr, nbss, mode));
-	str = strstr(cmd, " bssid=");
-	if (str) {
-		lps_bssid_list = kzalloc(nbss * sizeof(wl_pfn_bssid_t), GFP_KERNEL);
-		if (lps_bssid_list == NULL) {
-			DHD_PNO(("memory alloc bssid list(%ul) failed\n",
-				nbss * sizeof(wl_pfn_bssid_t)));
-			return -ENOMEM;
-		}
-
-		str += 7;
-		for (i = 0; i < nbss; i++) {
-			str = get_string_by_separator(sbuf, 32, str, ',');
-			if (bcm_ether_atoe(sbuf, &lps_bssid_list[i].macaddr) == 0) {
-				DHD_PNO(("wl_android_set_lps: %s is invalid LPS BSSID!\n", sbuf));
-				kfree(lps_bssid_list);
-				return -1;
-			} else {
-				lps_bssid_list[i].flags = mode;
-				printk(" lps_bssid[%d]="MACDBG", flags=0x%02x\n", i,
-					MAC2STRDBG(lps_bssid_list[i].macaddr.octet),
-						lps_bssid_list[i].flags);
-			}
-		}
-	} else {
-		DHD_PNO(("wl_android_set_lps: bssid param is not set\n"));
-		return -1;
-	}
-	lps_running = true;
-	dhd_dev_pno_set_for_hotlist(dev, lps_bssid_list,
-		(struct dhd_pno_hotlist_params *)&hotlist_params);
-
-	if (lps_bssid_list)
-		kfree(lps_bssid_list);
-
-	return 0;
-}
-#endif	/* LPS_SUPPORT */
-
 
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 {
@@ -3684,11 +3517,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			priv_cmd.total_len);
 	}
 #endif /* WL_NAN */
-#ifdef LPS_SUPPORT
-	else if (strnicmp(command, CMD_LPS, strlen(CMD_LPS)) == 0) {
-		bytes_written = wl_android_set_lps(net, command + strlen(CMD_LPS) + 1);
-	}
-#endif	/* LPS_SUPPORT */
 #if !defined WL_ENABLE_P2P_IF
 	else if (strnicmp(command, CMD_P2P_GET_NOA, strlen(CMD_P2P_GET_NOA)) == 0) {
 		bytes_written = wl_cfg80211_get_p2p_noa(net, command, priv_cmd.total_len);
@@ -3896,14 +3724,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			priv_cmd.total_len);
 	}
 #endif
-#ifdef WLWFDS
-	else if (strnicmp(command, CMD_ADD_WFDS_HASH, strlen(CMD_ADD_WFDS_HASH)) == 0) {
-		bytes_written = wl_android_set_wfds_hash(net, command, priv_cmd.total_len, 1);
-	}
-	else if (strnicmp(command, CMD_DEL_WFDS_HASH, strlen(CMD_DEL_WFDS_HASH)) == 0) {
-		bytes_written = wl_android_set_wfds_hash(net, command, priv_cmd.total_len, 0);
-	}
-#endif /* WLWFDS */
 	else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
@@ -3950,7 +3770,7 @@ int wl_android_init(void)
 		memset(iface_name, 0, IFNAMSIZ);
 		bcm_strncpy_s(iface_name, IFNAMSIZ, "wlan", IFNAMSIZ);
 	}
-#endif
+#endif 
 
 #ifdef WL_GENL
 	wl_genl_init();

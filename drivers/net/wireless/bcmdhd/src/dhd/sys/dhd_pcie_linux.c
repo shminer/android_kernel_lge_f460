@@ -1,7 +1,7 @@
 /*
  * Linux DHD Bus Module for PCIE
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -570,7 +570,7 @@ void dhdpcie_linkdown_cb(struct msm_pcie_notify *noti)
 						__FUNCTION__));
 					bus->islinkdown = TRUE;
 					DHD_OS_WAKE_LOCK(dhd);
-					dhd_os_check_hang(dhd, 0, -ETIMEDOUT);
+					dhd_os_check_hang(dhd, 0, 22);
 				}
 			}
 		}

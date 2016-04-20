@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), Generic work queue framework
  * Generic interface to handle dhd deferred work events
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -192,11 +192,6 @@ dhd_deferred_work_deinit(void *work)
 	if (deferred_work->work_fifo)
 		dhd_kfifo_free(deferred_work->work_fifo);
 
-#ifdef CUSTOMER_HW10
-	deferred_work->prio_fifo = NULL;
-	deferred_work->work_fifo = NULL;
-#endif
-
 	kfree(deferred_work);
 }
 
@@ -256,12 +251,8 @@ dhd_get_scheduled_work(struct dhd_deferred_wq *deferred_wq, struct dhd_deferred_
 {
 	int	status = 0;
 
-#ifdef CUSTOMER_HW10
-	if (!deferred_wq || !deferred_wq->prio_fifo || !deferred_wq->work_fifo) {
-#else
 	if (!deferred_wq) {
-#endif
-	    DHD_ERROR(("%s: work queue not initialized \n", __FUNCTION__));
+		DHD_ERROR(("%s: work queue not initialized \n", __FUNCTION__));
 		return DHD_WQ_STS_UNINITIALIZED;
 	}
 
