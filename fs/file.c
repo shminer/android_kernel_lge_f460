@@ -23,17 +23,6 @@
 #include <linux/rcupdate.h>
 #include <linux/workqueue.h>
 
-#include <linux/timer.h>
-
-
-int detect_fd_leak = 0;
-
-#define	DEBUG_FILE_OPEN_CLOSE	1
-
-#ifdef DEBUG_FILE_OPEN_CLOSE
-#define	FD_NUM_LIMIT 1024
-#endif
-
 int sysctl_nr_open __read_mostly = 1024*1024;
 int sysctl_nr_open_min = BITS_PER_LONG;
 int sysctl_nr_open_max = 1024 * 1024; /* raised later */
@@ -539,61 +528,7 @@ repeat:
 
 	if (start <= files->next_fd)
 		files->next_fd = fd + 1;
-// Added by dongwook.seo - Start... debug for EMFILE
-#ifdef DEBUG_FILE_OPEN_CLOSE
-	if(unlikely(detect_fd_leak))
-	if( fd >= FD_NUM_LIMIT )
-	{
-        int i = 0;
-        char *cwd;
-        char *buf;
-		struct timespec time;
-		struct tm tmresult;
 
-        buf = ( char*) kmalloc( PATH_MAX*sizeof(char), GFP_KERNEL);
-        if ( buf != NULL ) {
-            while( i < end ) {
-                if( fdt->fd[i] != NULL ) {
-                    cwd = d_path(&(fdt->fd[i]->f_path), buf, PATH_MAX*sizeof(char));
-                    if(IS_ERR(cwd)) {
-                        printk("[DBG_EMFILE_PID %d(%d)-%s] d_path return error %ld\n", current->pid, current->tgid, current->comm, PTR_ERR(cwd));
-                        break;
-                    }
-					time = fdt->fd[i]->f_inode->i_mtime;
-					time_to_tm(time.tv_sec, sys_tz.tz_minuteswest * 60 * (-1), &tmresult);
-					/*printk("[%02d-%02d %02d:%02d:%02d.%03lu]-uid=%u, euid=%u\n",
-						tmresult.tm_mon+1,
-						tmresult.tm_mday,
-						tmresult.tm_hour,
-						tmresult.tm_min,
-						tmresult.tm_sec,
-						(unsigned long) time.tv_nsec/1000000,
-						fdt->fd[i]->f_owner.uid,
-						fdt->fd[i]->f_owner.euid);*/
-                    printk("[%02d-%02d %02d:%02d:%02d.%03lu]-uid=%u, euid=%u[DEBUG_EMFILE_PID %d(%d)-%s] Open file with fd %d %s\n",
-						tmresult.tm_mon+1,
-						tmresult.tm_mday,
-						tmresult.tm_hour,
-						tmresult.tm_min,
-						tmresult.tm_sec,
-						(unsigned long) time.tv_nsec/1000000,
-						fdt->fd[i]->f_owner.uid,
-						fdt->fd[i]->f_owner.euid,
-						current->pid, current->tgid, current->comm, i , cwd);
-
-					
-                }
-                i++;
-            }
-            kfree(buf);
-        }
-        else {
-            printk("[DEBUG_EMFILE_PID %d(%d)-%s] Buf allocation Fail!!\n",current->pid, current->tgid, current->comm);
-        }
-    }
-#endif // DEBUG_FILE_OPEN_CLOSE...
-// Added by dongwook.seo - End
-	
 	__set_open_fd(fd, fdt);
 	if (flags & O_CLOEXEC)
 		__set_close_on_exec(fd, fdt);
