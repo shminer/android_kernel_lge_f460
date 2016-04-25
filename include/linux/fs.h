@@ -57,7 +57,6 @@ extern unsigned long get_max_files(void);
 extern int sysctl_nr_open;
 extern struct inodes_stat_t inodes_stat;
 extern int leases_enable, lease_break_time;
-extern int detect_fd_leak;
 extern int sysctl_protected_symlinks;
 extern int sysctl_protected_hardlinks;
 
