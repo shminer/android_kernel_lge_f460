@@ -255,6 +255,34 @@ static void vmpressure_work_fn(struct work_struct *work)
 	} while ((vmpr = vmpressure_parent(vmpr)));
 }
 
+static void vmpressure_update_window_size(struct vmpressure *vmpr,
+					  unsigned long total_pages)
+{
+	spin_lock(&vmpr->sr_lock);
+	/*
+	 * This is inspired by the low watermark computation:
+	 * We want a small window size for small machines, but don't
+	 * grow linearly, since users may want to do cache management
+	 * at a finer granularity.
+	 *
+	 * Using sqrt(4 * total_pages) yields the following:
+	 *
+	 * 32MB:	724k
+	 * 64MB:	1024k
+	 * 128MB:	1448k
+	 * 256MB:	2048k
+	 * 512MB:	2896k
+	 * 1024MB:	4096k
+	 * 2048MB:	5792k
+	 * 4096MB:	8192k
+	 * 8192MB:	11584k
+	 * 16384MB:	16384k
+	 * 32768MB:	23170k
+	 */
+	vmpr->window_size = int_sqrt(total_pages * 4);
+	spin_unlock(&vmpr->sr_lock);
+}
+
 void vmpressure_memcg(gfp_t gfp, struct mem_cgroup *memcg,
 		unsigned long scanned, unsigned long reclaimed)
 {
@@ -339,34 +367,6 @@ void vmpressure_global(gfp_t gfp, unsigned long scanned,
 	pressure = vmpressure_calc_pressure(scanned, reclaimed);
 	pressure = vmpressure_account_stall(pressure, stall, scanned);
 	vmpressure_notify(pressure);
-}
-
-static void vmpressure_update_window_size(struct vmpressure *vmpr,
-					  unsigned long total_pages)
-{
-	spin_lock(&vmpr->sr_lock);
-	/*
-	 * This is inspired by the low watermark computation:
-	 * We want a small window size for small machines, but don't
-	 * grow linearly, since users may want to do cache management
-	 * at a finer granularity.
-	 *
-	 * Using sqrt(4 * total_pages) yields the following:
-	 *
-	 * 32MB:	724k
-	 * 64MB:	1024k
-	 * 128MB:	1448k
-	 * 256MB:	2048k
-	 * 512MB:	2896k
-	 * 1024MB:	4096k
-	 * 2048MB:	5792k
-	 * 4096MB:	8192k
-	 * 8192MB:	11584k
-	 * 16384MB:	16384k
-	 * 32768MB:	23170k
-	 */
-	vmpr->window_size = int_sqrt(total_pages * 4);
-	spin_unlock(&vmpr->sr_lock);
 }
 
 /**
