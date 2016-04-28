@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -82,6 +82,7 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 		struct scatterlist *sglist;
 		unsigned int nrpages = PFN_ALIGN(size) >> PAGE_SHIFT;
 		struct page *dummy_page = phys_to_page(phy_addr);
+		size_t map_ret;
 
 		sglist = vmalloc(sizeof(*sglist) * nrpages);
 		if (!sglist) {
@@ -94,10 +95,14 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 		for (i = 0; i < nrpages; i++)
 			sg_set_page(&sglist[i], dummy_page, PAGE_SIZE, 0);
 
-		ret = iommu_map_range(domain, temp_iova, sglist, size, prot);
-		if (ret) {
+		map_ret = iommu_map_sg(domain, temp_iova, sglist, nrpages,
+					prot);
+		if (map_ret != size) {
 			pr_err("%s: could not map extra %lx in domain %p\n",
 				__func__, start_iova, domain);
+			ret = -EINVAL;
+		} else {
+			ret = 0;
 		}
 
 		vfree(sglist);
@@ -373,6 +378,21 @@ static struct msm_iova_data *msm_domain_to_iova_data(struct iommu_domain
 	return iova_data;
 }
 
+#ifdef CONFIG_MMU500_ACTIVE_PREFETCH_BUG_WITH_SECTION_MAPPING
+static unsigned long get_alignment_order(unsigned long align)
+{
+	if (align >= SZ_1M && align < SZ_2M)
+		return ilog2(SZ_2M);
+	else
+		return ilog2(align);
+}
+#else
+static unsigned long get_alignment_order(unsigned long align)
+{
+	return ilog2(align);
+}
+#endif
+
 int msm_allocate_iova_address(unsigned int iommu_domain,
 					unsigned int partition_no,
 					unsigned long size,
@@ -382,6 +402,7 @@ int msm_allocate_iova_address(unsigned int iommu_domain,
 	struct msm_iova_data *data;
 	struct mem_pool *pool;
 	unsigned long va;
+	unsigned long aligned_order;
 
 	data = find_domain(iommu_domain);
 
@@ -396,8 +417,10 @@ int msm_allocate_iova_address(unsigned int iommu_domain,
 	if (!pool->gpool)
 		return -EINVAL;
 
+	aligned_order = get_alignment_order(align);
+
 	mutex_lock(&pool->pool_mutex);
-	va = gen_pool_alloc_aligned(pool->gpool, size, ilog2(align));
+	va = gen_pool_alloc_aligned(pool->gpool, size, aligned_order);
 	mutex_unlock(&pool->pool_mutex);
 	if (va) {
 		pool->free -= size;

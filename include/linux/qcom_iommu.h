@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -114,6 +114,7 @@ struct msm_iommu_drvdata {
 	void __iomem *glb_base;
 	void __iomem *cb_base;
 	void __iomem *smmu_local_base;
+	void __iomem *vbif_base;
 	int ncb;
 	int ttbr_split;
 	struct clk *clk;
@@ -180,6 +181,7 @@ void iommu_resume(const struct msm_iommu_drvdata *iommu_drvdata);
 			the secure environment, false otherwise
  * @asid		ASID used with this context.
  * @attach_count	Number of time this context has been attached.
+ * @report_error_on_fault - true if error is returned back to master
  *
  * A msm_iommu_ctx_drvdata holds the driver data for a single context bank
  * within each IOMMU hardware instance
@@ -197,6 +199,7 @@ struct msm_iommu_ctx_drvdata {
 	int attach_count;
 	u32 sid_mask[MAX_NUM_SMR];
 	unsigned int n_sid_mask;
+	bool report_error_on_fault;
 };
 
 enum dump_reg {
@@ -393,7 +396,15 @@ u32 msm_iommu_get_mair1(void);
 u32 msm_iommu_get_prrr(void);
 u32 msm_iommu_get_nmrr(void);
 
+/* events for notifiers passed to msm_iommu_register_notify */
 #define TLB_SYNC_TIMEOUT 1
+
+#ifdef CONFIG_MSM_IOMMU_V1
 void msm_iommu_register_notify(struct notifier_block *nb);
+#else
+static inline void msm_iommu_register_notify(struct notifier_block *nb)
+{
+}
+#endif
 
 #endif
