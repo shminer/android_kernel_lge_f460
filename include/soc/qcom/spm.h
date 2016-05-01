@@ -41,7 +41,6 @@ int msm_spm_config_low_power_mode_addr(struct msm_spm_device *dev,
 		unsigned int mode, bool notify_rpm);
 int msm_spm_device_init(void);
 bool msm_spm_is_mode_avail(unsigned int mode);
-
 void msm_spm_dump_regs(unsigned int cpu);
 #if defined(CONFIG_MSM_L2_SPM)
 
@@ -87,11 +86,6 @@ static inline int msm_spm_turn_on_cpu_rail(void __iomem *base,
 		unsigned int val, int cpu)
 {
 	return -ENOSYS;
-}
-
-static void msm_spm_dump_regs(unsigned int cpu)
-{
-	return;
 }
 
 static inline int msm_spm_device_init(void)
