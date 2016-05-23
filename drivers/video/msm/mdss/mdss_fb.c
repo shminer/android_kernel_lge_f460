@@ -564,8 +564,6 @@ static int mdss_fb_create_sysfs(struct msm_fb_data_type *mfd)
 		pr_err("sysfs group creation failed, rc=%d\n", rc);
 
 	rc = mdss_livedisplay_create_sysfs(mfd);
-
-err:
 	return rc;
 }
 
