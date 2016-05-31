@@ -373,21 +373,21 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 	}
 
 	pr_debug("%s\n", __func__);
-
 	if (prtd->enabled == IDLE) {
 		params = &soc_prtd->dpcm[substream->stream].hw_params;
 		if (params_format(params) == SNDRV_PCM_FORMAT_S24_LE)
 			bits_per_sample = 24;
 
-	/* ULL mode is not supported in capture path */
-	if (pdata->perf_mode == LEGACY_PCM_MODE)
-		prtd->audio_client->perf_mode = LEGACY_PCM_MODE;
-	else
-		prtd->audio_client->perf_mode = LOW_LATENCY_PCM_MODE;
+		/* ULL mode is not supported in capture path */
+		if (pdata->perf_mode == LEGACY_PCM_MODE)
+			prtd->audio_client->perf_mode = LEGACY_PCM_MODE;
+		else
+			prtd->audio_client->perf_mode = LOW_LATENCY_PCM_MODE;
 
-	pr_debug("%s Opening %d-ch PCM read stream, perf_mode %d\n",
-			__func__, params_channels(params),
-			prtd->audio_client->perf_mode);
+		pr_debug("%s Opening %d-ch PCM read stream, perf_mode %d\n",
+				__func__, params_channels(params),
+				prtd->audio_client->perf_mode);
+
 		ret = q6asm_open_read_v2(prtd->audio_client, FORMAT_LINEAR_PCM,
 				bits_per_sample);
 		if (ret < 0) {
