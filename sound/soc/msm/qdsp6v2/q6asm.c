@@ -2432,10 +2432,15 @@ int q6asm_run(struct audio_client *ac, uint32_t flags,
 	}
 
 	rc = wait_event_timeout(ac->cmd_wait,
-			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+			(atomic_read(&ac->cmd_state) <= 0), 5*HZ);
 	if (!rc) {
 		pr_err("%s: timeout. waited for run success",
 				__func__);
+		goto fail_cmd;
+	}
+	if (atomic_read(&ac->cmd_state) < 0) {
+		pr_err("%s: DSP returned error[%d]\n",
+				__func__, atomic_read(&ac->cmd_state));
 		goto fail_cmd;
 	}
 
@@ -3514,15 +3519,10 @@ int q6asm_stream_media_format_block_flac(struct audio_client *ac,
 		goto fail_cmd;
 	}
 	rc = wait_event_timeout(ac->cmd_wait,
-				(atomic_read(&ac->cmd_state) <= 0), 5*HZ);
+				(atomic_read(&ac->cmd_state) == 0), 5*HZ);
 	if (!rc) {
 		pr_err("%s :timeout. waited for FORMAT_UPDATE\n", __func__);
 		rc = -ETIMEDOUT;
-		goto fail_cmd;
-	}
-	if (atomic_read(&ac->cmd_state) < 0) {
-		pr_err("%s: DSP returned error[%d]\n",
-				__func__, atomic_read(&ac->cmd_state));
 		goto fail_cmd;
 	}
 	return 0;
