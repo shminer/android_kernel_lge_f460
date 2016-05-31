@@ -1117,12 +1117,14 @@ static void wcd9xxx_clsh_state_ear_lo(struct snd_soc_codec *codec,
 		}
 	} else {
 		wcd9xxx_ncp_bypass_enable(codec, false);
-			if ((clsh_d->state & (~req_state)) == WCD9XXX_CLSH_STATE_LO) {
+
+		if ((clsh_d->state & (~req_state)) == WCD9XXX_CLSH_STATE_LO) {
 			wcd9xxx_set_fclk_get_ncp(codec, clsh_d,
 						NCP_FCLK_LEVEL_5);
 			wcd9xxx_set_fclk_put_ncp(codec, clsh_d,
 						NCP_FCLK_LEVEL_8);
 		}
+
 		if (req_state & WCD9XXX_CLSH_STATE_LO) {
 			snd_soc_update_bits(codec, WCD9XXX_A_NCP_STATIC,
 						0x20, 0x00);
