@@ -240,7 +240,9 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			pr_err("%s: copy from user data failed\n"
 			       "data %p size %d\n", __func__,
 			       snd_model_v2.data, snd_model_v2.data_size);
+			q6lsm_snd_model_buf_free(prtd->lsm_client);
 			rc = -EFAULT;
+			break;
 		}
 
 		pr_debug("SND Model Magic no byte[0] %x,\n"
@@ -328,6 +330,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			pr_err("%s: copy from user data failed data %p size %d\n",
 			       __func__, snd_model.data, snd_model.data_size);
 			rc = -EFAULT;
+			q6lsm_snd_model_buf_free(prtd->lsm_client);
 			break;
 		}
 		rc = q6lsm_set_kw_sensitivity_level(prtd->lsm_client,
@@ -335,6 +338,7 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 						snd_model.min_user_confidence);
 		if (rc) {
 			pr_err("%s: Error in KW sensitivity %x", __func__, rc);
+			q6lsm_snd_model_buf_free(prtd->lsm_client);
 			break;
 		}
 
@@ -367,10 +371,19 @@ static int msm_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			pr_debug("%s: New event available %ld\n", __func__,
 				 prtd->event_avail);
 			spin_lock_irqsave(&prtd->event_lock, flags);
-			if (prtd->event_status)
+			if (prtd->event_status) {
 				size = sizeof(*(prtd->event_status)) +
 				prtd->event_status->payload_size;
-			spin_unlock_irqrestore(&prtd->event_lock, flags);
+				spin_unlock_irqrestore(&prtd->event_lock,
+						       flags);
+			} else {
+				spin_unlock_irqrestore(&prtd->event_lock,
+						       flags);
+				rc = -EINVAL;
+				pr_err("%s: prtd->event_status is NULL\n",
+					__func__);
+				break;
+			}
 			if (user->payload_size <
 			    prtd->event_status->payload_size) {
 				pr_debug("%s: provided %dbytes isn't enough, needs %dbytes\n",
