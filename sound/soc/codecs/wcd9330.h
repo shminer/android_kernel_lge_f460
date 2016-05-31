@@ -105,6 +105,7 @@ enum {
 	TOMTOM_TX16,
 	TOMTOM_TX_MAX,
 };
+
 extern int tomtom_mclk_enable(struct snd_soc_codec *codec, int mclk_enable,
 			     bool dapm);
 extern int tomtom_hs_detect(struct snd_soc_codec *codec,

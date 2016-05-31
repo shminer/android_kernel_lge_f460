@@ -12,15 +12,16 @@
  *
  */
 #include <linux/slab.h>
+#include <linux/module.h>
 #include <linux/ioctl.h>
 #include <linux/bitops.h>
 #include <sound/hwdep.h>
-#include <sound/msmcal-hwdep.h>
 #include <sound/soc.h>
+#include <uapi/sound/msmcal-hwdep.h>
 #include "wcdcal-hwdep.h"
 
 const int cal_size_info[WCD9XXX_MAX_CAL] = {
-	[WCD9XXX_ANC_CAL] = 8192,
+	[WCD9XXX_ANC_CAL] = 4096,
 	[WCD9XXX_MBHC_CAL] = 4096,
 	[WCD9XXX_MAD_CAL] = 4096,
 };

@@ -35,10 +35,10 @@
 #include <linux/kernel.h>
 #include <linux/gpio.h>
 #include <linux/input.h>
+#include "wcdcal-hwdep.h"
 #include "wcd9320.h"
 #include "wcd9306.h"
 #include "wcd9xxx-mbhc.h"
-#include "wcdcal-hwdep.h"
 #include "wcd9xxx-resmgr.h"
 #include "wcd9xxx-common.h"
 
@@ -4383,7 +4383,7 @@ static void wcd9xxx_mbhc_fw_read(struct work_struct *work)
 	struct wcd9xxx_mbhc *mbhc;
 	struct snd_soc_codec *codec;
 	const struct firmware *fw;
-	struct firmware_cal *fw_data = NULL;
+        struct firmware_cal *fw_data = NULL;
 	int ret = -1, retry = 0;
 	bool use_default_cal = false;
 
@@ -4393,34 +4393,33 @@ static void wcd9xxx_mbhc_fw_read(struct work_struct *work)
 
 	while (retry < FW_READ_ATTEMPTS) {
 		retry++;
-		pr_info("%s:Attempt %d to request MBHC firmware\n",
-				__func__, retry);
+		pr_debug("%s:Attempt %d to request MBHC firmware\n",
+                               __func__, retry);
 		if (mbhc->mbhc_cb->get_hwdep_fw_cal)
 			fw_data = mbhc->mbhc_cb->get_hwdep_fw_cal(codec,
 					WCD9XXX_MBHC_CAL);
 		if (!fw_data)
 			ret = request_firmware(&fw, "wcd9320/wcd9320_mbhc.bin",
-					codec->dev);
+                                       codec->dev);
 		/*
-		 * if request_firmware and hwdep cal both fail then
-		 * retry for few times before bailing out
-		 */
+		* if request_firmware and hwdep cal both fail then
+		* retry for few times before bailing out
+		*/
 		if ((ret != 0) && !fw_data) {
 			usleep_range(FW_READ_TIMEOUT, FW_READ_TIMEOUT +
-					WCD9XXX_USLEEP_RANGE_MARGIN_US);
+						WCD9XXX_USLEEP_RANGE_MARGIN_US);
 		} else {
-			pr_info("%s: MBHC Firmware read succesful\n",
-					__func__);
+			pr_info("%s: MBHC Firmware read succesful\n", __func__);
 			break;
 		}
 	}
 	if (!fw_data)
-		pr_info("%s: using request_firmware\n", __func__);
+		pr_debug("%s: using request_firmware\n", __func__);
 	else
-		pr_info("%s: using hwdep cal\n", __func__);
+		pr_debug("%s: using hwdep cal\n", __func__);
 	if (ret != 0 && !fw_data) {
 		pr_err("%s: Cannot load MBHC firmware use default cal\n",
-				__func__);
+			__func__);
 		use_default_cal = true;
 	}
 	if (!use_default_cal) {
@@ -4436,7 +4435,7 @@ static void wcd9xxx_mbhc_fw_read(struct work_struct *work)
 		}
 		if (wcd9xxx_mbhc_fw_validate(data, size) == false) {
 			pr_err("%s: Invalid MBHC cal data size use default cal\n",
-			       __func__);
+				__func__);
 			if (!fw_data)
 				release_firmware(fw);
 		} else {
@@ -4450,6 +4449,7 @@ static void wcd9xxx_mbhc_fw_read(struct work_struct *work)
 				mbhc->mbhc_fw = fw;
 			}
 		}
+
 	}
 
 	(void) wcd9xxx_init_and_calibrate(mbhc);
@@ -4639,15 +4639,15 @@ int wcd9xxx_mbhc_start(struct wcd9xxx_mbhc *mbhc,
 		mbhc->mbhc_cb->enable_clock_gate(mbhc->codec, true);
 
 	if (!mbhc->mbhc_cfg->read_fw_bin ||
-	    (mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_fw) ||
-	    (mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_cal)) {
+		(mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_fw) ||
+		(mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_cal)) {
 		rc = wcd9xxx_init_and_calibrate(mbhc);
 	} else {
 		if (!mbhc->mbhc_fw || !mbhc->mbhc_cal)
 			schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
 					     usecs_to_jiffies(FW_READ_TIMEOUT));
 		else
-			pr_debug("%s: Skipping to read mbhc fw, 0x%p %p\n",
+			pr_debug("%s: Skipping to read mbhc fw, 0x%p 0x%p\n",
 				 __func__, mbhc->mbhc_fw, mbhc->mbhc_cal);
 	}
 

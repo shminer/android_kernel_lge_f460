@@ -30,6 +30,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
+#include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/pm_runtime.h>
 #include <linux/kernel.h>
@@ -37,7 +38,6 @@
 #include "wcd9330.h"
 #include "wcd9xxx-resmgr.h"
 #include "wcd9xxx-common.h"
-#include "wcdcal-hwdep.h"
 #include "wcd_cpe_core.h"
 
 enum {
@@ -532,9 +532,6 @@ struct tomtom_priv {
 
 	u32 anc_slot;
 	bool anc_func;
-
-	/* cal info for codec */
-	struct fw_info *fw_data;
 
 	/*track tomtom interface type*/
 	u8 intf_type;
@@ -3287,56 +3284,28 @@ static int tomtom_codec_config_mad(struct snd_soc_codec *codec)
 {
 	int ret;
 	const struct firmware *fw;
-	struct firmware_cal *hwdep_cal = NULL;
 	struct mad_audio_cal *mad_cal;
-	const void *data;
 	const char *filename = TOMTOM_MAD_AUDIO_FIRMWARE_PATH;
-	struct tomtom_priv *tomtom = snd_soc_codec_get_drvdata(codec);
-	size_t cal_size;
 
 	pr_debug("%s: enter\n", __func__);
-
-	if (!tomtom->fw_data) {
-		dev_err(codec->dev, "%s: invalid cal data\n",
-				__func__);
+	ret = request_firmware(&fw, filename, codec->dev);
+	if (ret != 0) {
+		pr_err("Failed to acquire MAD firwmare data %s: %d\n", filename,
+		       ret);
 		return -ENODEV;
 	}
 
-	hwdep_cal = wcdcal_get_fw_cal(tomtom->fw_data, WCD9XXX_MAD_CAL);
-	if (hwdep_cal) {
-		data = hwdep_cal->data;
-		cal_size = hwdep_cal->size;
-		dev_dbg(codec->dev, "%s: using hwdep calibration\n",
-				__func__);
-	} else {
-		ret = request_firmware(&fw, filename, codec->dev);
-		if (ret != 0) {
-			pr_err("Failed to acquire MAD firwmare data %s: %d\n",
-				filename, ret);
-			return -ENODEV;
-		}
-		if (!fw) {
-			dev_err(codec->dev, "failed to get mad fw");
-			return -ENODEV;
-		}
-		data = fw->data;
-		cal_size = fw->size;
-		dev_dbg(codec->dev, "%s: using request_firmware calibration\n",
-				__func__);
-	}
-	if (cal_size < sizeof(struct mad_audio_cal)) {
-		pr_err("%s: incorrect hwdep cal size %zu\n",
-			__func__, cal_size);
-		ret = -ENOMEM;
-		goto err;
+	if (fw->size < sizeof(struct mad_audio_cal)) {
+		pr_err("%s: incorrect firmware size %u\n", __func__, fw->size);
+		release_firmware(fw);
+		return -ENOMEM;
 	}
 
-	mad_cal = (struct mad_audio_cal *)(data);
+	mad_cal = (struct mad_audio_cal *)(fw->data);
 	if (!mad_cal) {
-		dev_err(codec->dev, "%s: Invalid calibration data\n",
-				__func__);
-		ret =  -EINVAL;
-		goto err;
+		pr_err("%s: Invalid calibration data\n", __func__);
+		release_firmware(fw);
+		return -EINVAL;
 	}
 
 	snd_soc_write(codec, TOMTOM_A_CDC_MAD_MAIN_CTL_2,
@@ -3386,13 +3355,13 @@ static int tomtom_codec_config_mad(struct snd_soc_codec *codec)
 	snd_soc_write(codec, TOMTOM_A_CDC_MAD_ULTR_CTL_6,
 		      mad_cal->ultrasound_info.rms_threshold_msb);
 
+	release_firmware(fw);
+
 	/* Set MAD intr time to 20 msec */
 	snd_soc_update_bits(codec, 0x4E, 0x01F, 0x13);
 
 	pr_debug("%s: leave ret %d\n", __func__, ret);
-err:
-	if (!hwdep_cal)
-		release_firmware(fw);
+
 	return ret;
 }
 
@@ -4031,19 +4000,17 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 	const char *filename;
 	const struct firmware *fw;
 	int i;
-	int ret = 0;
+	int ret;
 	int num_anc_slots;
 	struct wcd9xxx_anc_header *anc_head;
 	struct tomtom_priv *tomtom = snd_soc_codec_get_drvdata(codec);
-	struct firmware_cal *hwdep_cal = NULL;
 	u32 anc_writes_size = 0;
 	u32 anc_cal_size = 0;
 	int anc_size_remaining;
 	u32 *anc_ptr;
 	u16 reg;
 	u8 mask, val, old_val;
-	size_t cal_size;
-	const void *data;
+
 
 	if (tomtom->anc_func == 0)
 		return 0;
@@ -4052,51 +4019,37 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		filename = "wcd9320/wcd9320_anc.bin";
 
-		hwdep_cal = wcdcal_get_fw_cal(tomtom->fw_data, WCD9XXX_ANC_CAL);
-		if (hwdep_cal) {
-			data = hwdep_cal->data;
-			cal_size = hwdep_cal->size;
-			dev_dbg(codec->dev, "%s: using hwdep calibration\n",
-				__func__);
-		} else {
-			ret = request_firmware(&fw, filename, codec->dev);
-			if (ret != 0) {
-				dev_err(codec->dev, "Failed to acquire ANC data: %d\n",
-					ret);
-				return -ENODEV;
-			}
-			if (!fw) {
-				dev_err(codec->dev, "failed to get anc fw");
-				return -ENODEV;
-			}
-			data = fw->data;
-			cal_size = fw->size;
-			dev_dbg(codec->dev, "%s: using request_firmware calibration\n",
-				__func__);
+		ret = request_firmware(&fw, filename, codec->dev);
+		if (ret != 0) {
+			dev_err(codec->dev, "Failed to acquire ANC data: %d\n",
+				ret);
+			return -ENODEV;
 		}
-		if (cal_size < sizeof(struct wcd9xxx_anc_header)) {
+
+		if (fw->size < sizeof(struct wcd9xxx_anc_header)) {
 			dev_err(codec->dev, "Not enough data\n");
-			ret = -ENOMEM;
-			goto err;
+			release_firmware(fw);
+			return -ENOMEM;
 		}
+
 		/* First number is the number of register writes */
-		anc_head = (struct wcd9xxx_anc_header *)(data);
-		anc_ptr = (u32 *)(data +
+		anc_head = (struct wcd9xxx_anc_header *)(fw->data);
+		anc_ptr = (u32 *)((u32)fw->data +
 				  sizeof(struct wcd9xxx_anc_header));
-		anc_size_remaining = cal_size -
+		anc_size_remaining = fw->size -
 				     sizeof(struct wcd9xxx_anc_header);
 		num_anc_slots = anc_head->num_anc_slots;
 
 		if (tomtom->anc_slot >= num_anc_slots) {
 			dev_err(codec->dev, "Invalid ANC slot selected\n");
-			ret = -EINVAL;
-			goto err;
+			release_firmware(fw);
+			return -EINVAL;
 		}
 		for (i = 0; i < num_anc_slots; i++) {
 			if (anc_size_remaining < TOMTOM_PACKED_REG_SIZE) {
 				dev_err(codec->dev, "Invalid register format\n");
-				ret = -EINVAL;
-				goto err;
+				release_firmware(fw);
+				return -EINVAL;
 			}
 			anc_writes_size = (u32)(*anc_ptr);
 			anc_size_remaining -= sizeof(u32);
@@ -4105,8 +4058,8 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 			if (anc_writes_size * TOMTOM_PACKED_REG_SIZE
 				> anc_size_remaining) {
 				dev_err(codec->dev, "Invalid register format\n");
-				ret = -EINVAL;
-				goto err;
+				release_firmware(fw);
+				return -ENOMEM;
 			}
 
 			if (tomtom->anc_slot == i)
@@ -4118,8 +4071,8 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 		}
 		if (i == num_anc_slots) {
 			dev_err(codec->dev, "Selected ANC slot not present\n");
-			ret = -EINVAL;
-			goto err;
+			release_firmware(fw);
+			return -ENOMEM;
 		}
 
 		i = 0;
@@ -4161,8 +4114,7 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 		if (w->reg == TOMTOM_A_RX_HPH_R_DAC_CTL)
 			snd_soc_update_bits(codec,
 				TOMTOM_A_CDC_CLK_ANC_RESET_CTL, 0x0C, 0x00);
-		if (!hwdep_cal)
-			release_firmware(fw);
+		release_firmware(fw);
 		txfe_clkdiv_update(codec);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
@@ -4178,10 +4130,6 @@ static int tomtom_codec_enable_anc(struct snd_soc_dapm_widget *w,
 		break;
 	}
 	return 0;
-err:
-		if (!hwdep_cal)
-			release_firmware(fw);
-		return ret;
 }
 
 static int tomtom_hphl_dac_event(struct snd_soc_dapm_widget *w,
@@ -5309,16 +5257,32 @@ static int tomtom_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 	return 0;
 }
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-extern int snd_hax_reg_access(unsigned int);
-extern unsigned int snd_hax_cache_read(unsigned int);
-extern void snd_hax_cache_write(unsigned int, unsigned int);
-#endif
+static int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
+	unsigned int value)
+{
+	int ret;
+	struct wcd9xxx *wcd9xxx = codec->control_data;
+	struct tomtom_priv *tomtom_p = snd_soc_codec_get_drvdata(codec);
 
-#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL
-static
-#endif
-unsigned int tomtom_read(struct snd_soc_codec *codec,
+	if (reg == SND_SOC_NOPM)
+		return 0;
+
+	BUG_ON(reg > TOMTOM_MAX_REGISTER);
+
+	if (!tomtom_volatile(codec, reg)) {
+		ret = snd_soc_cache_write(codec, reg, value);
+		if (ret != 0)
+			dev_err(codec->dev, "Cache write to %x failed: %d\n",
+				reg, ret);
+	}
+
+	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
+		dev_err(codec->dev, "write 0x%02x while offline\n", reg);
+		return -ENODEV;
+	} else
+		return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
+}
+static unsigned int tomtom_read(struct snd_soc_codec *codec,
 				unsigned int reg)
 {
 	unsigned int val;
@@ -5350,61 +5314,6 @@ unsigned int tomtom_read(struct snd_soc_codec *codec,
 		return val;
 	}
 }
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-EXPORT_SYMBOL(tomtom_read);
-#endif
-
-#ifndef CONFIG_SOUND_CONTROL_HAX_3_GPL
-static
-#endif
-int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
- unsigned int value)
-{
- int ret;
- struct wcd9xxx *wcd9xxx = codec->control_data;
- struct tomtom_priv *tomtom_p = snd_soc_codec_get_drvdata(codec);
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
- unsigned int val;
-#endif
-
- if (reg == SND_SOC_NOPM)
- return 0;
-
- BUG_ON(reg > TOMTOM_MAX_REGISTER);
-
- if (!tomtom_volatile(codec, reg)) {
- ret = snd_soc_cache_write(codec, reg, value);
- if (ret != 0)
- dev_err(codec->dev, "Cache write to %x failed: %d\n",
- reg, ret);
- }
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	if (!snd_hax_reg_access(reg)) {
-		if (!((val = snd_hax_cache_read(reg)) != -1)) {
-			val = wcd9xxx_reg_read_safe(codec->control_data, reg);
-		}
-	} else {
-		snd_hax_cache_write(reg, value);
-		val = value;
-	}
-	
-	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
-		dev_err(codec->dev, "write 0x%02x while offline\n", reg);
-		return -ENODEV;
-	} else
-		return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, val);
-#else
-	if (unlikely(test_bit(BUS_DOWN, &tomtom_p->status_mask))) {
-		dev_err(codec->dev, "write 0x%02x while offline\n", reg);
-		return -ENODEV;
-	} else
-		return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
-#endif
-}
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-EXPORT_SYMBOL(tomtom_write);
-#endif
-
 
 static int tomtom_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -6611,12 +6520,6 @@ static int tomtom_codec_enable_ear_pa(struct snd_soc_dapm_widget *w,
 
 		usleep_range(5000, 5100);
 		break;
-	case SND_SOC_DAPM_POST_PMD:
-		wcd9xxx_clsh_fsm(codec, &tomtom_p->clsh_d,
-						 WCD9XXX_CLSH_STATE_EAR,
-						 WCD9XXX_CLSH_REQ_DISABLE,
-						 WCD9XXX_CLSH_EVENT_POST_PA);
-		usleep_range(5000, 5100);
 	}
 	return 0;
 }
@@ -6635,9 +6538,19 @@ static int tomtom_codec_ear_dac_event(struct snd_soc_dapm_widget *w,
 						 WCD9XXX_CLSH_STATE_EAR,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_PRE_DAC);
+		snd_soc_update_bits(codec, w->reg, 0x20, 0x20);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		snd_soc_update_bits(codec, w->reg, 0x20, 0x00);
+		wcd9xxx_clsh_fsm(codec, &tomtom_p->clsh_d,
+						 WCD9XXX_CLSH_STATE_EAR,
+						 WCD9XXX_CLSH_REQ_DISABLE,
+						 WCD9XXX_CLSH_EVENT_POST_PA);
+		usleep_range(5000, 5100);
+		break;
+	default:
 		break;
 	}
-
 	return 0;
 }
 
@@ -6749,12 +6662,11 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("EAR"),
 
 	SND_SOC_DAPM_PGA_E("EAR PA", TOMTOM_A_RX_EAR_EN, 4, 0, NULL, 0,
-			tomtom_codec_enable_ear_pa, SND_SOC_DAPM_POST_PMU |
-			SND_SOC_DAPM_POST_PMD),
+			tomtom_codec_enable_ear_pa, SND_SOC_DAPM_POST_PMU),
 
 	SND_SOC_DAPM_MIXER_E("DAC1", TOMTOM_A_RX_EAR_EN, 6, 0, dac1_switch,
 		ARRAY_SIZE(dac1_switch), tomtom_codec_ear_dac_event,
-		SND_SOC_DAPM_PRE_PMU),
+		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_AIF_IN_E("AIF1 PB", "AIF1 Playback", 0, SND_SOC_NOPM,
 				AIF1_PB, 0, tomtom_codec_enable_slimrx,
@@ -7919,27 +7831,6 @@ static void tomtom_cleanup_irqs(struct tomtom_priv *tomtom)
 	wcd9xxx_free_irq(core_res, WCD9XXX_IRQ_SLIMBUS, tomtom);
 }
 
-static
-struct firmware_cal *tomtom_get_hwdep_fw_cal(struct snd_soc_codec *codec,
-			enum wcd_cal_type type)
-{
-	struct tomtom_priv *tomtom;
-	struct firmware_cal *hwdep_cal;
-	if (!codec) {
-		pr_err("%s: NULL codec pointer\n", __func__);
-		return NULL;
-	}
-	tomtom = snd_soc_codec_get_drvdata(codec);
-	hwdep_cal = wcdcal_get_fw_cal(tomtom->fw_data, type);
-	if (!hwdep_cal) {
-		dev_err(codec->dev, "%s: cal not sent by %d\n",
-				__func__, type);
-		return NULL;
-	} else {
-		return hwdep_cal;
-	}
-}
-
 int tomtom_hs_detect(struct snd_soc_codec *codec,
 		    struct wcd9xxx_mbhc_config *mbhc_cfg)
 {
@@ -8541,7 +8432,6 @@ static const struct wcd9xxx_mbhc_cb mbhc_cb = {
 	.insert_rem_status = tomtom_mbhc_ins_rem_status,
 	.micbias_pulldown_ctrl = tomtom_mbhc_micb_pulldown_ctrl,
 	.codec_rco_ctrl = tomtom_codec_internal_rco_ctrl,
-	.get_hwdep_fw_cal = tomtom_get_hwdep_fw_cal,
 	.hph_auto_pulldown_ctrl = tomtom_codec_hph_auto_pull_down,
 };
 
@@ -8862,10 +8752,6 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	tomtom_codec_priv = codec;
 #endif
 
-#ifdef CONFIG_SOUND_CONTROL_HAX_3_GPL
-	pr_info("tomtom codec probe...\n");
-	fauxsound_codec_ptr = codec;
-#endif
 
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	control = codec->control_data;
@@ -8934,7 +8820,7 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 				rco_clk_rate, TOMTOM_ZDET_SUPPORTED);
 	if (ret) {
 		pr_err("%s: mbhc init failed %d\n", __func__, ret);
-		goto err_hwdep;
+		goto err_nomem_slimch;
 	}
 #endif
 
@@ -8960,7 +8846,7 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	ret = tomtom_handle_pdata(tomtom);
 	if (IS_ERR_VALUE(ret)) {
 		pr_err("%s: bad pdata\n", __func__);
-		goto err_hwdep;
+		goto err_nomem_slimch;
 	}
 
 	tomtom->spkdrv_reg = tomtom_codec_find_regulator(codec,
@@ -8973,7 +8859,7 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	if (!ptr) {
 		pr_err("%s: no mem for slim chan ctl data\n", __func__);
 		ret = -ENOMEM;
-		goto err_hwdep;
+		goto err_nomem_slimch;
 	}
 
 	if (tomtom->intf_type == WCD9XXX_INTERFACE_TYPE_I2C) {
@@ -9047,8 +8933,6 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 
 err_pdata:
 	kfree(ptr);
-err_hwdep:
-	kfree(tomtom->fw_data);
 err_nomem_slimch:
 	devm_kfree(codec->dev, tomtom);
 	return ret;
