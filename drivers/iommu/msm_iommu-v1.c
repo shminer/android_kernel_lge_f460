@@ -40,11 +40,6 @@
 #include "msm_iommu_perfmon.h"
 #include "msm_iommu_pagetable.h"
 
-/*                                                                                          */
-#include <linux/thermal.h>
-#include "../thermal/thermal_core.h"
-/*                                                                                          */
-
 #if defined(CONFIG_IOMMU_LPAE) || defined(CONFIG_IOMMU_AARCH64)
 /* bitmap of the page sizes currently supported */
 #define MSM_IOMMU_PGSIZES	(SZ_4K | SZ_64K | SZ_2M | SZ_32M | SZ_1G)
