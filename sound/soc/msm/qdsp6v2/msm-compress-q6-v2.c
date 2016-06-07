@@ -2139,9 +2139,9 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 	switch (codec->codec) {
 	case SND_AUDIOCODEC_MP3:
 #ifdef CONFIG_HIFI_SOUND
-		codec->num_descriptors = 5;
+		codec->num_descriptors = 3;
 #else
-		codec->num_descriptors = 4;
+		codec->num_descriptors = 2;
 #endif
 		codec->descriptor[0].max_ch = 2;
 		codec->descriptor[0].sample_rates = SNDRV_PCM_RATE_8000_48000;
@@ -2154,9 +2154,9 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 		break;
 	case SND_AUDIOCODEC_AAC:
 #ifdef CONFIG_HIFI_SOUND
-		codec->num_descriptors = 5;
+		codec->num_descriptors = 3;
 #else
-		codec->num_descriptors = 4;
+		codec->num_descriptors = 2;
 #endif
 		codec->descriptor[1].max_ch = 2;
 		codec->descriptor[1].sample_rates = SNDRV_PCM_RATE_8000_48000;
@@ -2175,7 +2175,7 @@ static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,
 		break;
 #ifdef CONFIG_HIFI_SOUND
 	case SND_AUDIOCODEC_PCM:
-		codec->num_descriptors = 5;
+		codec->num_descriptors = 3;
 		codec->descriptor[4].max_ch = 2;
 		codec->descriptor[4].sample_rates = SNDRV_PCM_RATE_8000_192000;
 		codec->descriptor[4].bit_rate[0] = 192; /* 192kbps */
