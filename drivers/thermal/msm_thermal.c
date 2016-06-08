@@ -100,8 +100,8 @@ static struct completion hotplug_notify_complete;
 static struct completion freq_mitigation_complete;
 static struct completion thermal_monitor_complete;
 
-/* Always enable Intelli Thermal on boot */
-static int intelli_enabled;
+/* Always enable Intelli Thermal on JZ KERNEL! */
+static int intelli_enabled = 1;
 
 static int rails_cnt;
 static int psm_rails_cnt;
@@ -2504,20 +2504,16 @@ static int __ref set_enabled(const char *val, const struct kernel_param *kp)
 	int ret = 0;
 
 	if (*val == '0' || *val == 'n' || *val == 'N') {
-		intelli_enabled = 0;
-		thermal_subsystem_init();
-		pr_info("%s: disabled!\n", KBUILD_MODNAME);
-	} else {
-		if (!intelli_enabled) {
-			intelli_enabled = 1;
-			schedule_delayed_work(&check_temp_work,
-					msecs_to_jiffies(1000));
-			pr_info("%s: rescheduling...\n", KBUILD_MODNAME);
-		} else
-			pr_info("%s: already running...\n \
-				if you wish to disable echo N > \
-				intelli_enabled\n", KBUILD_MODNAME);
-	}
+		pr_info("%s: Intelli thermal must enabled on JZ KERNEL!!\n", KBUILD_MODNAME);
+		return ret;
+	} 
+	if (!intelli_enabled) {
+		intelli_enabled = 1;
+		schedule_delayed_work(&check_temp_work,
+				msecs_to_jiffies(1000));
+		pr_info("%s: scheduling...\n", KBUILD_MODNAME);
+	} 
+
 	pr_info("%s: intelli_enabled = %d\n", KBUILD_MODNAME, intelli_enabled);
 
 	return ret;
