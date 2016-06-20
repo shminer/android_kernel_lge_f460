@@ -1,7 +1,7 @@
 /* drivers/soc/qcom/smd.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -128,6 +128,11 @@ static struct interrupt_config private_intr_config[NUM_SMD_SUBSYSTEMS] = {
 	},
 };
 
+union fifo_mem {
+	uint64_t u64;
+	uint8_t u8;
+};
+
 struct interrupt_stat interrupt_stats[NUM_SMD_SUBSYSTEMS];
 
 #define SMSM_STATE_ADDR(entry)           (smsm_info.state + entry)
@@ -229,8 +234,33 @@ static inline void smd_write_intr(unsigned int val, void __iomem *addr)
  */
 static void *smd_memcpy_to_fifo(void *dest, const void *src, size_t num_bytes)
 {
+	union fifo_mem *temp_dst = (union fifo_mem *)dest;
+	union fifo_mem *temp_src = (union fifo_mem *)src;
+	uintptr_t mask = sizeof(union fifo_mem) - 1;
 
-	memcpy_toio(dest, src, num_bytes);
+	/* Do byte copies until we hit 8-byte (double word) alignment */
+	while ((uintptr_t)temp_dst & mask && num_bytes) {
+		__raw_writeb_no_log(temp_src->u8, temp_dst);
+		temp_src = (union fifo_mem *)((uintptr_t)temp_src + 1);
+		temp_dst = (union fifo_mem *)((uintptr_t)temp_dst + 1);
+		num_bytes--;
+	}
+
+	/* Do double word copies */
+	while (num_bytes >= sizeof(union fifo_mem)) {
+		__raw_writeq_no_log(temp_src->u64, temp_dst);
+		temp_dst++;
+		temp_src++;
+		num_bytes -= sizeof(union fifo_mem);
+	}
+
+	/* Copy remaining bytes */
+	while (num_bytes--) {
+		__raw_writeb_no_log(temp_src->u8, temp_dst);
+		temp_src = (union fifo_mem *)((uintptr_t)temp_src + 1);
+		temp_dst = (union fifo_mem *)((uintptr_t)temp_dst + 1);
+	}
+
 	return dest;
 }
 
@@ -248,7 +278,33 @@ static void *smd_memcpy_to_fifo(void *dest, const void *src, size_t num_bytes)
  */
 static void *smd_memcpy_from_fifo(void *dest, const void *src, size_t num_bytes)
 {
-	memcpy_fromio(dest, src, num_bytes);
+	union fifo_mem *temp_dst = (union fifo_mem *)dest;
+	union fifo_mem *temp_src = (union fifo_mem *)src;
+	uintptr_t mask = sizeof(union fifo_mem) - 1;
+
+	/* Do byte copies until we hit 8-byte (double word) alignment */
+	while ((uintptr_t)temp_src & mask && num_bytes) {
+		temp_dst->u8 = __raw_readb_no_log(temp_src);
+		temp_src = (union fifo_mem *)((uintptr_t)temp_src + 1);
+		temp_dst = (union fifo_mem *)((uintptr_t)temp_dst + 1);
+		num_bytes--;
+	}
+
+	/* Do double word copies */
+	while (num_bytes >= sizeof(union fifo_mem)) {
+		temp_dst->u64 = __raw_readq_no_log(temp_src);
+		temp_dst++;
+		temp_src++;
+		num_bytes -= sizeof(union fifo_mem);
+	}
+
+	/* Copy remaining bytes */
+	while (num_bytes--) {
+		temp_dst->u8 = __raw_readb_no_log(temp_src);
+		temp_src = (union fifo_mem *)((uintptr_t)temp_src + 1);
+		temp_dst = (union fifo_mem *)((uintptr_t)temp_dst + 1);
+	}
+
 	return dest;
 }
 
@@ -1276,13 +1332,6 @@ static void do_smd_probe(unsigned remote_pid)
 	}
 }
 
-static void remote_processed_close(struct smd_channel *ch)
-{
-	/* The remote side has observed our close, we can allow a reopen */
-	list_move(&ch->ch_list, &smd_ch_to_close_list);
-	queue_work(channel_close_wq, &finalize_channel_close_work);
-}
-
 static void smd_state_change(struct smd_channel *ch,
 			     unsigned last, unsigned next)
 {
@@ -1292,11 +1341,7 @@ static void smd_state_change(struct smd_channel *ch,
 
 	switch (next) {
 	case SMD_SS_OPENING:
-		if (last == SMD_SS_OPENED &&
-		    ch->half_ch->get_state(ch->send) == SMD_SS_CLOSED) {
-			/* We missed the CLOSING and CLOSED states */
-			remote_processed_close(ch);
-		} else if (ch->half_ch->get_state(ch->send) == SMD_SS_CLOSING ||
+		if (ch->half_ch->get_state(ch->send) == SMD_SS_CLOSING ||
 		    ch->half_ch->get_state(ch->send) == SMD_SS_CLOSED) {
 			ch->half_ch->set_tail(ch->recv, 0);
 			ch->half_ch->set_head(ch->send, 0);
@@ -1321,13 +1366,14 @@ static void smd_state_change(struct smd_channel *ch,
 			ch->pending_pkt_sz = 0;
 			ch->notify(ch->priv, SMD_EVENT_CLOSE);
 		}
-		/* We missed the CLOSING state */
-		if (ch->half_ch->get_state(ch->send) == SMD_SS_CLOSED)
-			remote_processed_close(ch);
 		break;
 	case SMD_SS_CLOSING:
-		if (ch->half_ch->get_state(ch->send) == SMD_SS_CLOSED)
-			remote_processed_close(ch);
+		if (ch->half_ch->get_state(ch->send) == SMD_SS_CLOSED) {
+			list_move(&ch->ch_list,
+					&smd_ch_to_close_list);
+			queue_work(channel_close_wq,
+						&finalize_channel_close_work);
+		}
 		break;
 	}
 }
@@ -2549,7 +2595,7 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 
 		SMSM_DBG("<SM %08x %08x>\n", apps, modm);
 		if (modm & SMSM_RESET) {
-			pr_err("SMSM: Modem SMSM state changed to SMSM_RESET.\n");
+			pr_err("\nSMSM: Modem SMSM state changed to SMSM_RESET.");
 		} else if (modm & SMSM_INIT) {
 			if (!(apps & SMSM_INIT))
 				apps |= SMSM_INIT;

@@ -19,8 +19,8 @@
 
 #include <linux/types.h>
 #include <linux/cpuidle.h>
-#include <asm/smp_plat.h>
 #include <asm/barrier.h>
+#include <asm/smp_plat.h>
 
 #if !defined(CONFIG_SMP)
 #define msm_secondary_startup NULL
@@ -108,6 +108,7 @@ void msm_pm_enable_retention(bool enable);
 bool msm_pm_retention_enabled(void);
 bool msm_cpu_pm_enter_sleep(enum msm_pm_sleep_mode mode, bool from_idle);
 int msm_pm_collapse(unsigned long unused);
+
 static inline void msm_arch_idle(void)
 {
 	mb();
@@ -124,7 +125,6 @@ s32 msm_cpuidle_get_deep_idle_latency(void);
 static inline void msm_pm_set_rpm_wakeup_irq(unsigned int irq) {}
 static inline int msm_pm_wait_cpu_shutdown(unsigned int cpu) { return 0; }
 static inline int msm_pm_sleep_status_init(void) { return 0; };
-
 static inline void lpm_cpu_hotplug_enter(unsigned int cpu)
 {
 	msm_arch_idle();
