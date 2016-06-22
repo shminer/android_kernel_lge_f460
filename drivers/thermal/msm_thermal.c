@@ -1230,11 +1230,13 @@ static int __ref update_offline_cores(int val)
 {
 	uint32_t cpu = 0;
 	int ret = 0;
+	uint32_t previous_cpus_offlined = 0;
 
 	if (!core_control)
 		return 0;
 
-	cpus_offlined = msm_thermal_info.core_control_mask & val;
+	previous_cpus_offlined = cpus_offlined;
+	cpus_offlined = msm_thermal_info_local.core_control_mask & val;
 
 	for_each_possible_cpu(cpu) {
 		if (cpus_offlined & BIT(cpu)) {
