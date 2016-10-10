@@ -1,1 +1,0 @@
-obj-$(CONFIG_LGE_PM_UNIFIED_NODE) += lge_power_sysfs.o

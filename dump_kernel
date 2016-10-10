@@ -1,6 +1,0 @@
-#!/bin/bash
-if [ -e vmlinux.txt ];then
-	rm vmlinux.txt
-fi
-
-./android-toolchain/bin/arm-eabi-objdump -S -l -z vmlinux > vmlinux.txt
